@@ -1,0 +1,25 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (Squad CLI artifacts; project itself is .NET)
+node_modules/
+
+# .NET
+bin/
+obj/
+*.user
+*.suo
+
+# Squad — keep team state, ignore noisy runtime logs
+.squad/log/
+.squad/orchestration-log/
+.squad/casting-history.json
+
+# spec-kit — keep artifacts, ignore caches
+.specify/cache/
+
+# Local
+.env
+.env.local
+*.secrets
