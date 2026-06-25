@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    # macOS runner: FoundryStudio is a net11.0-macos AppKit app (Apple Silicon).
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      # TENET: An engineer should never see a red X on CI.
+      # When this job fails, diagnose the root cause and open a remediation PR;
+      # CI failures are a project failure mode, not a contributor task.
+      #
+      # Placeholder until the M0 gate proves the toolchain and the first
+      # project lands. Replace with:
+      #   - pin the net11 macOS workload + maui-labs AppKit feed (see KNOWN-GOOD-VERSIONS.md)
+      #   - dotnet restore + dotnet build against the pinned versions
+      #   - dotnet test (xUnit pure-logic seams, no native dylib needed)
+      - name: Placeholder build step
+        run: echo "Replace with restore + build + test once M0 is green and the first project exists."

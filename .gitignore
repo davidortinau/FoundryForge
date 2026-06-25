@@ -23,3 +23,10 @@ obj/
 .env
 .env.local
 *.secrets
+# Squad: ignore runtime state (logs, inbox, sessions)
+.squad/decisions/inbox/
+.squad/sessions/
+.squad/.scratch/
+.squad/.cache/
+# Squad: SubSquad activation file (local to this machine)
+.squad-workstream
