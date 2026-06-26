@@ -39,6 +39,7 @@ The model cache (multi-GB) and settings are user data. Never wipe to reset; back
 ## Code conventions
 - C# nullable enabled; services via the MAUI DI container; Razor components call injected services directly.
 - Keep platform-specific code out of shared UI; follow the MAUI.Sherpa project shape (see `docs/PLAN.md` -> Reference architecture).
+- **UI follows the Design Guide ([`docs/DESIGN.md`](docs/DESIGN.md)).** Every surface uses the `--fs-*` design tokens (no hardcoded hex), the Foundry Copper accent, Workshop Daylight + Night Forge themes at parity, the Sherpa-style sidebar shell, and the honesty/consent UX patterns. Verify new UI in **both** themes (frontmost screenshots, KI-001) before "done." Where the guide and Constitution touch (honesty, data preservation), the Constitution wins.
 
 ## Workflow
 This repo uses Squad (`.squad/`) + spec-kit (`.specify/`). Plan with `/speckit.*`; Squad's coordinator routes `tasks.md` to the specialists in `.squad/team.md`. Decisions ratify in `.squad/decisions.md`.

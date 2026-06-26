@@ -1,0 +1,46 @@
+@inject NavigationManager Navigation
+
+<aside class="sidebar" aria-label="FoundryStudio navigation">
+    <a class="sidebar__skip" href="#main-content">Skip to content</a>
+    <div class="sidebar__brand" aria-label="FoundryStudio">
+        <span class="foundry-mark foundry-mark--small" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+                <path d="M5 6.5h14v11H5z" />
+                <path d="M8 17.5V9h8" />
+                <path d="M8 12.75h6.5" />
+            </svg>
+        </span>
+        <div>
+            <strong>FoundryStudio</strong>
+            <span>Local model workshop</span>
+        </div>
+    </div>
+
+    <nav class="sidebar-nav" aria-label="Primary">
+        <div class="sidebar-nav__group" aria-labelledby="nav-group-workshop">
+            <p id="nav-group-workshop" class="sidebar-nav__eyebrow">Workshop</p>
+            <NavLink id="nav-models" data-testid="nav-models" class="sidebar-nav__row" href="/" Match="NavLinkMatch.All" aria-label="Models catalog">
+                <span class="sidebar-nav__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M6 7v12h12V7"/><path d="M9 11h6"/><path d="M9 15h4"/></svg></span>
+                <span>Models</span>
+            </NavLink>
+            <button id="nav-chat" data-testid="nav-chat" class="sidebar-nav__row is-disabled" type="button" disabled aria-disabled="true">
+                <span class="sidebar-nav__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 6.5h14v9H8l-3 3z"/><path d="M8 10h8"/><path d="M8 13h5"/></svg></span>
+                <span>Chat</span>
+                <span class="sidebar-nav__soon">Coming soon</span>
+            </button>
+            <button id="nav-server" data-testid="nav-server" class="sidebar-nav__row is-disabled" type="button" disabled aria-disabled="true">
+                <span class="sidebar-nav__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 7h14v4H5z"/><path d="M5 13h14v4H5z"/><path d="M8 9h.01"/><path d="M8 15h.01"/></svg></span>
+                <span>Server</span>
+                <span class="sidebar-nav__soon">Coming soon</span>
+            </button>
+        </div>
+
+        <div class="sidebar-nav__group" aria-labelledby="nav-group-system">
+            <p id="nav-group-system" class="sidebar-nav__eyebrow">System</p>
+            <NavLink id="nav-settings" data-testid="nav-settings" class="sidebar-nav__row" href="/settings" aria-label="Settings">
+                <span class="sidebar-nav__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z"/><path d="M19 12a7 7 0 0 0-.1-1.18l2.1-1.62-2-3.46-2.48 1a7 7 0 0 0-2.04-1.18L14.1 3h-4.2l-.38 2.56a7 7 0 0 0-2.04 1.18L5 5.74l-2 3.46 2.1 1.62a7.4 7.4 0 0 0 0 2.36L3 14.8l2 3.46 2.48-1a7 7 0 0 0 2.04 1.18l.38 2.56h4.2l.38-2.56a7 7 0 0 0 2.04-1.18l2.48 1 2-3.46-2.1-1.62A7 7 0 0 0 19 12z"/></svg></span>
+                <span>Settings</span>
+            </NavLink>
+        </div>
+    </nav>
+</aside>

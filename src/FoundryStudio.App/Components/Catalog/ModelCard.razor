@@ -1,7 +1,7 @@
 @using System.Globalization
 @inject IFoundryCatalogService CatalogService
 
-<article class="model-card"
+<article class="model-card @(IsLoaded ? "model-card--loaded" : string.Empty) @(Operation.Phase == ModelOpPhase.Loading ? "model-card--working" : string.Empty)"
          data-testid="model-card"
          data-alias="@Model.Alias"
          tabindex="0"
@@ -9,13 +9,26 @@
     <header class="model-card__header">
         <div>
             <p class="eyebrow" data-testid="card-alias">@DisplayOrUnknown(Model.Alias)</p>
-            <h2 id="@_titleId" data-testid="card-displayname">@DisplayOrUnknown(Model.DisplayName)</h2>
+            <div class="model-card__title-row">
+                <h2 id="@_titleId" data-testid="card-displayname">@DisplayOrUnknown(Model.DisplayName)</h2>
+                @if (FormatBadgeText is { } formatBadgeText)
+                {
+                    <span class="format-badge" aria-label="Model format">@formatBadgeText</span>
+                }
+            </div>
         </div>
         <div class="model-card__badges">
             <span class="cache-badge @(IsCached ? "cache-badge--cached" : "cache-badge--not-cached")"
                   data-testid="card-cached-badge"
                   aria-label="@(IsCached ? "Cached model" : "Not cached model")">
-                <span aria-hidden="true">@(IsCached ? "✓" : "○")</span>
+                @if (IsCached)
+                {
+                    <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></svg>
+                }
+                else
+                {
+                    <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" /></svg>
+                }
                 @(IsCached ? "Cached" : "Not cached")
             </span>
             @if (IsLoaded)
@@ -23,9 +36,13 @@
                 <span class="cache-badge cache-badge--loaded"
                       data-testid="card-loaded-badge"
                       aria-label="Loaded model">
-                    <span aria-hidden="true">●</span>
+                    <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" /><path d="M12 8v4l2.5 2.5" /></svg>
                     Loaded
                 </span>
+            }
+            @if (IsCached)
+            {
+                <span class="copper-stamp" aria-label="Cached locally">cached locally</span>
             }
         </div>
     </header>
@@ -58,7 +75,21 @@
                 {
                     foreach (var chip in CapabilityChips)
                     {
-                        <span class="capability-chip">@chip</span>
+                        <span class="capability-chip @chip.CssClass">
+                            @if (chip.Kind == "vision")
+                            {
+                                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z" /><circle cx="12" cy="12" r="2.5" /></svg>
+                            }
+                            else if (chip.Kind == "tool")
+                            {
+                                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-3-3z" /></svg>
+                            }
+                            else
+                            {
+                                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" /></svg>
+                            }
+                            @chip.Label
+                        </span>
                     }
                 }
             </dd>
@@ -115,13 +146,13 @@
 
             @if (Operation.Phase is ModelOpPhase.Downloading or ModelOpPhase.Cancelling)
             {
-                <div class="download-progress"
+                <div class="download-progress @(Operation.ProgressPercent is null ? "download-progress--indeterminate" : string.Empty)"
                      data-testid="card-download-progress"
                      role="progressbar"
                      aria-label="Download progress for @DisplayOrUnknown(Model.DisplayName)"
                      aria-valuemin="0"
                      aria-valuemax="100"
-                     aria-valuenow="@ProgressAriaValue"
+                     aria-valuenow="@(Operation.ProgressPercent is double ? ProgressAriaValue : null)"
                      aria-busy="@(Operation.ProgressPercent is null ? "true" : "false")">
                     <div class="download-progress__bar" style="width: @ProgressWidth"></div>
                     <span>@ProgressLabel</span>
@@ -144,7 +175,7 @@
                         aria-describedby="@_diskFitId"
                         @onclick="DownloadAsync"
                         disabled="@Operation.IsWorking">
-                    Download
+                    Cast to local cache
                 </button>
             }
         }
@@ -170,17 +201,17 @@
                             data-testid="card-load"
                             @onclick="LoadAsync"
                             disabled="@Operation.IsWorking">
-                        @(Operation.Phase == ModelOpPhase.Loading ? "Loading…" : "Load")
+                        @(Operation.Phase == ModelOpPhase.Loading ? "Loading model…" : "Temper in memory")
                     </button>
                 }
 
                 <button id="@_deleteId"
                         type="button"
-                        class="button button-danger"
+                        class="button button-secondary"
                         data-testid="card-delete"
                         @onclick="RequestDeleteAsync"
                         disabled="@Operation.IsWorking">
-                    Delete…
+                    Delete from cache…
                 </button>
             </div>
         }
@@ -223,28 +254,26 @@
     private string _deleteId = string.Empty;
     private string _diskFitId = string.Empty;
 
-    private IReadOnlyList<string> CapabilityChips
+    private sealed record CapabilityChip(string Kind, string Label, string CssClass);
+
+    private IReadOnlyList<CapabilityChip> CapabilityChips
     {
         get
         {
-            var chips = new List<string>();
+            var chips = new List<CapabilityChip>();
             if (Model.Capabilities.Vision)
             {
-                chips.Add("Vision");
+                chips.Add(new CapabilityChip("vision", "Vision", string.Empty));
             }
 
-            if (!Model.Capabilities.ToolCallingKnown)
+            if (Model.Capabilities.ToolCallingKnown && Model.Capabilities.ToolCalling)
             {
-                chips.Add("Tool calling unknown");
-            }
-            else if (Model.Capabilities.ToolCalling)
-            {
-                chips.Add("Tool calling");
+                chips.Add(new CapabilityChip("tool", "Tool use", "capability-chip--tool"));
             }
 
             if (Model.Capabilities.Reasoning)
             {
-                chips.Add("Reasoning");
+                chips.Add(new CapabilityChip("reasoning", "Reasoning", "capability-chip--reasoning"));
             }
 
             return chips;
@@ -287,8 +316,12 @@
         : "0%";
 
     private string ProgressLabel => Operation.ProgressPercent is double value
-        ? $"{Math.Clamp(value, 0, 100).ToString("0", CultureInfo.InvariantCulture)}%"
-        : "Waiting for progress…";
+        ? $"Casting {DisplayOrUnknown(Model.DisplayName)} — {Math.Clamp(value, 0, 100).ToString("0", CultureInfo.InvariantCulture)}%"
+        : $"Casting {DisplayOrUnknown(Model.DisplayName)} — waiting for progress…";
+
+    private string? FormatBadgeText => string.IsNullOrWhiteSpace(Model.ModelType)
+        ? null
+        : Model.ModelType.Trim();
 
     protected override void OnParametersSet()
     {

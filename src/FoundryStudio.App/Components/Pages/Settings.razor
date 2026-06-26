@@ -1,11 +1,17 @@
 @page "/settings"
 @inject ISettingsService SettingsService
 
-<main class="shell settings-shell" data-testid="settings-page">
+<div class="settings-shell" data-testid="settings-page">
+    <PageHeader TitleId="settings-title"
+                Eyebrow="FoundryStudio settings"
+                Title="Model cache"
+                Subtitle="Change only the cache pointer. Existing cached models are never moved or deleted by this setting.">
+        <Toolbar>
+            <a id="settings-back-link" data-testid="settings-back-link" class="button button-secondary" href="/">Back to catalog</a>
+        </Toolbar>
+    </PageHeader>
+
     <section class="card settings-panel" aria-labelledby="settings-title">
-        <p class="eyebrow">FoundryStudio settings</p>
-        <h1 id="settings-title">Model cache</h1>
-        <p class="status">Change only the cache pointer. Existing cached models are never moved or deleted by this setting.</p>
 
         @if (_isLoading)
         {
@@ -13,6 +19,7 @@
         }
         else
         {
+            <div class="settings-grid">
             <div class="field">
                 <label for="settings-cache-dir">Model cache directory</label>
                 <input id="settings-cache-dir"
@@ -43,7 +50,7 @@
                         disabled="@_isSaving">
                     Save cache directory
                 </button>
-                <a id="settings-back-link" data-testid="settings-back-link" class="button button-secondary" href="/">Back to catalog</a>
+            </div>
             </div>
         }
     </section>
@@ -60,7 +67,7 @@
                    ErrorMessage="@_error"
                    OnConfirm="ConfirmSaveAsync"
                    OnCancel="CloseSaveConfirmationAsync" />
-</main>
+</div>
 
 @code {
     private AppSettings? _currentSettings;

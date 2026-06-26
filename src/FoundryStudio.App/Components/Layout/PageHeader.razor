@@ -1,0 +1,34 @@
+<section class="page-header" aria-labelledby="@TitleId">
+    <div class="page-header__identity">
+        <span class="page-header__glyph" aria-hidden="true">
+            @if (Glyph is not null)
+            {
+                @Glyph
+            }
+            else
+            {
+                <span class="foundry-mark"><svg viewBox="0 0 24 24" focusable="false"><path d="M5 6.5h14v11H5z" /><path d="M8 17.5V9h8" /><path d="M8 12.75h6.5" /></svg></span>
+            }
+        </span>
+        <div>
+            <p class="eyebrow">@Eyebrow</p>
+            <h1 id="@TitleId">@Title</h1>
+            <p class="page-header__subtitle">@Subtitle</p>
+        </div>
+    </div>
+    @if (Toolbar is not null)
+    {
+        <div class="page-header__toolbar">
+            @Toolbar
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public string TitleId { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Eyebrow { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Subtitle { get; set; } = string.Empty;
+    [Parameter] public RenderFragment? Glyph { get; set; }
+    [Parameter] public RenderFragment? Toolbar { get; set; }
+}

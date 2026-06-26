@@ -1,11 +1,11 @@
 <Router AppAssembly="@typeof(Routes).Assembly">
     <Found Context="routeData">
         <AppReadyBoundary>
-            <RouteView RouteData="routeData" />
+            <RouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)" />
         </AppReadyBoundary>
     </Found>
     <NotFound>
-        <main class="shell">
+        <main class="not-found-shell">
             <section class="card">
                 <h1>Page not found</h1>
                 <a href="/">Back to FoundryStudio</a>

@@ -10,7 +10,7 @@ namespace FoundryStudio.Foundry;
 ///
 /// Design rules (binding):
 /// - KI-005: heavy native init runs OFF the BlazorWebView dispatcher (<c>Task.Run</c>); the gate is
-///   awaited, never blocked. There is NO <c>.Result</c>/<c>.Wait()</c> on the init task anywhere.
+///   awaited, never blocked. Initialization is awaited asynchronously; the UI thread is never blocked on the init task.
 /// - KI-007 #4: a faulted/canceled init is NOT memoized forever — the next <see cref="ReadyAsync"/>
 ///   retries instead of returning a permanently dead task.
 /// </summary>

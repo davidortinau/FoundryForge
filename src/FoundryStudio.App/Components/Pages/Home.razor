@@ -2,22 +2,18 @@
 @inject IFoundryCatalogService CatalogService
 @inject ISettingsService SettingsService
 
-<main class="shell catalog-shell" data-testid="catalog-page">
-    <section class="catalog-hero" aria-labelledby="catalog-title">
-        <p class="eyebrow">Foundry Local catalog</p>
-        <div class="catalog-hero__heading">
-            <div>
-                <h1 id="catalog-title">Browse models</h1>
-                <p class="status">Install, load, unload, and safely manage Foundry Local models.</p>
-            </div>
-            <div class="catalog-hero__actions">
-                <a id="catalog-settings-link" data-testid="settings-link" class="button button-secondary" href="/settings">Settings</a>
-                <button id="catalog-refresh" type="button" class="button button-secondary" @onclick="RefreshCatalogAsync" disabled="@IsBusy">
-                    Refresh catalog
-                </button>
-            </div>
-        </div>
-    </section>
+<div class="catalog-shell" data-testid="catalog-page">
+    <PageHeader TitleId="catalog-title"
+                Eyebrow="Foundry Local catalog"
+                Title="Browse models"
+                Subtitle="Install, load, and safely manage Foundry Local models.">
+        <Toolbar>
+            <a id="catalog-settings-link" data-testid="settings-link" class="button button-secondary" href="/settings">Settings</a>
+            <button id="catalog-refresh" type="button" class="button button-secondary" @onclick="RefreshCatalogAsync" disabled="@IsBusy">
+                Refresh catalog
+            </button>
+        </Toolbar>
+    </PageHeader>
 
     @if (_state.Status == CatalogViewState.CatalogStatus.Loading)
     {
@@ -100,7 +96,7 @@
         <section class="catalog-summary" aria-label="Catalog result summary">
             @if (_state.IsShowingCurated)
             {
-                <p class="curated-banner" data-testid="curated-banner">Recommended - FoundryStudio-curated, not a quality ranking</p>
+                <p class="curated-banner" data-testid="curated-banner">Recommended — curated by FoundryStudio, not a quality ranking</p>
             }
             <p class="loaded-summary" data-testid="loaded-indicator" aria-live="polite">
                 @LoadedSummary
@@ -114,7 +110,10 @@
         @if (_state.Status == CatalogViewState.CatalogStatus.Empty)
         {
             <section class="catalog-state card" data-testid="catalog-empty" role="status" aria-live="polite" aria-label="No matching catalog models">
-                <h2>No models match your filters</h2>
+                <span class="foundry-mark catalog-empty__mark" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false"><path d="M5 6.5h14v11H5z" /><path d="M8 17.5V9h8" /><path d="M8 12.75h6.5" /></svg>
+                </span>
+                <h2>Choose your first model</h2>
                 <p class="status">Try a different search, broaden the facets, or reset to the curated default.</p>
                 <button id="catalog-reset" type="button" class="button" @onclick="ResetCatalogAsync">Reset filters</button>
             </section>
@@ -123,7 +122,7 @@
         {
             <section class="catalog-group" data-testid="group-cached" aria-labelledby="group-cached-title">
                 <div class="catalog-group__header">
-                    <h2 id="group-cached-title" data-testid="group-label">Installed / cached</h2>
+                    <h2 id="group-cached-title" data-testid="group-label"><span>Installed / cached</span>Ready on this Mac</h2>
                     <span data-testid="group-count" aria-live="polite">@_state.VisibleCached.Count.ToString("N0")</span>
                 </div>
                 @if (_state.VisibleCached.Count == 0)
@@ -150,7 +149,7 @@
 
             <section class="catalog-group" data-testid="group-available" aria-labelledby="group-available-title">
                 <div class="catalog-group__header">
-                    <h2 id="group-available-title" data-testid="group-label">Available to download</h2>
+                    <h2 id="group-available-title" data-testid="group-label"><span>Available to download</span>Cast to local cache</h2>
                     <span data-testid="group-count" aria-live="polite">@_state.VisibleAvailable.Count.ToString("N0")</span>
                 </div>
                 @if (_state.VisibleAvailable.Count == 0)
@@ -187,7 +186,7 @@
                    ErrorMessage="@_deleteError"
                    OnConfirm="ConfirmDeleteAsync"
                    OnCancel="CloseDeleteDialogAsync" />
-</main>
+</div>
 
 @code {
     private readonly CatalogViewState _state = new();
