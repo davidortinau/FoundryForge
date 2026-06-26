@@ -14,9 +14,9 @@ public interface IFoundryCatalogService
 
     Task<IReadOnlyList<ModelInfo>> ListLoadedAsync(CancellationToken cancellationToken = default);
 
-    Task DownloadAsync(string alias, IProgress<double>? progress = null, CancellationToken cancellationToken = default);
+    Task DownloadAsync(string alias, IProgress<double>? progress = null, string? variantId = null, CancellationToken cancellationToken = default);
 
-    Task LoadAsync(string alias, CancellationToken cancellationToken = default);
+    Task LoadAsync(string alias, string? variantId = null, CancellationToken cancellationToken = default);
 
     Task UnloadAsync(string alias, CancellationToken cancellationToken = default);
 

@@ -69,6 +69,12 @@ button:disabled {
   color: CanvasText;
 }
 
+.button-danger {
+  border-color: color-mix(in srgb, CanvasText 20%, red 55%);
+  background: color-mix(in srgb, CanvasText 82%, red 18%);
+  color: Canvas;
+}
+
 .catalog-shell {
   display: grid;
   gap: 18px;
@@ -84,6 +90,20 @@ button:disabled {
   align-items: flex-start;
   justify-content: space-between;
   gap: 18px;
+}
+
+.catalog-hero__actions,
+.settings-actions,
+.model-management__actions,
+.confirm-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+a.button {
+  text-decoration: none;
 }
 
 .catalog-controls {
@@ -160,6 +180,15 @@ button:disabled {
   font-weight: 650;
 }
 
+.loaded-summary {
+  margin: 0;
+  border: 1px solid color-mix(in srgb, CanvasText 20%, Highlight 35%);
+  border-radius: 999px;
+  padding: 0.45rem 0.75rem;
+  background: color-mix(in srgb, Canvas 88%, Highlight 12%);
+  font-weight: 650;
+}
+
 .metadata-muted {
   color: color-mix(in srgb, CanvasText 68%, transparent);
 }
@@ -190,6 +219,12 @@ button:disabled {
   gap: 12px;
 }
 
+.model-card__badges {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+
 .model-card h2 {
   margin: 0;
   overflow-wrap: anywhere;
@@ -214,6 +249,11 @@ button:disabled {
 .cache-badge--not-cached {
   color: CanvasText;
   background: color-mix(in srgb, Canvas 86%, CanvasText 8%);
+}
+
+.cache-badge--loaded {
+  color: color-mix(in srgb, CanvasText 88%, Highlight 35%);
+  background: color-mix(in srgb, Canvas 84%, Highlight 16%);
 }
 
 .model-facts {
@@ -251,6 +291,126 @@ button:disabled {
   padding: 0.3rem 0.55rem;
   background: color-mix(in srgb, CanvasText 8%, Canvas);
   font-weight: 650;
+}
+
+.catalog-group {
+  display: grid;
+  gap: 14px;
+}
+
+.catalog-group__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid color-mix(in srgb, CanvasText 14%, transparent);
+  padding-bottom: 8px;
+}
+
+.catalog-group__header h2 {
+  margin: 0;
+}
+
+.catalog-group__header span {
+  border-radius: 999px;
+  padding: 0.3rem 0.65rem;
+  background: color-mix(in srgb, CanvasText 9%, Canvas);
+  font-weight: 700;
+}
+
+.model-management {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  border-top: 1px solid color-mix(in srgb, CanvasText 12%, transparent);
+  padding-top: 14px;
+}
+
+.model-management__autoload {
+  width: fit-content;
+}
+
+.disk-warning {
+  margin: 0;
+  border: 1px solid color-mix(in srgb, CanvasText 18%, transparent);
+  border-radius: 12px;
+  padding: 0.6rem 0.75rem;
+  background: color-mix(in srgb, CanvasText 7%, Canvas);
+}
+
+.disk-warning--warn {
+  border-color: color-mix(in srgb, CanvasText 18%, orange 62%);
+  background: color-mix(in srgb, Canvas 80%, orange 20%);
+  font-weight: 650;
+}
+
+.download-progress {
+  position: relative;
+  overflow: hidden;
+  min-height: 42px;
+  border: 1px solid color-mix(in srgb, CanvasText 18%, Highlight 40%);
+  border-radius: 12px;
+  background: color-mix(in srgb, CanvasText 8%, Canvas);
+}
+
+.download-progress__bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  min-width: 2rem;
+  background: color-mix(in srgb, Highlight 55%, Canvas 45%);
+  transition: width 140ms ease-out;
+}
+
+.download-progress span {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 0.75rem;
+  font-weight: 800;
+}
+
+.operation-error {
+  margin: 0;
+  border: 1px solid color-mix(in srgb, CanvasText 22%, red 55%);
+  border-radius: 12px;
+  padding: 0.65rem 0.8rem;
+  background: color-mix(in srgb, Canvas 82%, red 18%);
+  color: CanvasText;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: color-mix(in srgb, CanvasText 32%, transparent);
+}
+
+.confirm-dialog {
+  width: min(520px, 100%);
+}
+
+.confirm-dialog h2 {
+  margin: 0 0 10px;
+}
+
+.confirm-dialog__actions {
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+.settings-shell {
+  display: grid;
+  place-items: start center;
+}
+
+.settings-panel {
+  width: min(820px, 100%);
+  box-sizing: border-box;
 }
 
 .catalog-state {

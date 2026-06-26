@@ -50,7 +50,7 @@ public sealed class FoundryChatClient : IChatClient
 
         // Ensure the model is loaded THROUGH the gate (a mutation), then take a generation lease so a
         // concurrent load/unload drains/rejects rather than tearing this stream (Constitution V).
-        await _catalog.LoadAsync(alias, cancellationToken).ConfigureAwait(false);
+        await _catalog.LoadAsync(alias, cancellationToken: cancellationToken).ConfigureAwait(false);
         var model = await _catalog.ResolveModelAsync(alias, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Model '{alias}' not found in the Foundry Local catalog.");
 

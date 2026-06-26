@@ -1,4 +1,5 @@
 @using System.Globalization
+@inject IFoundryCatalogService CatalogService
 
 <article class="model-card"
          data-testid="model-card"
@@ -10,12 +11,23 @@
             <p class="eyebrow" data-testid="card-alias">@DisplayOrUnknown(Model.Alias)</p>
             <h2 id="@_titleId" data-testid="card-displayname">@DisplayOrUnknown(Model.DisplayName)</h2>
         </div>
-        <span class="cache-badge @(Model.IsCached ? "cache-badge--cached" : "cache-badge--not-cached")"
-              data-testid="card-cached-badge"
-              aria-label="@(Model.IsCached ? "Cached model" : "Not cached model")">
-            <span aria-hidden="true">@(Model.IsCached ? "✓" : "○")</span>
-            @(Model.IsCached ? "Cached" : "Not cached")
-        </span>
+        <div class="model-card__badges">
+            <span class="cache-badge @(IsCached ? "cache-badge--cached" : "cache-badge--not-cached")"
+                  data-testid="card-cached-badge"
+                  aria-label="@(IsCached ? "Cached model" : "Not cached model")">
+                <span aria-hidden="true">@(IsCached ? "✓" : "○")</span>
+                @(IsCached ? "Cached" : "Not cached")
+            </span>
+            @if (IsLoaded)
+            {
+                <span class="cache-badge cache-badge--loaded"
+                      data-testid="card-loaded-badge"
+                      aria-label="Loaded model">
+                    <span aria-hidden="true">●</span>
+                    Loaded
+                </span>
+            }
+        </div>
     </header>
 
     <dl class="model-facts">
@@ -56,12 +68,160 @@
             <dd data-testid="card-variants">@FormatVariants(Model.Variants)</dd>
         </div>
     </dl>
+
+    <section class="model-management" aria-label="Manage @DisplayOrUnknown(Model.DisplayName)">
+        @if (VariantSelection.HasVariants)
+        {
+            <div class="field">
+                <label for="@_variantId">Variant</label>
+                <select id="@_variantId"
+                        data-testid="card-variant-select"
+                        value="@VariantSelection.EffectiveVariantId"
+                        @onchange="OnVariantChangedAsync"
+                        disabled="@Operation.IsWorking">
+                    @foreach (var variant in Model.Variants)
+                    {
+                        <option value="@variant.VariantId">@FormatVariant(variant)</option>
+                    }
+                </select>
+            </div>
+        }
+        else
+        {
+            <p class="metadata-muted" data-testid="card-variant-select">No variants reported.</p>
+        }
+
+        @if (!IsCached)
+        {
+            @if (DiskFitMessage is { } diskFitMessage)
+            {
+                <p id="@_diskFitId"
+                   class="disk-warning @(DiskFitIsWarning ? "disk-warning--warn" : string.Empty)"
+                   data-testid="card-diskfit"
+                   role="@(DiskFitIsWarning ? "status" : null)">
+                    @diskFitMessage
+                </p>
+            }
+
+            <label class="field-checkbox model-management__autoload" for="@_autoloadId">
+                <input id="@_autoloadId"
+                       type="checkbox"
+                       data-testid="card-autoload"
+                       checked="@Operation.AutoLoadAfterDownload"
+                       @onchange="OnAutoLoadChangedAsync"
+                       disabled="@Operation.IsWorking" />
+                <span>Auto-load after download</span>
+            </label>
+
+            @if (Operation.Phase is ModelOpPhase.Downloading or ModelOpPhase.Cancelling)
+            {
+                <div class="download-progress"
+                     data-testid="card-download-progress"
+                     role="progressbar"
+                     aria-label="Download progress for @DisplayOrUnknown(Model.DisplayName)"
+                     aria-valuemin="0"
+                     aria-valuemax="100"
+                     aria-valuenow="@ProgressAriaValue"
+                     aria-busy="@(Operation.ProgressPercent is null ? "true" : "false")">
+                    <div class="download-progress__bar" style="width: @ProgressWidth"></div>
+                    <span>@ProgressLabel</span>
+                </div>
+                <button id="@_cancelId"
+                        type="button"
+                        class="button button-secondary"
+                        data-testid="card-download-cancel"
+                        @onclick="CancelDownloadAsync"
+                        disabled="@(Operation.Phase == ModelOpPhase.Cancelling)">
+                    @(Operation.Phase == ModelOpPhase.Cancelling ? "Cancelling…" : "Cancel")
+                </button>
+            }
+            else
+            {
+                <button id="@_downloadId"
+                        type="button"
+                        class="button"
+                        data-testid="card-download"
+                        aria-describedby="@_diskFitId"
+                        @onclick="DownloadAsync"
+                        disabled="@Operation.IsWorking">
+                    Download
+                </button>
+            }
+        }
+        else
+        {
+            <div class="model-management__actions">
+                @if (IsLoaded)
+                {
+                    <button id="@_unloadId"
+                            type="button"
+                            class="button button-secondary"
+                            data-testid="card-unload"
+                            @onclick="UnloadAsync"
+                            disabled="@Operation.IsWorking">
+                        @(Operation.Phase == ModelOpPhase.Unloading ? "Unloading…" : "Unload")
+                    </button>
+                }
+                else
+                {
+                    <button id="@_loadId"
+                            type="button"
+                            class="button"
+                            data-testid="card-load"
+                            @onclick="LoadAsync"
+                            disabled="@Operation.IsWorking">
+                        @(Operation.Phase == ModelOpPhase.Loading ? "Loading…" : "Load")
+                    </button>
+                }
+
+                <button id="@_deleteId"
+                        type="button"
+                        class="button button-danger"
+                        data-testid="card-delete"
+                        @onclick="RequestDeleteAsync"
+                        disabled="@Operation.IsWorking">
+                    Delete…
+                </button>
+            </div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Operation.ErrorMessage))
+        {
+            <p class="operation-error"
+               data-testid="@(Operation.Phase == ModelOpPhase.Busy ? "card-busy" : "card-download-error")"
+               role="alert">
+                @Operation.ErrorMessage
+            </p>
+        }
+    </section>
 </article>
 
 @code {
     [Parameter, EditorRequired] public ModelInfo Model { get; set; } = default!;
 
+    [Parameter] public bool IsCached { get; set; }
+
+    [Parameter] public bool IsLoaded { get; set; }
+
+    [Parameter, EditorRequired] public ModelOperationState Operation { get; set; } = default!;
+
+    [Parameter, EditorRequired] public VariantSelectionState VariantSelection { get; set; } = default!;
+
+    [Parameter] public double? FreeDiskGb { get; set; }
+
+    [Parameter] public EventCallback OnMutationCompleted { get; set; }
+
+    [Parameter] public EventCallback<ModelInfo> OnDeleteRequested { get; set; }
+
     private string _titleId = string.Empty;
+    private string _variantId = string.Empty;
+    private string _autoloadId = string.Empty;
+    private string _downloadId = string.Empty;
+    private string _cancelId = string.Empty;
+    private string _loadId = string.Empty;
+    private string _unloadId = string.Empty;
+    private string _deleteId = string.Empty;
+    private string _diskFitId = string.Empty;
 
     private IReadOnlyList<string> CapabilityChips
     {
@@ -91,9 +251,185 @@
         }
     }
 
+    private DiskFitResult? DiskFit => FreeDiskGb is double freeDiskGb
+        ? DiskFitHeuristic.Evaluate(EffectiveDownloadSizeGb, freeDiskGb)
+        : null;
+
+    private double? EffectiveDownloadSizeGb
+    {
+        get
+        {
+            var effectiveVariantId = VariantSelection.EffectiveVariantId;
+            var variantSize = string.IsNullOrWhiteSpace(effectiveVariantId)
+                ? null
+                : Model.Variants.FirstOrDefault(v => string.Equals(v.VariantId, effectiveVariantId, StringComparison.Ordinal))?.SizeGb;
+
+            return variantSize ?? Model.SizeGb;
+        }
+    }
+
+    private bool DiskFitIsWarning => DiskFit?.Fit == FoundryStudio.Core.Models.DiskFit.Warn;
+
+    private string? DiskFitMessage => DiskFit switch
+    {
+        { Fit: FoundryStudio.Core.Models.DiskFit.Warn, MarginGb: { } margin } =>
+            $"May not fit: {FormatSize(FreeDiskGb)} free, {Math.Abs(margin).ToString("0.0", CultureInfo.InvariantCulture)} GB short after download headroom.",
+        { Fit: FoundryStudio.Core.Models.DiskFit.Unknown } => "Size unknown — disk fit cannot be checked.",
+        _ => null,
+    };
+
+    private string? ProgressAriaValue => Operation.ProgressPercent is double value
+        ? Math.Round(value).ToString(CultureInfo.InvariantCulture)
+        : null;
+
+    private string ProgressWidth => Operation.ProgressPercent is double value
+        ? $"{Math.Clamp(value, 0, 100).ToString("0.##", CultureInfo.InvariantCulture)}%"
+        : "0%";
+
+    private string ProgressLabel => Operation.ProgressPercent is double value
+        ? $"{Math.Clamp(value, 0, 100).ToString("0", CultureInfo.InvariantCulture)}%"
+        : "Waiting for progress…";
+
     protected override void OnParametersSet()
     {
-        _titleId = $"model-title-{SanitizeForId(Model.Alias)}";
+        var slug = SanitizeForId(Model.Alias);
+        _titleId = $"model-title-{slug}";
+        _variantId = $"card-variant-{slug}";
+        _autoloadId = $"card-autoload-{slug}";
+        _downloadId = $"card-download-{slug}";
+        _cancelId = $"card-download-cancel-{slug}";
+        _loadId = $"card-load-{slug}";
+        _unloadId = $"card-unload-{slug}";
+        _deleteId = $"card-delete-{slug}";
+        _diskFitId = $"card-diskfit-{slug}";
+    }
+
+    private async Task DownloadAsync()
+    {
+        Operation.Reset();
+        Operation.Phase = ModelOpPhase.Downloading;
+        Operation.Cts = new CancellationTokenSource();
+        await InvokeAsync(StateHasChanged);
+
+        var progress = new Progress<double>(value =>
+        {
+            Operation.ProgressPercent = NormalizeProgress(value);
+            _ = InvokeAsync(StateHasChanged);
+        });
+
+        try
+        {
+            await CatalogService.DownloadAsync(Model.Alias, progress, VariantSelection.EffectiveVariantId, Operation.Cts.Token);
+            if (Operation.AutoLoadAfterDownload && !Operation.Cts.IsCancellationRequested)
+            {
+                Operation.Phase = ModelOpPhase.Loading;
+                await InvokeAsync(StateHasChanged);
+                await CatalogService.LoadAsync(Model.Alias, VariantSelection.EffectiveVariantId, Operation.Cts.Token);
+            }
+
+            Operation.Reset();
+            await OnMutationCompleted.InvokeAsync();
+        }
+        catch (OperationCanceledException)
+        {
+            Operation.Reset();
+            await OnMutationCompleted.InvokeAsync();
+        }
+        catch (ModelBusyException ex)
+        {
+            Operation.Fail(ex.Message, busy: true);
+        }
+        catch (Exception ex)
+        {
+            Operation.Fail($"Operation failed: {ex.Message}");
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Task CancelDownloadAsync()
+    {
+        Operation.Phase = ModelOpPhase.Cancelling;
+        Operation.Cts?.Cancel();
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadAsync()
+    {
+        Operation.Reset();
+        Operation.Phase = ModelOpPhase.Loading;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            await CatalogService.LoadAsync(Model.Alias, VariantSelection.EffectiveVariantId);
+            Operation.Reset();
+            await OnMutationCompleted.InvokeAsync();
+        }
+        catch (ModelBusyException ex)
+        {
+            Operation.Fail(ex.Message, busy: true);
+        }
+        catch (Exception ex)
+        {
+            Operation.Fail($"Load failed: {ex.Message}");
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task UnloadAsync()
+    {
+        Operation.Reset();
+        Operation.Phase = ModelOpPhase.Unloading;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            await CatalogService.UnloadAsync(Model.Alias);
+            Operation.Reset();
+            await OnMutationCompleted.InvokeAsync();
+        }
+        catch (ModelBusyException ex)
+        {
+            Operation.Fail(ex.Message, busy: true);
+        }
+        catch (Exception ex)
+        {
+            Operation.Fail($"Unload failed: {ex.Message}");
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Task RequestDeleteAsync() => OnDeleteRequested.InvokeAsync(Model);
+
+    private Task OnVariantChangedAsync(ChangeEventArgs args)
+    {
+        var value = args.Value?.ToString();
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            VariantSelection.Pin(value);
+        }
+
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task OnAutoLoadChangedAsync(ChangeEventArgs args)
+    {
+        Operation.AutoLoadAfterDownload = args.Value is true;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private static double NormalizeProgress(double value)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return 0;
+        }
+
+        var percent = value <= 1 ? value * 100 : value;
+        return Math.Clamp(percent, 0, 100);
     }
 
     private static string DisplayOrUnknown(string? value) =>

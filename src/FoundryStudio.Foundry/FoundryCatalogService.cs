@@ -35,8 +35,11 @@ public sealed class FoundryCatalogService : IFoundryCatalogService
             : await catalog.ListModelsAsync(cancellationToken).ConfigureAwait(false);
 
         var loadedIds = await LoadedIdsAsync(catalog, cancellationToken).ConfigureAwait(false);
-        var infos = models.Select(m => MapEnriched(m, loadedIds.Contains(m.Info.Id))).ToList();
-        return filter.Apply(infos);
+        // KI-009: when sourced from GetCachedModelsAsync the set IS authoritative-cached — mark IsCached
+        // true and don't re-apply CachedOnly (which could wrongly drop models if info.Cached is unreliable).
+        var effectiveFilter = filter.CachedOnly ? filter with { CachedOnly = false } : filter;
+        var infos = models.Select(m => MapEnriched(m, loadedIds.Contains(m.Info.Id), isCachedOverride: filter.CachedOnly ? true : (bool?)null)).ToList();
+        return effectiveFilter.Apply(infos);
     }
 
     public async Task<ModelInfo?> GetModelAsync(string alias, CancellationToken cancellationToken = default)
@@ -69,7 +72,7 @@ public sealed class FoundryCatalogService : IFoundryCatalogService
         var catalog = await CatalogAsync(cancellationToken).ConfigureAwait(false);
         var loadedIds = await LoadedIdsAsync(catalog, cancellationToken).ConfigureAwait(false);
         var models = await catalog.GetCachedModelsAsync(cancellationToken).ConfigureAwait(false);
-        return models.Select(m => MapEnriched(m, loadedIds.Contains(m.Info.Id))).ToList();
+        return models.Select(m => MapEnriched(m, loadedIds.Contains(m.Info.Id), isCachedOverride: true)).ToList();
     }
 
     public async Task<IReadOnlyList<ModelInfo>> ListLoadedAsync(CancellationToken cancellationToken = default)
@@ -79,19 +82,17 @@ public sealed class FoundryCatalogService : IFoundryCatalogService
         return models.Select(m => MapEnriched(m, isLoaded: true)).ToList();
     }
 
-    public async Task DownloadAsync(string alias, IProgress<double>? progress = null, CancellationToken cancellationToken = default)
+    public async Task DownloadAsync(string alias, IProgress<double>? progress = null, string? variantId = null, CancellationToken cancellationToken = default)
     {
-        var model = await ResolveModelAsync(alias, cancellationToken).ConfigureAwait(false)
-            ?? throw new InvalidOperationException($"Model '{alias}' not found in the Foundry Local catalog.");
+        var model = await ResolveTargetAsync(alias, variantId, cancellationToken).ConfigureAwait(false);
         await model.DownloadAsync(p => progress?.Report(p), cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task LoadAsync(string alias, CancellationToken cancellationToken = default)
+    public async Task LoadAsync(string alias, string? variantId = null, CancellationToken cancellationToken = default)
     {
         await _gate.MutateAsync(alias, MutationPolicy.Drain, async () =>
         {
-            var model = await ResolveModelAsync(alias, cancellationToken).ConfigureAwait(false)
-                ?? throw new InvalidOperationException($"Model '{alias}' not found in the Foundry Local catalog.");
+            var model = await ResolveTargetAsync(alias, variantId, cancellationToken).ConfigureAwait(false);
 
             if (!await model.IsCachedAsync(cancellationToken).ConfigureAwait(false))
             {
@@ -103,6 +104,24 @@ public sealed class FoundryCatalogService : IFoundryCatalogService
                 await model.LoadAsync(cancellationToken).ConfigureAwait(false);
             }
         }, cancellationToken).ConfigureAwait(false);
+    }
+
+    // Resolve the model, honoring a pinned variant (FR-020). An unknown variantId is an honest failure, not
+    // a silent fallback to the default that would mislead the user.
+    private async Task<IModel> ResolveTargetAsync(string alias, string? variantId, CancellationToken cancellationToken)
+    {
+        var model = await ResolveModelAsync(alias, cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException($"Model '{alias}' not found in the Foundry Local catalog.");
+
+        if (variantId is not null)
+        {
+            var variant = model.Variants.FirstOrDefault(v => string.Equals(v.Info.Id, variantId, StringComparison.Ordinal))
+                ?? throw new InvalidOperationException($"Variant '{variantId}' not found for model '{alias}'.");
+            model.SelectVariant(variant);
+            return variant;
+        }
+
+        return model;
     }
 
     public async Task UnloadAsync(string alias, CancellationToken cancellationToken = default)
@@ -119,11 +138,8 @@ public sealed class FoundryCatalogService : IFoundryCatalogService
 
     public async Task DeleteFromCacheAsync(string alias, bool userConfirmed, CancellationToken cancellationToken = default)
     {
-        if (!userConfirmed)
-        {
-            throw new InvalidOperationException(
-                $"Deleting cached model '{alias}' requires explicit user confirmation (protected user data).");
-        }
+        // Constitution IV: the multi-GB model cache is protected user data. No deletion without consent.
+        ConsentGuard.RequireConfirmed(userConfirmed, $"Deleting cached model '{alias}'");
 
         await _gate.MutateAsync(alias, MutationPolicy.Drain, async () =>
         {
@@ -155,7 +171,7 @@ public sealed class FoundryCatalogService : IFoundryCatalogService
 
     // FL IModel.Info (rich metadata) -> Core ModelInfo. Honest nullable mapping: a missing FL field becomes
     // null/empty so the card renders "unknown", never a fabricated value.
-    private static ModelInfo MapEnriched(IModel model, bool isLoaded)
+    private static ModelInfo MapEnriched(IModel model, bool isLoaded, bool? isCachedOverride = null)
     {
         var info = model.Info;
         var capabilities = CapabilityParser.Parse(info.Capabilities, info.InputModalities, info.SupportsToolCalling);
@@ -169,7 +185,7 @@ public sealed class FoundryCatalogService : IFoundryCatalogService
             Task: info.Task ?? string.Empty,
             Provider: info.ProviderType ?? string.Empty,
             Variants: model.Variants.Select(MapVariant).ToList(),
-            IsCached: info.Cached,
+            IsCached: isCachedOverride ?? info.Cached,
             IsLoaded: isLoaded,
             ExecutionProvider: info.Runtime?.ExecutionProvider,
             ContextLength: ToInt(info.ContextLength),

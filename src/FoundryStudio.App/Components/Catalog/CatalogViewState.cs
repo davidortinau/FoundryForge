@@ -32,6 +32,18 @@ public sealed class CatalogViewState
 
     public IReadOnlyList<ModelInfo> Visible { get; private set; } = Array.Empty<ModelInfo>();
 
+    public IReadOnlyList<ModelInfo> VisibleCached { get; private set; } = Array.Empty<ModelInfo>();
+
+    public IReadOnlyList<ModelInfo> VisibleAvailable { get; private set; } = Array.Empty<ModelInfo>();
+
+    public HashSet<string> CachedAliases { get; private set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public HashSet<string> LoadedAliases { get; private set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public Dictionary<string, ModelOperationState> Operations { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly Dictionary<string, VariantSelectionState> _variantSelections = new(StringComparer.OrdinalIgnoreCase);
+
     public CatalogFacets Facets { get; private set; } =
         new(Array.Empty<string>(), Array.Empty<string>(), Array.Empty<Device>());
 
@@ -59,6 +71,8 @@ public sealed class CatalogViewState
         Status = CatalogStatus.Error;
         ErrorMessage = message;
         Visible = Array.Empty<ModelInfo>();
+        VisibleCached = Array.Empty<ModelInfo>();
+        VisibleAvailable = Array.Empty<ModelInfo>();
     }
 
     public void ResetToCuratedDefault()
@@ -71,9 +85,17 @@ public sealed class CatalogViewState
     public void Recompute()
     {
         Facets = CatalogFacets.Derive(AllModels);
-        Visible = IsShowingCurated
+        var filtered = IsShowingCurated
             ? CuratedSelector.Select(AllModels)
-            : Filter.Apply(AllModels);
+            : (Filter.CachedOnly
+                ? (Filter with { CachedOnly = false }).Apply(AllModels).Where(model => CachedAliases.Contains(model.Alias)).ToList()
+                : Filter.Apply(AllModels));
+
+        Visible = filtered;
+
+        var groups = CatalogGrouping.Partition(Visible, CachedAliases);
+        VisibleCached = groups.Cached;
+        VisibleAvailable = groups.Available;
 
         // Empty whenever nothing is visible (no models at all, or no matches, or curated yielded nothing)
         // — never "Populated" over an empty grid.
@@ -82,5 +104,44 @@ public sealed class CatalogViewState
             : CatalogStatus.Populated;
 
         ErrorMessage = null;
+    }
+
+    public void SetAuthoritativeState(IEnumerable<ModelInfo> cachedModels, IEnumerable<ModelInfo> loadedModels)
+    {
+        CachedAliases = cachedModels
+            .Select(m => m.Alias)
+            .Where(alias => !string.IsNullOrWhiteSpace(alias))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        LoadedAliases = loadedModels
+            .Select(m => m.Alias)
+            .Where(alias => !string.IsNullOrWhiteSpace(alias))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    public bool IsCached(ModelInfo model) => CachedAliases.Contains(model.Alias);
+
+    public bool IsLoaded(ModelInfo model) => LoadedAliases.Contains(model.Alias);
+
+    public ModelOperationState GetOperation(ModelInfo model)
+    {
+        if (!Operations.TryGetValue(model.Alias, out var operation))
+        {
+            operation = new ModelOperationState();
+            Operations[model.Alias] = operation;
+        }
+
+        return operation;
+    }
+
+    public VariantSelectionState GetVariantSelection(ModelInfo model)
+    {
+        if (!_variantSelections.TryGetValue(model.Alias, out var selection))
+        {
+            selection = new VariantSelectionState(model.Variants);
+            _variantSelections[model.Alias] = selection;
+        }
+
+        return selection;
     }
 }
