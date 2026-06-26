@@ -97,3 +97,18 @@ Ownership routing:
 - Workaround: none needed for M2. For M3 (cache management UI): trust the GetCachedModelsAsync source (don't re-apply CachedOnly) or verify FL Info.Cached is authoritative for that path.
 - Remove when: M3 verifies FL Info.Cached semantics on the cached-models path.
 - Status: **RESOLVED (M3)**. Fixed two ways: (1) `FoundryCatalogService.BrowseAsync` now strips `CachedOnly` from the effective filter and passes an `isCachedOverride` into `MapEnriched` so the cached-models path doesn't re-drop on `info.Cached`; `ListCachedAsync` passes `isCachedOverride:true`. (2) `CatalogGrouping.Partition` groups the UI by the **authoritative** cached-alias set from `ListCachedAsync` (not the per-model `IsCached` flag) — proven by `CatalogGroupingTests` (a model whose flag disagrees with the set is grouped by the set). Hardware e2e confirmed cached(1)/available(5) grouping with David's pre-cached qwen2.5-0.5b in the Installed/cached section.
+
+### KI-010 — FL streaming emits no token usage; total-tokens shows honest "unknown" (M4)
+- Area: FL integration (Foundry Local SDK 1.2.3 streaming).
+- Symptom: during streaming chat, Foundry Local/Betalgo does NOT emit a `UsageContent`/usage frame, so `metric-total` (total tokens) honestly renders **"unknown"**. TTFT and tokens/sec are still real (measured from stream timing); finish reason IS provided (e.g. `length`→"max-tokens"). This is the honest outcome predicted by research R2 — NOT a bug or fabrication.
+- Workaround: none needed — `FoundryMessageMapper.ExtractUsage` returns null when FL provides nothing and `TokenStatsAccumulator` surfaces "unknown" (no back-computed total). Hardware-verified on qwen2.5-0.5b.
+- Remove when: a future FL build emits streaming usage; then `metric-total` will show the real count with no code change (the extraction already reads `Usage.TotalTokens`).
+- Status: open (informational; honest by design).
+
+### KI-011 — M4 live tool-calling UI deferred (needs tool-capable model + FL↔Betalgo tool bridge)
+- Area: M4 chat scope decision.
+- Symptom: US8 (live tool/function-calling UI) and US9 (structured-output toggle/regenerate) are NOT shipped in the first M4 increment. The MEAI pipeline (`UseFunctionInvocation` + `UseOpenTelemetry`) IS built and `ToolInvocationWiringTests` proves the middleware invokes a real `AIFunction`, but the full MEAI `AITool`→Betalgo `ToolDefinition` translation + FL tool-call-response→`FunctionCallContent` parsing is not wired into the live FL request, and no tool UI ships (no dead UI — Constitution III).
+- Why deferred: end-to-end hardware verification needs a reliably tool-capable model; the only cached model (qwen2.5-0.5b) is too small to emit tool calls reliably, and downloading a larger model unprompted would consume time/bandwidth. Shipping unverified tool UI would violate the honesty constitution.
+- Workaround: n/a — the capability is surfaced as absent, honestly. `Foundry/Tools/ChatTools.cs` (the 2 genuine tools) + the live FL tool bridge + the `chat-tool-activity` UI are the follow-up.
+- Remove when: a follow-up wires the FL tool bridge and hardware-verifies the loop on a tool-capable model.
+- Status: open (deferred follow-up).

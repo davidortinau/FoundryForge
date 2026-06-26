@@ -381,3 +381,61 @@ button:disabled { cursor: not-allowed; opacity: 0.65; transform: none; }
   .field-search { grid-column: auto; }
   .model-facts { grid-template-columns: 1fr; }
 }
+
+.chat-shell { display: grid; gap: var(--fs-space-5); }
+.chat-layout { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: var(--fs-space-5); align-items: start; }
+.chat-sidebar { position: sticky; top: var(--fs-space-5); display: grid; gap: var(--fs-space-4); }
+.chat-sidebar__actions { display: flex; gap: var(--fs-space-2); flex-wrap: wrap; }
+.chat-sidebar__actions--danger { border-top: 1px solid var(--fs-border); padding-top: var(--fs-space-4); }
+.chat-conversations { display: grid; gap: var(--fs-space-2); max-height: 44vh; overflow: auto; padding-right: var(--fs-space-1); }
+.chat-conversation { display: grid; justify-items: start; gap: var(--fs-space-1); min-height: auto; border-color: var(--fs-border); background: var(--fs-surface-raised); color: var(--fs-text); padding: var(--fs-space-3); text-align: left; }
+.chat-conversation.is-active { border-color: var(--fs-accent); background: color-mix(in srgb, var(--fs-accent) 12%, var(--fs-surface)); color: var(--fs-accent-text); }
+.chat-conversation small { color: var(--fs-text-tertiary); font: var(--fs-type-mono); }
+.chat-main { display: grid; gap: var(--fs-space-5); min-width: 0; }
+.chat-state { display: flex; align-items: center; gap: var(--fs-space-4); }
+.chat-state--busy { border-color: var(--fs-warning); background: var(--fs-warning-bg); color: var(--fs-warning); }
+.chat-workbench { display: grid; gap: var(--fs-space-4); min-height: 520px; }
+.chat-messages { display: grid; align-content: start; gap: var(--fs-space-4); min-height: 280px; max-height: 58vh; overflow: auto; padding: var(--fs-space-2); border: 1px solid var(--fs-border); border-radius: var(--fs-radius-lg); background: var(--fs-surface-inset); }
+.chat-empty { margin: auto; text-align: center; }
+.chat-message { display: grid; gap: var(--fs-space-2); max-width: min(760px, 92%); border: 1px solid var(--fs-border); border-radius: var(--fs-radius-lg); padding: var(--fs-space-4); background: var(--fs-surface); box-shadow: var(--fs-elev-card); overflow-wrap: anywhere; }
+.chat-message--user { justify-self: end; border-color: color-mix(in srgb, var(--fs-accent) 36%, var(--fs-border)); background: color-mix(in srgb, var(--fs-accent) 9%, var(--fs-surface)); }
+.chat-message--assistant { justify-self: start; }
+.chat-message[data-streaming="true"] { border-color: color-mix(in srgb, var(--fs-accent) 45%, var(--fs-border)); }
+.chat-message__meta { display: flex; align-items: center; justify-content: space-between; gap: var(--fs-space-2); color: var(--fs-text-tertiary); font: var(--fs-type-label); }
+.chat-message__streaming { border: 1px solid var(--fs-accent); color: var(--fs-accent-text); background: color-mix(in srgb, var(--fs-accent) 10%, transparent); }
+.chat-markdown :last-child,
+.chat-message p:last-child { margin-bottom: 0; }
+.chat-markdown pre,
+.chat-codeblock pre { overflow: auto; border: 1px solid var(--fs-border); border-radius: var(--fs-radius-md); padding: var(--fs-space-3); background: var(--fs-surface-inset); color: var(--fs-text); font: var(--fs-type-mono); }
+.chat-markdown code,
+.chat-codeblock code { font: var(--fs-type-mono); }
+.chat-codeblocks { display: grid; gap: var(--fs-space-3); }
+.chat-codeblock { margin: 0; border: 1px solid var(--fs-border); border-radius: var(--fs-radius-lg); padding: var(--fs-space-3); background: var(--fs-surface-raised); }
+.chat-codeblock figcaption { display: flex; align-items: center; justify-content: space-between; gap: var(--fs-space-2); margin-bottom: var(--fs-space-2); color: var(--fs-text-tertiary); font: var(--fs-type-mono); }
+.chat-code-copy { min-height: 32px; padding: 0 var(--fs-space-3); }
+.chat-awaiting { margin: 0; justify-self: start; border: 1px solid var(--fs-accent); border-radius: var(--fs-radius-pill); padding: var(--fs-space-2) var(--fs-space-3); background: color-mix(in srgb, var(--fs-accent) 10%, var(--fs-surface)); color: var(--fs-accent-text); font: var(--fs-type-label); }
+.chat-metrics { display: flex; flex-wrap: wrap; gap: var(--fs-space-3); margin: calc(-1 * var(--fs-space-2)) 0 0 var(--fs-space-3); color: var(--fs-text-tertiary); font: var(--fs-type-mono); }
+.chat-metrics div { display: inline-flex; gap: var(--fs-space-1); }
+.chat-metrics dt::after { content: ":"; }
+.chat-metrics dd { margin: 0; color: var(--fs-text-secondary); }
+.chat-composer-panel { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--fs-space-3); align-items: end; }
+.chat-composer-panel__actions { display: flex; gap: var(--fs-space-2); align-items: center; justify-content: flex-end; }
+.chat-send { border-color: var(--fs-accent-fill); background: var(--fs-accent-fill); color: var(--fs-text-inverse); }
+.field textarea { width: 100%; min-height: 42px; border: 1px solid var(--fs-border-strong); border-radius: var(--fs-radius-sm); padding: var(--fs-space-3); background: var(--fs-surface-raised); color: var(--fs-text); font: var(--fs-type-body); resize: vertical; }
+textarea:focus-visible { outline: 3px solid var(--fs-accent-ring); outline-offset: 2px; }
+.chat-settings-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 1fr); gap: var(--fs-space-4); }
+.chat-system-card { min-width: 0; }
+.chat-params-card,
+.chat-context-card { display: grid; gap: var(--fs-space-3); }
+.chat-params-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--fs-space-3); }
+.chat-context { display: grid; gap: var(--fs-space-2); color: var(--fs-text-secondary); }
+.chat-context p { margin: 0; }
+.chat-context__warn { border: 1px solid var(--fs-warning); border-radius: var(--fs-radius-md); padding: var(--fs-space-3); background: var(--fs-warning-bg); color: var(--fs-warning); font: var(--fs-type-label); }
+
+@media (max-width: 920px) {
+  .chat-layout,
+  .chat-settings-grid,
+  .chat-composer-panel { grid-template-columns: 1fr; }
+  .chat-sidebar { position: static; }
+  .chat-message { max-width: 100%; }
+}

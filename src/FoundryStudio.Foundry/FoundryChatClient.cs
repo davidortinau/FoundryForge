@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using FoundryStudio.Core.Abstractions;
 using FoundryStudio.Foundry.Internal;
+using Microsoft.AI.Foundry.Local;
 using Microsoft.Extensions.AI;
 
 namespace FoundryStudio.Foundry;
@@ -56,11 +57,23 @@ public sealed class FoundryChatClient : IChatClient
 
         await using var lease = await _gate.BeginGenerationAsync(alias, cancellationToken).ConfigureAwait(false);
         var chatClient = await model.GetChatClientAsync(cancellationToken).ConfigureAwait(false);
+        ApplyInferenceSettings(chatClient, options);
         var foundryMessages = FoundryMessageMapper.ToFoundryMessages(messages);
 
-        // TODO(M4): map ChatOptions (temperature/max tokens; tools + response_format as BEST-EFFORT per M0d) into the request.
+        int? totalTokens = null;
+        int? outputTokens = null;
+        string? finishReason = null;
+
         await foreach (var chunk in chatClient.CompleteChatStreamingAsync(foundryMessages, cancellationToken).ConfigureAwait(false))
         {
+            if (FoundryMessageMapper.ExtractUsage(chunk) is { } usage)
+            {
+                totalTokens = usage.Total ?? totalTokens;
+                outputTokens = usage.Output ?? outputTokens;
+            }
+
+            finishReason = FoundryMessageMapper.ExtractFinishReason(chunk) ?? finishReason;
+
             var token = FoundryMessageMapper.ExtractToken(chunk); // KI-007 #2: empty-Choices guard
             if (string.IsNullOrEmpty(token))
             {
@@ -69,7 +82,72 @@ public sealed class FoundryChatClient : IChatClient
 
             yield return new ChatResponseUpdate(ChatRole.Assistant, token) { ModelId = model.Id };
         }
+
+        // Honest trailing metrics frame — emit ONLY what FL actually provided. Absent usage/finish-reason
+        // means the UI shows "unknown", never a fabricated total (FR-016, R2).
+        if (totalTokens is not null || outputTokens is not null || finishReason is not null)
+        {
+            var trailing = new ChatResponseUpdate { Role = ChatRole.Assistant, ModelId = model.Id };
+            if (totalTokens is not null || outputTokens is not null)
+            {
+                trailing.Contents.Add(new UsageContent(new UsageDetails
+                {
+                    TotalTokenCount = totalTokens,
+                    OutputTokenCount = outputTokens
+                }));
+            }
+
+            if (finishReason is not null)
+            {
+                trailing.FinishReason = MapFinishReason(finishReason);
+            }
+
+            yield return trailing;
+        }
     }
+
+    /// <summary>
+    /// Apply ONLY the four Foundry-Local-honored inference params (US5, FR-019). We deliberately never set
+    /// <c>TopK</c>/<c>RandomSeed</c>/<c>PresencePenalty</c> — those properties exist on the settings object but
+    /// FL does not honor them, so surfacing/setting them would be a fabricated control (Constitution III).
+    /// </summary>
+    private static void ApplyInferenceSettings(OpenAIChatClient chatClient, ChatOptions? options)
+    {
+        if (options is null)
+        {
+            return;
+        }
+
+        var settings = chatClient.Settings;
+        if (options.Temperature is { } t)
+        {
+            settings.Temperature = t;
+        }
+
+        if (options.MaxOutputTokens is { } max)
+        {
+            settings.MaxTokens = max;
+        }
+
+        if (options.TopP is { } topP)
+        {
+            settings.TopP = topP;
+        }
+
+        if (options.FrequencyPenalty is { } freq)
+        {
+            settings.FrequencyPenalty = freq;
+        }
+    }
+
+    private static ChatFinishReason MapFinishReason(string raw) => raw.ToLowerInvariant() switch
+    {
+        "stop" => ChatFinishReason.Stop,
+        "length" => ChatFinishReason.Length,
+        "tool_calls" => ChatFinishReason.ToolCalls,
+        "content_filter" => ChatFinishReason.ContentFilter,
+        _ => new ChatFinishReason(raw)
+    };
 
     public object? GetService(Type serviceType, object? serviceKey = null)
     {

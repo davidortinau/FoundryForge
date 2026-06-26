@@ -1,0 +1,649 @@
+@page "/chat"
+@using System.Globalization
+@using FoundryStudio.Core.Chat
+@using Microsoft.Extensions.AI
+@implements IDisposable
+@inject IChatService ChatService
+@inject IChatHistoryStore HistoryStore
+@inject IFoundryCatalogService CatalogService
+
+<div class="chat-shell" data-testid="chat-page">
+    <PageHeader TitleId="chat-title"
+                Eyebrow="Local chat"
+                Title="Chat with a loaded model"
+                Subtitle="Stream replies in-process from Foundry Local. Every token and metric shown comes from the real stream.">
+        <Toolbar>
+            <p class="loaded-summary" data-testid="chat-active-model" aria-live="polite">@ActiveModelSummary</p>
+        </Toolbar>
+    </PageHeader>
+
+    <div class="chat-layout">
+        <aside class="chat-sidebar card" aria-label="Chat conversations and controls">
+            <div class="chat-sidebar__actions">
+                <button type="button" class="button" data-testid="chat-new" @onclick="NewChatAsync" disabled="@IsStreaming">New chat</button>
+                <button type="button" class="button button-secondary" data-testid="chat-duplicate" @onclick="DuplicateChatAsync" disabled="@(CurrentSession is null || IsStreaming)">Duplicate</button>
+            </div>
+
+            <nav class="chat-conversations" data-testid="chat-conversations" aria-label="Saved conversations">
+                @if (_sessions.Count == 0)
+                {
+                    <p class="status">No conversations saved yet.</p>
+                }
+                else
+                {
+                    @foreach (var session in _sessions)
+                    {
+                        <button type="button"
+                                class="chat-conversation @(CurrentSession?.Id == session.Id ? "is-active" : string.Empty)"
+                                aria-current="@(CurrentSession?.Id == session.Id ? "page" : null)"
+                                @onclick="() => SelectSessionAsync(session.Id)"
+                                disabled="@IsStreaming">
+                            <span>@session.Title</span>
+                            <small>@session.UpdatedAt.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</small>
+                        </button>
+                    }
+                }
+            </nav>
+
+            <div class="chat-sidebar__actions chat-sidebar__actions--danger" aria-label="Conversation destructive actions">
+                <button type="button" class="button button-secondary" data-testid="chat-clear" @onclick="OpenClearDialogAsync" disabled="@(CurrentSession is null || IsStreaming)">Clear messages…</button>
+                <button type="button" class="button button-secondary" data-testid="chat-delete" @onclick="OpenDeleteDialogAsync" disabled="@(CurrentSession is null || IsStreaming)">Delete chat…</button>
+            </div>
+        </aside>
+
+        <main class="chat-main" aria-labelledby="chat-title">
+            @if (!string.IsNullOrWhiteSpace(_busyMessage))
+            {
+                <section class="chat-state chat-state--busy card" data-testid="chat-busy" role="alert">
+                    <strong>Model state changed.</strong>
+                    <p>@_busyMessage</p>
+                </section>
+            }
+
+            @if (ActiveModel is null)
+            {
+                <section class="chat-state card" data-testid="chat-gate" aria-labelledby="chat-gate-title">
+                    <span class="foundry-mark" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M5 6.5h14v11H5z" /><path d="M8 17.5V9h8" /><path d="M8 12.75h6.5" /></svg></span>
+                    <div>
+                        <h2 id="chat-gate-title">A model must be loaded before chat can start.</h2>
+                        <p class="status">Load a local model through the existing tempering path, then the composer will become available.</p>
+                    </div>
+                    <button type="button" class="button" data-testid="chat-gate-load" @onclick="LoadOnDemandAsync" disabled="@_isLoadingModel">
+                        @(_isLoadingModel ? "Loading model…" : "Load a model")
+                    </button>
+                </section>
+            }
+
+            <section class="chat-workbench card" aria-label="Conversation workbench">
+                <div class="chat-messages" data-testid="chat-messages" aria-label="Conversation messages">
+                    @if (CurrentSession?.Messages.Count > 0)
+                    {
+                        @foreach (var message in CurrentSession.Messages.Where(m => m.Role is ChatTurnRole.User or ChatTurnRole.Assistant))
+                        {
+                            <MessageBubble Role="@message.Role" Content="@message.Content" />
+                            @if (message.Role == ChatTurnRole.Assistant && message.Metrics is not null)
+                            {
+                                <MetricsRow Metrics="@message.Metrics" />
+                            }
+                        }
+                    }
+                    else
+                    {
+                        <p class="chat-empty status">Ask this local model to start a saved conversation.</p>
+                    }
+
+                    @if (IsStreaming)
+                    {
+                        @if (!_hasFirstToken)
+                        {
+                            <p class="chat-awaiting" data-testid="chat-awaiting" role="status" aria-live="polite">pouring response — waiting for the first real token…</p>
+                        }
+                        <MessageBubble Role="ChatTurnRole.Assistant" Content="@_liveAssistantText" IsStreaming="true" />
+                        <MetricsRow Metrics="@_liveMetrics" />
+                    }
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(_streamError))
+                {
+                    <p class="operation-error" data-testid="chat-error" role="alert">@_streamError</p>
+                }
+
+                <div class="chat-composer-panel">
+                    <div class="field chat-composer-field">
+                        <label for="chat-composer-input">Message</label>
+                        <textarea id="chat-composer-input"
+                                  data-testid="chat-composer"
+                                  rows="4"
+                                  placeholder="Ask this local model…"
+                                  value="@_draft"
+                                  @oninput="OnDraftChanged"
+                                  disabled="@(ActiveModel is null || IsStreaming)"></textarea>
+                    </div>
+                    <div class="chat-composer-panel__actions">
+                        @if (IsStreaming)
+                        {
+                            <button type="button" class="button button-secondary" data-testid="chat-stop" @onclick="StopStreamingAsync">Stop</button>
+                        }
+                        else
+                        {
+                            <button type="button" class="button chat-send" data-testid="chat-send" @onclick="SendAsync" disabled="@(!CanSend)">Send</button>
+                        }
+                    </div>
+                </div>
+            </section>
+
+            <section class="chat-settings-grid" aria-label="Chat prompt and inference settings">
+                <div class="card chat-system-card">
+                    <div class="field">
+                        <label for="chat-system-prompt-input">System prompt</label>
+                        <textarea id="chat-system-prompt-input"
+                                  data-testid="chat-system-prompt"
+                                  rows="5"
+                                  value="@(CurrentSession?.SystemPrompt ?? string.Empty)"
+                                  @onchange="OnSystemPromptChangedAsync"
+                                  disabled="@(CurrentSession is null || IsStreaming)"
+                                  placeholder="Optional instructions for this conversation"></textarea>
+                    </div>
+                </div>
+
+                <div class="card chat-params-card" aria-label="Supported inference parameters">
+                    <p class="eyebrow">Inference parameters</p>
+                    <div class="chat-params-grid">
+                        <div class="field">
+                            <label for="param-temperature-input">Temperature</label>
+                            <input id="param-temperature-input" data-testid="param-temperature" type="number" min="0" max="2" step="0.1" value="@FormatDouble(CurrentParameters.Temperature)" @onchange="OnTemperatureChangedAsync" disabled="@(CurrentSession is null || IsStreaming)" />
+                        </div>
+                        <div class="field">
+                            <label for="param-max-tokens-input">Max tokens</label>
+                            <input id="param-max-tokens-input" data-testid="param-max-tokens" type="number" min="1" step="1" value="@FormatInt(CurrentParameters.MaxOutputTokens)" @onchange="OnMaxTokensChangedAsync" disabled="@(CurrentSession is null || IsStreaming)" />
+                        </div>
+                        <div class="field">
+                            <label for="param-top-p-input">Top-p</label>
+                            <input id="param-top-p-input" data-testid="param-top-p" type="number" min="0" max="1" step="0.05" value="@FormatDouble(CurrentParameters.TopP)" @onchange="OnTopPChangedAsync" disabled="@(CurrentSession is null || IsStreaming)" />
+                        </div>
+                        <div class="field">
+                            <label for="param-frequency-penalty-input">Frequency penalty</label>
+                            <input id="param-frequency-penalty-input" data-testid="param-frequency-penalty" type="number" min="-2" max="2" step="0.1" value="@FormatDouble(CurrentParameters.FrequencyPenalty)" @onchange="OnFrequencyPenaltyChangedAsync" disabled="@(CurrentSession is null || IsStreaming)" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card chat-context-card">
+                    <p class="eyebrow">Context window</p>
+                    <div class="chat-context" data-testid="chat-context" aria-label="Estimated context window usage">
+                        @if (ContextEstimate.IsUnknown)
+                        {
+                            <p data-testid="chat-context-unknown">Estimate: about @ContextEstimate.UsedTokensEstimate.ToString("N0", CultureInfo.CurrentCulture) tokens used; limit unknown for this model.</p>
+                        }
+                        else
+                        {
+                            <p>Estimate: about @ContextEstimate.UsedTokensEstimate.ToString("N0", CultureInfo.CurrentCulture) of @ContextEstimate.ContextLength!.Value.ToString("N0", CultureInfo.CurrentCulture) tokens used (@FormatPercent(ContextEstimate.Fraction)).</p>
+                        }
+                        @if (ContextEstimate.IsWarn)
+                        {
+                            <p class="chat-context__warn" data-testid="chat-context-warn" role="status">Near the estimated limit — older turns may fall out of context.</p>
+                        }
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <ConfirmDialog IsOpen="@(_confirmAction is not null)"
+                   Eyebrow="Chat history"
+                   Title="@ConfirmTitle"
+                   Message="@ConfirmMessage"
+                   ConfirmText="@ConfirmText"
+                   BusyText="Working…"
+                   IsBusy="@_confirmBusy"
+                   ErrorMessage="@_confirmError"
+                   OnConfirm="ConfirmDestructiveAsync"
+                   OnCancel="CloseConfirmDialogAsync" />
+</div>
+
+@code {
+    private const string DefaultLoadAlias = "qwen2.5-0.5b";
+
+    private IReadOnlyList<ChatSession> _sessions = Array.Empty<ChatSession>();
+    private ChatSession? CurrentSession { get; set; }
+    private ModelInfo? ActiveModel { get; set; }
+    private string _draft = string.Empty;
+    private string _liveAssistantText = string.Empty;
+    private GenerationMetrics? _liveMetrics;
+    private bool _hasFirstToken;
+    private bool _isStreaming;
+    private bool _isLoadingModel;
+    private string? _busyMessage;
+    private string? _streamError;
+    private CancellationTokenSource? _streamCts;
+    private ConfirmAction? _confirmAction;
+    private bool _confirmBusy;
+    private string? _confirmError;
+
+    private enum ConfirmAction { Clear, Delete }
+
+    private bool IsStreaming => _isStreaming;
+
+    private bool CanSend => ActiveModel is not null && !IsStreaming && !string.IsNullOrWhiteSpace(_draft);
+
+    private InferenceParameters CurrentParameters => CurrentSession?.Parameters ?? InferenceParameters.Defaults;
+
+    private string ActiveModelSummary => ActiveModel is null ? "Loaded: none" : $"Loaded: {DisplayName(ActiveModel)}";
+
+    private string ConfirmTitle => _confirmAction switch
+    {
+        ConfirmAction.Clear => "Clear conversation messages?",
+        ConfirmAction.Delete => "Delete conversation?",
+        _ => string.Empty
+    };
+
+    private string ConfirmText => _confirmAction switch
+    {
+        ConfirmAction.Clear => "Clear messages",
+        ConfirmAction.Delete => "Delete chat",
+        _ => "Confirm"
+    };
+
+    private string ConfirmMessage => CurrentSession is null
+        ? string.Empty
+        : _confirmAction switch
+        {
+            ConfirmAction.Clear => $"Clear all messages in '{CurrentSession.Title}'? This cannot be undone.",
+            ConfirmAction.Delete => $"Delete conversation '{CurrentSession.Title}'? This cannot be undone.",
+            _ => string.Empty
+        };
+
+    private ContextWindowEstimate ContextEstimate
+    {
+        get
+        {
+            var used = 0;
+            if (!string.IsNullOrWhiteSpace(CurrentSession?.SystemPrompt))
+            {
+                used += ContextWindowEstimator.ApproximateTokens(CurrentSession.SystemPrompt);
+            }
+
+            if (CurrentSession is not null)
+            {
+                used += CurrentSession.Messages.Sum(m => ContextWindowEstimator.ApproximateTokens(m.Content));
+            }
+
+            if (IsStreaming)
+            {
+                used += ContextWindowEstimator.ApproximateTokens(_liveAssistantText);
+            }
+
+            return ContextWindowEstimator.Estimate(used, ActiveModel?.ContextLength);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshLoadedModelAsync();
+        await RefreshSessionsAsync();
+        if (CurrentSession is null)
+        {
+            await NewChatAsync();
+        }
+    }
+
+    private async Task RefreshLoadedModelAsync()
+    {
+        try
+        {
+            var loaded = await CatalogService.ListLoadedAsync();
+            ActiveModel = loaded.OrderBy(m => m.DisplayName, StringComparer.OrdinalIgnoreCase).FirstOrDefault();
+            _busyMessage = null;
+        }
+        catch (Exception ex)
+        {
+            ActiveModel = null;
+            _busyMessage = $"Loaded model state could not be read: {ex.Message}";
+        }
+    }
+
+    private async Task RefreshSessionsAsync()
+    {
+        _sessions = await HistoryStore.ListAsync();
+        _sessions = _sessions.OrderByDescending(s => s.UpdatedAt).ToList();
+        if (CurrentSession is not null)
+        {
+            CurrentSession = _sessions.FirstOrDefault(s => s.Id == CurrentSession.Id) ?? CurrentSession;
+        }
+        else
+        {
+            CurrentSession = _sessions.FirstOrDefault();
+        }
+    }
+
+    private async Task NewChatAsync()
+    {
+        var now = DateTimeOffset.UtcNow;
+        CurrentSession = ChatSession.New(now);
+        await HistoryStore.SaveAsync(CurrentSession);
+        await RefreshSessionsAsync();
+    }
+
+    private async Task DuplicateChatAsync()
+    {
+        if (CurrentSession is null)
+        {
+            return;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        CurrentSession = CurrentSession with
+        {
+            Id = Guid.NewGuid().ToString("n"),
+            Title = $"Copy of {CurrentSession.Title}",
+            CreatedAt = now,
+            UpdatedAt = now,
+            Messages = CurrentSession.Messages.ToList()
+        };
+        await HistoryStore.SaveAsync(CurrentSession);
+        await RefreshSessionsAsync();
+    }
+
+    private async Task SelectSessionAsync(string id)
+    {
+        if (IsStreaming)
+        {
+            return;
+        }
+
+        CurrentSession = await HistoryStore.GetAsync(id) ?? CurrentSession;
+        _draft = string.Empty;
+        _streamError = null;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadOnDemandAsync()
+    {
+        _isLoadingModel = true;
+        _busyMessage = null;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            var cached = await CatalogService.ListCachedAsync();
+            var target = cached.OrderBy(m => m.DisplayName, StringComparer.OrdinalIgnoreCase).FirstOrDefault()?.Alias ?? DefaultLoadAlias;
+            await CatalogService.LoadAsync(target);
+            await RefreshLoadedModelAsync();
+        }
+        catch (ModelBusyException ex)
+        {
+            _busyMessage = $"The model gate is busy: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            _busyMessage = $"A model could not be loaded: {ex.Message}";
+        }
+        finally
+        {
+            _isLoadingModel = false;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void OnDraftChanged(ChangeEventArgs args) => _draft = args.Value?.ToString() ?? string.Empty;
+
+    private async Task SendAsync()
+    {
+        if (!CanSend || CurrentSession is null || ActiveModel is null)
+        {
+            return;
+        }
+
+        await RefreshLoadedModelAsync();
+        if (ActiveModel is null)
+        {
+            _busyMessage = "The model is no longer loaded. Load a model before sending.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var userText = _draft.Trim();
+        _draft = string.Empty;
+        _streamError = null;
+        _busyMessage = null;
+        _liveAssistantText = string.Empty;
+        _liveMetrics = null;
+        _hasFirstToken = false;
+        _isStreaming = true;
+        _streamCts = new CancellationTokenSource();
+        var sentAt = DateTimeOffset.UtcNow;
+        var accumulator = new TokenStatsAccumulator();
+        accumulator.OnSend(sentAt);
+
+        CurrentSession = AddMessage(CurrentSession, new ChatMessageRecord(ChatTurnRole.User, userText, sentAt));
+        if (CurrentSession.Title == "New chat")
+        {
+            CurrentSession = CurrentSession with { Title = DeriveTitle(userText), UpdatedAt = sentAt };
+        }
+        CurrentSession = CurrentSession with { ModelAlias = ActiveModel.Alias, UpdatedAt = sentAt };
+        await InvokeAsync(StateHasChanged);
+
+        StopReason stopReason = StopReason.Unknown;
+        try
+        {
+            var requestMessages = TranscriptAssembler.Assemble(CurrentSession);
+            var options = CurrentSession.Parameters.ToChatOptions(ActiveModel.Alias);
+            await foreach (var update in ChatService.StreamAsync(requestMessages, options, _streamCts.Token).WithCancellation(_streamCts.Token))
+            {
+                accumulator.OnUpdate(update, DateTimeOffset.UtcNow);
+                stopReason = MapStopReason(update.FinishReason) ?? stopReason;
+                if (!string.IsNullOrEmpty(update.Text))
+                {
+                    _hasFirstToken = true;
+                    _liveAssistantText += update.Text;
+                    _liveMetrics = accumulator.Complete(MapStopReason(update.FinishReason) ?? StopReason.Unknown);
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+        }
+        catch (OperationCanceledException) when (_streamCts.IsCancellationRequested)
+        {
+            stopReason = StopReason.UserCancelled;
+        }
+        catch (ModelBusyException ex)
+        {
+            stopReason = StopReason.Error;
+            _busyMessage = $"The model is busy or was unloaded elsewhere: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            stopReason = StopReason.Error;
+            _streamError = $"Stream stopped with an error. Partial response is preserved. {ex.Message}";
+        }
+        finally
+        {
+            var completedAt = DateTimeOffset.UtcNow;
+            _isStreaming = false;
+            var metrics = accumulator.Complete(stopReason);
+            if (CurrentSession is not null)
+            {
+                CurrentSession = AddMessage(CurrentSession, new ChatMessageRecord(ChatTurnRole.Assistant, _liveAssistantText, completedAt, metrics, stopReason));
+                CurrentSession = CurrentSession with { UpdatedAt = completedAt, ModelAlias = ActiveModel?.Alias ?? CurrentSession.ModelAlias };
+                await HistoryStore.SaveAsync(CurrentSession);
+                await RefreshSessionsAsync();
+            }
+
+            _streamCts?.Dispose();
+            _streamCts = null;
+            _liveAssistantText = string.Empty;
+            _liveMetrics = null;
+            _hasFirstToken = false;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Task StopStreamingAsync()
+    {
+        _streamCts?.Cancel();
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnSystemPromptChangedAsync(ChangeEventArgs args)
+    {
+        if (CurrentSession is null)
+        {
+            return;
+        }
+
+        CurrentSession = CurrentSession with
+        {
+            SystemPrompt = NormalizeOptional(args.Value?.ToString()),
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
+        await SaveCurrentSessionAsync();
+    }
+
+    private Task OnTemperatureChangedAsync(ChangeEventArgs args) => UpdateParametersAsync(CurrentParameters with { Temperature = ParseDouble(args.Value?.ToString()) });
+
+    private Task OnMaxTokensChangedAsync(ChangeEventArgs args) => UpdateParametersAsync(CurrentParameters with { MaxOutputTokens = ParseInt(args.Value?.ToString()) });
+
+    private Task OnTopPChangedAsync(ChangeEventArgs args) => UpdateParametersAsync(CurrentParameters with { TopP = ParseDouble(args.Value?.ToString()) });
+
+    private Task OnFrequencyPenaltyChangedAsync(ChangeEventArgs args) => UpdateParametersAsync(CurrentParameters with { FrequencyPenalty = ParseDouble(args.Value?.ToString()) });
+
+    private async Task UpdateParametersAsync(InferenceParameters parameters)
+    {
+        if (CurrentSession is null)
+        {
+            return;
+        }
+
+        CurrentSession = CurrentSession with { Parameters = parameters, UpdatedAt = DateTimeOffset.UtcNow };
+        await SaveCurrentSessionAsync();
+    }
+
+    private async Task SaveCurrentSessionAsync()
+    {
+        if (CurrentSession is null)
+        {
+            return;
+        }
+
+        await HistoryStore.SaveAsync(CurrentSession);
+        await RefreshSessionsAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Task OpenClearDialogAsync()
+    {
+        _confirmAction = ConfirmAction.Clear;
+        _confirmError = null;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task OpenDeleteDialogAsync()
+    {
+        _confirmAction = ConfirmAction.Delete;
+        _confirmError = null;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task CloseConfirmDialogAsync()
+    {
+        _confirmAction = null;
+        _confirmBusy = false;
+        _confirmError = null;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ConfirmDestructiveAsync()
+    {
+        if (CurrentSession is null || _confirmAction is null)
+        {
+            return;
+        }
+
+        _confirmBusy = true;
+        _confirmError = null;
+        var targetId = CurrentSession.Id;
+        try
+        {
+            if (_confirmAction == ConfirmAction.Clear)
+            {
+                await HistoryStore.ClearMessagesAsync(targetId, userConfirmed: true);
+                CurrentSession = await HistoryStore.GetAsync(targetId) ?? CurrentSession with { Messages = Array.Empty<ChatMessageRecord>(), UpdatedAt = DateTimeOffset.UtcNow };
+            }
+            else
+            {
+                await HistoryStore.DeleteAsync(targetId, userConfirmed: true);
+                CurrentSession = null;
+            }
+
+            _confirmAction = null;
+            _confirmBusy = false;
+            await RefreshSessionsAsync();
+            if (CurrentSession is null)
+            {
+                await NewChatAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _confirmError = ex.Message;
+            _confirmBusy = false;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private static ChatSession AddMessage(ChatSession session, ChatMessageRecord message)
+    {
+        var messages = session.Messages.ToList();
+        messages.Add(message);
+        return session with { Messages = messages, UpdatedAt = message.CreatedAt };
+    }
+
+    private static StopReason? MapStopReason(ChatFinishReason? reason)
+    {
+        if (reason is null)
+        {
+            return null;
+        }
+
+        if (reason == ChatFinishReason.Stop)
+        {
+            return StopReason.Natural;
+        }
+
+        if (reason == ChatFinishReason.Length)
+        {
+            return StopReason.MaxTokens;
+        }
+
+        if (reason == ChatFinishReason.ToolCalls)
+        {
+            return StopReason.ToolCalls;
+        }
+
+        return StopReason.Unknown;
+    }
+
+    private static string DisplayName(ModelInfo model) => string.IsNullOrWhiteSpace(model.DisplayName) ? model.Alias : model.DisplayName;
+
+    private static string DeriveTitle(string text) => text.Length <= 48 ? text : text[..48].TrimEnd() + "…";
+
+    private static string? NormalizeOptional(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static double? ParseDouble(string? value) => double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed) ? parsed : null;
+
+    private static int? ParseInt(string? value) => int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) ? parsed : null;
+
+    private static string FormatDouble(double? value) => value?.ToString("0.###", CultureInfo.InvariantCulture) ?? string.Empty;
+
+    private static string FormatInt(int? value) => value?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
+
+    private static string FormatPercent(double? value) => value is null ? "unknown" : value.Value.ToString("P0", CultureInfo.CurrentCulture);
+
+    public void Dispose()
+    {
+        _streamCts?.Cancel();
+        _streamCts?.Dispose();
+    }
+}

@@ -4,6 +4,7 @@ using Microsoft.Maui.Hosting;
 using Microsoft.Maui.Platforms.MacOS.Essentials;
 using Microsoft.Maui.Platforms.MacOS.Hosting;
 using FoundryStudio.Core.Abstractions;
+using FoundryStudio.Core.Chat;
 using FoundryStudio.Core.Concurrency;
 using FoundryStudio.Core.PostV1;
 using FoundryStudio.Foundry;
@@ -60,6 +61,8 @@ public static class FoundryStudioServiceCollectionExtensions
         // In-process chat: thin IChatClient adapter (no loopback) behind IChatService (M4 middleware seam).
         services.AddSingleton<FoundryChatClient>();
         services.AddSingleton<IChatService, ChatService>();
+        services.AddSingleton<IChatHistoryStore>(_ =>
+            new FileChatHistoryStore(Path.Combine(FileSystem.AppDataDirectory, "chats")));
 
         // Post-v1 honest stubs keep the DI graph stable for M5/M6 (IsSupported == false; operations throw).
         services.AddSingleton<IEmbeddingService, StubEmbeddingService>();

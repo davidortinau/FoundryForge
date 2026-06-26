@@ -35,4 +35,39 @@ internal static class FoundryMessageMapper
         // OpenAI streaming Delta field so a future FL/Betalgo change can't silently produce an empty stream.
         return chunk.Choices[0].Message?.Content ?? chunk.Choices[0].Delta?.Content;
     }
+
+    /// <summary>
+    /// Real usage from a chunk, if the engine provided it (terminal/usage frame). Returns null when absent —
+    /// the caller surfaces "unknown", never a fabricated total (FR-016, R2).
+    /// </summary>
+    public static (int? Total, int? Output)? ExtractUsage(ChatCompletionCreateResponse chunk)
+    {
+        ArgumentNullException.ThrowIfNull(chunk);
+        if (chunk.Usage is null)
+        {
+            return null;
+        }
+
+        var total = chunk.Usage.TotalTokens;
+        var output = chunk.Usage.CompletionTokens;
+        // Betalgo zero-fills TotalTokens on non-usage frames; treat 0 as "not provided".
+        if (total <= 0 && output is null or <= 0)
+        {
+            return null;
+        }
+
+        return (total > 0 ? total : (int?)null, output);
+    }
+
+    /// <summary>The raw finish reason from a chunk (e.g. "stop", "length", "tool_calls"), or null if absent.</summary>
+    public static string? ExtractFinishReason(ChatCompletionCreateResponse chunk)
+    {
+        ArgumentNullException.ThrowIfNull(chunk);
+        if (chunk.Choices is not { Count: > 0 })
+        {
+            return null;
+        }
+
+        return string.IsNullOrWhiteSpace(chunk.Choices[0].FinishReason) ? null : chunk.Choices[0].FinishReason;
+    }
 }

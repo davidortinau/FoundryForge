@@ -135,8 +135,15 @@
       "foundrystudio.core": {
         "type": "Project",
         "dependencies": {
+          "Markdig": "[0.44.0, )",
           "Microsoft.Extensions.AI": "[10.0.1, )"
         }
+      },
+      "Markdig": {
+        "type": "CentralTransitive",
+        "requested": "[0.44.0, )",
+        "resolved": "0.44.0",
+        "contentHash": "X+CYMjcUnh/yO24wOSQxVFLiGqWrrtXJ5M7toHiM1Zk4Fg9UMLN5fkaq6FSOWH+mIprsHHgDMlq3MJhmrXalhg=="
       },
       "Microsoft.ML.OnnxRuntime.Foundry": {
         "type": "CentralTransitive",

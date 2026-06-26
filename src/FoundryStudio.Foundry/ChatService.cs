@@ -15,7 +15,15 @@ public sealed class ChatService : IChatService
 
     public ChatService(FoundryChatClient adapter)
     {
-        _chatClient = adapter; // M4 seam: adapter.AsBuilder().UseFunctionInvocation().UseOpenTelemetry().Build()
+        // M4: build the documented MEAI middleware pipeline. UseFunctionInvocation() is MEAI's real tool
+        // execution middleware (no faked path); UseOpenTelemetry() emits gen-AI semantic-convention spans
+        // (Constitution telemetry gate; no PII). Tools, when present, are supplied per-request via
+        // ChatOptions.Tools.
+        _chatClient = adapter
+            .AsBuilder()
+            .UseFunctionInvocation()
+            .UseOpenTelemetry()
+            .Build();
     }
 
     public IAsyncEnumerable<ChatResponseUpdate> StreamAsync(

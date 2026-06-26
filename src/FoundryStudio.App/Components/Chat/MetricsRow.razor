@@ -1,0 +1,31 @@
+@using System.Globalization
+
+@if (Metrics is not null)
+{
+    <dl class="chat-metrics" data-testid="chat-metrics" aria-label="Generation metrics">
+        <div data-testid="metric-ttft"><dt>TTFT</dt><dd>@FormatDuration(Metrics.TimeToFirstToken)</dd></div>
+        <div data-testid="metric-tps"><dt>Tokens/sec</dt><dd>@FormatRate(Metrics.TokensPerSecond)</dd></div>
+        <div data-testid="metric-total"><dt>Total tokens</dt><dd>@FormatTotal(Metrics.TotalTokens)</dd></div>
+        <div data-testid="metric-stop"><dt>Stop</dt><dd>@FormatStop(Metrics.StopReason)</dd></div>
+    </dl>
+}
+
+@code {
+    [Parameter] public GenerationMetrics? Metrics { get; set; }
+
+    private static string FormatDuration(TimeSpan? value) => value is null ? "unknown" : $"{value.Value.TotalMilliseconds.ToString("0", CultureInfo.CurrentCulture)} ms";
+
+    private static string FormatRate(double? value) => value is null ? "unknown" : value.Value.ToString("0.0", CultureInfo.CurrentCulture);
+
+    private static string FormatTotal(int? value) => value is null ? "unknown" : value.Value.ToString("N0", CultureInfo.CurrentCulture);
+
+    private static string FormatStop(StopReason reason) => reason switch
+    {
+        StopReason.Natural => "natural",
+        StopReason.MaxTokens => "max-tokens",
+        StopReason.ToolCalls => "tool-calls",
+        StopReason.UserCancelled => "user-cancelled",
+        StopReason.Error => "error",
+        _ => "unknown"
+    };
+}
