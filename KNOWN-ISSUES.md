@@ -112,3 +112,10 @@ Ownership routing:
 - Workaround: n/a — the capability is surfaced as absent, honestly. `Foundry/Tools/ChatTools.cs` (the 2 genuine tools) + the live FL tool bridge + the `chat-tool-activity` UI are the follow-up.
 - Remove when: a follow-up wires the FL tool bridge and hardware-verifies the loop on a tool-capable model.
 - Status: open (deferred follow-up).
+
+### KI-012 — FL web service requires a bind URL in Configuration.Web at manager creation (M5)
+- Area: FL integration (Foundry Local SDK 1.2.3).
+- Symptom: `FoundryLocalManager.StartWebServiceAsync` fails with "Web service configuration was not provided" unless `Configuration.Web.Urls` is set when the singleton manager is created (`CreateAsync`). There is no runtime port argument — the bind address is fixed at manager-creation time.
+- Resolution (M5): `FoundryLifecycle` sets `Configuration.Web = new Configuration.WebService { Urls = "http://127.0.0.1:5273" }`. The Server panel shows the ACTUAL bound URL from `manager.Urls` (verbatim), never a fabricated/assumed value. Localhost-only by design; no runtime port control (FL doesn't expose one).
+- Remove when: n/a (documents the required FL configuration). If a configurable port is ever wanted, it requires recreating the singleton manager (out of v1 scope).
+- Status: resolved (M5); informational.

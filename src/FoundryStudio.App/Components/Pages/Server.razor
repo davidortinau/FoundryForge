@@ -1,0 +1,276 @@
+@page "/server"
+@using System.Globalization
+@inject ILocalServerService LocalServer
+@inject IJSRuntime Js
+
+<div class="server-shell" data-testid="server-page">
+    <PageHeader TitleId="server-title"
+                Eyebrow="External OpenAI server"
+                Title="Light the local server"
+                Subtitle="Expose Foundry Local's local OpenAI-compatible server for external tools. FoundryStudio chat stays in-process.">
+        <Toolbar>
+            <button type="button"
+                    class="button @ToggleButtonClass"
+                    data-testid="server-toggle"
+                    aria-label="@ToggleAriaLabel"
+                    aria-pressed="@Status.IsRunning.ToString().ToLowerInvariant()"
+                    disabled="@(!LocalServer.IsSupported || Status.IsBusy)"
+                    @onclick="ToggleServerAsync">
+                @ToggleText
+            </button>
+        </Toolbar>
+    </PageHeader>
+
+    <section class="server-forge card" aria-labelledby="server-forge-title">
+        <div class="server-forge__status">
+            <span class="server-pilot-light @(PilotLightLit ? "is-lit" : string.Empty)"
+                  data-testid="server-pilot-light"
+                  data-state="@StateName"
+                  aria-hidden="true"></span>
+            <div>
+                <p class="eyebrow">Forge state</p>
+                <h2 id="server-forge-title">@ForgeTitle</h2>
+                <p class="server-status-line" data-testid="server-status" role="status" aria-live="polite">
+                    @StateName
+                </p>
+            </div>
+        </div>
+
+        @if (!LocalServer.IsSupported)
+        {
+            <p class="server-note server-note--info" data-testid="server-unsupported" role="note">
+                The local server is not supported by this build or platform.
+            </p>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Status.Message))
+        {
+            <p class="operation-error" data-testid="server-error" role="alert">@Status.Message</p>
+        }
+
+        @if (ShowEndpointEmpty)
+        {
+            <p class="server-note server-note--error" data-testid="server-endpoint-empty" role="alert">
+                Foundry Local reported a start, but did not return a bound endpoint. No endpoint is shown.
+            </p>
+        }
+
+        @if (Status.IsRunning && BaseEndpoint is not null && CopyPayload is not null)
+        {
+            <div class="server-endpoint-card" data-testid="server-endpoint" aria-label="Bound server endpoint">
+                <div>
+                    <p class="eyebrow">Bound URL</p>
+                    <code>@BaseEndpoint</code>
+                    @if (AllEndpoints.Count > 1)
+                    {
+                        <ul class="server-endpoint-card__all" aria-label="All bound URLs">
+                            @foreach (var endpoint in AllEndpoints)
+                            {
+                                <li><code>@endpoint</code></li>
+                            }
+                        </ul>
+                    }
+                </div>
+                <button type="button"
+                        class="button button-secondary"
+                        data-testid="server-endpoint-copy"
+                        aria-label="Copy exact bound server endpoint"
+                        @onclick="CopyEndpointAsync">
+                    @CopyButtonText
+                </button>
+            </div>
+        }
+    </section>
+
+    <section class="server-grid" aria-label="Server facts">
+        <section class="card server-routes" data-testid="server-routes" aria-labelledby="server-routes-title">
+            <p class="eyebrow" data-testid="server-routes-documented-label">Documented OpenAI-compatible surface</p>
+            <h2 id="server-routes-title">Routes external tools can call</h2>
+            <ul>
+                @foreach (var route in ServerEndpoints.DocumentedRoutes)
+                {
+                    <li>
+                        <code>@route.Path</code>
+                        <span>@route.Description</span>
+                        @if (Status.IsRunning && BaseEndpoint is not null)
+                        {
+                            <small>@ServerEndpoints.RouteUrl(BaseEndpoint, route)</small>
+                        }
+                    </li>
+                }
+            </ul>
+        </section>
+
+        <section class="card server-limits" data-testid="server-limitations" aria-labelledby="server-limitations-title">
+            <p class="eyebrow">Plain limits</p>
+            <h2 id="server-limitations-title">What this server is not</h2>
+            <ul>
+                @foreach (var limitation in ServerLimitations.All)
+                {
+                    <li>@limitation</li>
+                }
+            </ul>
+        </section>
+    </section>
+
+    <section class="card server-scope" aria-labelledby="server-scope-title">
+        <div>
+            <p class="eyebrow">Scope</p>
+            <h2 id="server-scope-title">External tools only</h2>
+            <p data-testid="server-scope-note">
+                This server is for external tools only; in-app chat runs in-process and is unaffected.
+            </p>
+        </div>
+
+        @if (RequestLog.Show)
+        {
+            <div data-testid="server-request-log" aria-label="Observed server requests">
+                @if (RequestLog.Entries.Count == 0)
+                {
+                    <p class="status">No observed requests yet.</p>
+                }
+                else
+                {
+                    <ul>
+                        @foreach (var entry in RequestLog.Entries)
+                        {
+                            <li>
+                                <time datetime="@entry.At.ToString("O", CultureInfo.InvariantCulture)">@entry.At.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</time>
+                                <span>@entry.Summary</span>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="server-note server-note--info" data-testid="server-request-log-omitted" role="note">
+                @RequestLog.HonestNote
+            </p>
+        }
+    </section>
+</div>
+
+@code {
+    private ServerStatus Status { get; set; } = ServerStatus.Stopped;
+    private bool _emptyEndpointAfterStart;
+    private string _copyButtonText = "Copy endpoint";
+
+    private RequestLogView RequestLog { get; } = RequestActivityProjection.Project(null);
+
+    private string StateName => Status.State.ToString().ToLowerInvariant();
+    private bool PilotLightLit => ServerStateMachine.PilotLightLit(Status.State);
+    private string? BaseEndpoint => Status.IsRunning ? ServerEndpoints.BaseUrl(Status.Urls) : null;
+    private IReadOnlyList<string> AllEndpoints => Status.IsRunning ? ServerEndpoints.AllBaseUrls(Status.Urls) : Array.Empty<string>();
+    private string? CopyPayload => Status.IsRunning ? ServerEndpoints.CopyPayload(Status.Urls) : null;
+    private bool ShowEndpointEmpty => _emptyEndpointAfterStart && Status.State == ServerState.Error;
+    private string CopyButtonText => _copyButtonText;
+
+    private string ToggleButtonClass => Status.IsRunning ? "button-secondary" : string.Empty;
+    private string ToggleText => Status.State switch
+    {
+        ServerState.Starting => "Lighting server…",
+        ServerState.Running => "Stop server",
+        ServerState.Stopping => "Stopping server…",
+        _ => "Light local server"
+    };
+
+    private string ToggleAriaLabel => Status.IsRunning ? "Stop the local server" : "Start the local server";
+
+    private string ForgeTitle => Status.State switch
+    {
+        ServerState.Starting => "Igniting the server",
+        ServerState.Running => BaseEndpoint is null ? "Server running" : $"Forge lit at {BaseEndpoint}",
+        ServerState.Stopping => "Extinguishing the server",
+        ServerState.Error => "Server needs attention",
+        _ => "Server is stopped"
+    };
+
+    protected override void OnInitialized()
+    {
+        var urls = LocalServer.Urls;
+        Status = LocalServer.IsSupported && urls.Count > 0
+            ? new ServerStatus(ServerState.Running, urls)
+            : ServerStatus.Stopped;
+    }
+
+    private async Task ToggleServerAsync()
+    {
+        if (!LocalServer.IsSupported || Status.IsBusy)
+        {
+            return;
+        }
+
+        if (Status.IsRunning)
+        {
+            await StopServerAsync();
+        }
+        else
+        {
+            await StartServerAsync();
+        }
+    }
+
+    private async Task StartServerAsync()
+    {
+        _emptyEndpointAfterStart = false;
+        _copyButtonText = "Copy endpoint";
+        Status = new ServerStatus(ServerState.Starting, Array.Empty<string>());
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            var urls = await LocalServer.StartAsync();
+            if (ServerEndpoints.BaseUrl(urls) is null)
+            {
+                _emptyEndpointAfterStart = true;
+                Status = new ServerStatus(
+                    ServerState.Error,
+                    Array.Empty<string>(),
+                    "Foundry Local reported a start but returned no bound address.");
+            }
+            else
+            {
+                Status = new ServerStatus(ServerState.Running, urls);
+            }
+        }
+        catch (Exception ex)
+        {
+            Status = new ServerStatus(ServerState.Error, Array.Empty<string>(), ex.Message);
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task StopServerAsync()
+    {
+        _emptyEndpointAfterStart = false;
+        _copyButtonText = "Copy endpoint";
+        Status = new ServerStatus(ServerState.Stopping, Status.Urls);
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            await LocalServer.StopAsync();
+            Status = ServerStatus.Stopped;
+        }
+        catch (Exception ex)
+        {
+            Status = new ServerStatus(ServerState.Error, Array.Empty<string>(), ex.Message);
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task CopyEndpointAsync()
+    {
+        if (CopyPayload is null)
+        {
+            return;
+        }
+
+        await Js.InvokeVoidAsync("foundryStudioClipboard.copy", CopyPayload);
+        _copyButtonText = "Copied exact endpoint";
+    }
+}

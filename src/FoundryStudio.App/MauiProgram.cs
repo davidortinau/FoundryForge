@@ -64,10 +64,11 @@ public static class FoundryStudioServiceCollectionExtensions
         services.AddSingleton<IChatHistoryStore>(_ =>
             new FileChatHistoryStore(Path.Combine(FileSystem.AppDataDirectory, "chats")));
 
-        // Post-v1 honest stubs keep the DI graph stable for M5/M6 (IsSupported == false; operations throw).
+        // Post-v1 honest stubs keep the DI graph stable for M6 (IsSupported == false; operations throw).
         services.AddSingleton<IEmbeddingService, StubEmbeddingService>();
         services.AddSingleton<ITranscriptionService, StubTranscriptionService>();
-        services.AddSingleton<ILocalServerService, StubLocalServerService>();
+        // M5: the real exposed server over the single shared FoundryLocalManager (the only new FL-bound piece).
+        services.AddSingleton<ILocalServerService, LocalServerService>();
 
         // Settings: human-readable JSON in app data; consent-gated, never wiped without confirmation.
         services.AddSingleton<ISettingsService>(_ =>

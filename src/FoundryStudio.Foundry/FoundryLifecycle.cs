@@ -69,6 +69,13 @@ public sealed class FoundryLifecycle : IFoundryLifecycle
             {
                 AppName = "foundrystudio",
                 LogLevel = Microsoft.AI.Foundry.Local.LogLevel.Information,
+                // M5: the exposed local server binds this localhost address (FL has no runtime port arg —
+                // the bind URL is set at manager creation). After StartWebServiceAsync, manager.Urls reports
+                // the ACTUAL bound address, which the Server panel shows verbatim. Localhost-only by design.
+                Web = new Configuration.WebService
+                {
+                    Urls = "http://127.0.0.1:5273",
+                },
             };
 
             if (!FoundryLocalManager.IsInitialized)
