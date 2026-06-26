@@ -27,6 +27,7 @@ Ownership routing:
 - Workaround: verify Blazor-on-AppKit visual state via DOM inspection (`maui devflow webview source`, `Runtime evaluate "document.body.innerHTML"`, computed-style queries) plus a human eyeball; do not rely on `ui screenshot` for WebView content on AppKit.
 - Upstream: not yet filed (David-owned — fix in maui-labs DevFlow: implement WKWebView-layer capture / CDP `Page.captureScreenshot` for the macOS agent).
 - Remove when: DevFlow macOS agent captures the WKWebView layer (native screenshot) or implements CDP `Page.captureScreenshot`.
+- Update (M2): root cause refined — the WKWebView GPU-composited layer is only in the window backing store when the window is FRONTMOST. `ui screenshot`, `screencapture -l <windowid>`, AND CDP `webview Page captureScreenshot` (still "unimplemented") all return blank WebView content for a background-launched app. David's interactive sessions capture fine because his app window is frontmost. Autonomous/background verification uses DOM inspection (`webview source`/`Runtime evaluate`) as the sanctioned evidence path (the M2 catalog-ui.dom contract designs for this). To get pixels: bring the window frontmost (focus) then `ui screenshot`.
 - Status: open
 
 ### KI-002 — DevFlow Agent/Blazor preview.7.26230.1 not on the public feed
@@ -89,3 +90,10 @@ Ownership routing:
 - Workaround: none needed for M1 (shutdown-only, process-global manager).
 - Remove when: M2 hardens the lifecycle dispose path (volatile `_disposed`, dispose under lock, continuation-dispose for late-completing init).
 - Status: open (M2 hardening)
+
+### KI-009 — BrowseAsync(CachedOnly) double-filters on info.Cached (M3 watch)
+- Area: app/FL integration (our code) — from M2 /review. NOT exercised by the M2 UI (which calls BrowseAsync() with no CachedOnly and filters AllModels in-memory).
+- Symptom: BrowseAsync with CachedOnly=true sources from FL GetCachedModelsAsync, then re-applies CatalogFilter.Apply which drops !model.IsCached (mapped from info.Cached). If FL's Info.Cached isn't reliably true for models returned by GetCachedModelsAsync, the cached-only browse could return empty despite cached models existing.
+- Workaround: none needed for M2. For M3 (cache management UI): trust the GetCachedModelsAsync source (don't re-apply CachedOnly) or verify FL Info.Cached is authoritative for that path.
+- Remove when: M3 verifies FL Info.Cached semantics on the cached-models path.
+- Status: open (M3 watch)

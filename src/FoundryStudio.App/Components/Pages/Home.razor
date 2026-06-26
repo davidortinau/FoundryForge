@@ -1,57 +1,216 @@
 @page "/"
-@using FoundryStudio.Core.Abstractions
-@using Microsoft.Extensions.AI
-@inject IChatService ChatService
+@inject IFoundryCatalogService CatalogService
 
-<main class="shell">
-    <section class="card">
-        <p class="eyebrow">M1 foundation</p>
-        <h1 id="home-ready">FoundryStudio</h1>
-        <p class="status">Foundry Local is ready. Catalog, chat, and settings wire in next.</p>
-
-        @* M1 foundation smoke ONLY - proves the in-process IChatService path (DI -> ChatService ->
-           FoundryChatClient -> FL, no loopback socket). The real chat experience is M4. *@
-        <button id="btn-chat-smoke" @onclick="RunChatSmokeAsync" disabled="@_busy">Run in-process chat smoke</button>
-        <p id="chat-progress" class="status">@_progress</p>
-        <pre id="chat-output" class="output">@_output</pre>
+<main class="shell catalog-shell" data-testid="catalog-page">
+    <section class="catalog-hero" aria-labelledby="catalog-title">
+        <p class="eyebrow">Foundry Local catalog</p>
+        <div class="catalog-hero__heading">
+            <div>
+                <h1 id="catalog-title">Browse models</h1>
+                <p class="status">Discover Foundry Local models. M2 is browse-only: nothing downloads, loads, unloads, or chats from this screen.</p>
+            </div>
+            <button id="catalog-refresh" type="button" class="button button-secondary" @onclick="RefreshCatalogAsync" disabled="@IsBusy">
+                Refresh catalog
+            </button>
+        </div>
     </section>
+
+    @if (_state.Status == CatalogViewState.CatalogStatus.Loading)
+    {
+        <section class="catalog-state card" data-testid="catalog-loading" role="status" aria-live="polite" aria-label="Loading catalog">
+            <h2>Loading catalog…</h2>
+            <p class="status">Reading the Foundry Local catalog through the app service.</p>
+        </section>
+    }
+    else if (_state.Status == CatalogViewState.CatalogStatus.Error)
+    {
+        <section class="catalog-state card catalog-state--error" data-testid="catalog-error" role="alert" aria-label="Catalog load failed">
+            <h2>Catalog could not be loaded</h2>
+            <p>@_state.ErrorMessage</p>
+            <button id="catalog-retry" type="button" class="button" @onclick="RefreshCatalogAsync">Retry</button>
+        </section>
+    }
+    else
+    {
+        <section class="catalog-controls card" aria-label="Catalog search, filters, and view controls">
+            <div class="field field-search">
+                <label for="catalog-search">Search models</label>
+                <input id="catalog-search"
+                       type="search"
+                       value="@_state.Filter.SearchText"
+                       @oninput="OnSearchChangedAsync"
+                       placeholder="Alias, display name, or id"
+                       autocomplete="off" />
+            </div>
+
+            <div class="field">
+                <label for="filter-device">Device</label>
+                <select id="filter-device" value="@DeviceFilterValue" @onchange="OnDeviceChangedAsync">
+                    <option value="">All devices</option>
+                    @foreach (var device in _state.Facets.Devices)
+                    {
+                        <option value="@device">@device.ToString().ToUpperInvariant()</option>
+                    }
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="filter-task">Task</label>
+                <select id="filter-task" value="@(_state.Filter.Task ?? string.Empty)" @onchange="OnTaskChangedAsync">
+                    <option value="">All tasks</option>
+                    @foreach (var task in _state.Facets.Tasks)
+                    {
+                        <option value="@task">@task</option>
+                    }
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="filter-provider">Provider</label>
+                <select id="filter-provider" value="@(_state.Filter.Provider ?? string.Empty)" @onchange="OnProviderChangedAsync">
+                    <option value="">All providers</option>
+                    @foreach (var provider in _state.Facets.Providers)
+                    {
+                        <option value="@provider">@provider</option>
+                    }
+                </select>
+            </div>
+
+            <div class="field field-checkbox">
+                <input id="filter-cached"
+                       type="checkbox"
+                       checked="@_state.Filter.CachedOnly"
+                       @onchange="OnCachedOnlyChangedAsync" />
+                <label for="filter-cached">Cached only</label>
+            </div>
+
+            <div class="field">
+                <label for="view-toggle">Catalog view</label>
+                <select id="view-toggle" value="@_state.ViewMode" @onchange="OnViewModeChangedAsync">
+                    <option value="@CatalogViewState.CatalogViewMode.Curated">Curated</option>
+                    <option value="@CatalogViewState.CatalogViewMode.Full">Full catalog</option>
+                </select>
+            </div>
+        </section>
+
+        <section class="catalog-summary" aria-label="Catalog result summary">
+            @if (_state.IsShowingCurated)
+            {
+                <p class="curated-banner" data-testid="curated-banner">Recommended - FoundryStudio-curated, not a quality ranking</p>
+            }
+            <p class="catalog-count" data-testid="catalog-count" aria-live="polite">
+                @_state.Visible.Count.ToString("N0") model@(_state.Visible.Count == 1 ? string.Empty : "s") shown
+                <span class="metadata-muted">from @_state.AllModels.Count.ToString("N0") available</span>
+            </p>
+        </section>
+
+        @if (_state.Status == CatalogViewState.CatalogStatus.Empty)
+        {
+            <section class="catalog-state card" data-testid="catalog-empty" role="status" aria-live="polite" aria-label="No matching catalog models">
+                <h2>No models match your filters</h2>
+                <p class="status">Try a different search, broaden the facets, or reset to the curated default.</p>
+                <button id="catalog-reset" type="button" class="button" @onclick="ResetCatalogAsync">Reset filters</button>
+            </section>
+        }
+        else
+        {
+            <section class="catalog-grid" aria-label="Model catalog results">
+                @foreach (var model in _state.Visible)
+                {
+                    <ModelCard Model="model" />
+                }
+            </section>
+        }
+    }
 </main>
 
 @code {
-    private bool _busy;
-    private string _progress = "Idle.";
-    private string _output = string.Empty;
+    private readonly CatalogViewState _state = new();
 
-    private async Task RunChatSmokeAsync()
+    private bool IsBusy => _state.Status == CatalogViewState.CatalogStatus.Loading;
+
+    private string DeviceFilterValue => _state.Filter.Device?.ToString() ?? string.Empty;
+
+    protected override async Task OnInitializedAsync()
     {
-        _busy = true;
-        _output = string.Empty;
-        _progress = "Loading model + streaming in-process…";
+        await RefreshCatalogAsync();
+    }
+
+    private async Task RefreshCatalogAsync()
+    {
+        _state.SetLoading();
         await InvokeAsync(StateHasChanged);
 
         try
         {
-            var messages = new List<ChatMessage>
-            {
-                new(ChatRole.User, "In one short sentence, why is the sky blue?"),
-            };
-
-            await foreach (var update in ChatService.StreamAsync(messages))
-            {
-                _output += update.Text;
-                await InvokeAsync(StateHasChanged);
-            }
-
-            _progress = "Reply complete.";
+            _state.AllModels = await CatalogService.BrowseAsync();
+            _state.Recompute();
         }
         catch (Exception ex)
         {
-            _progress = $"Chat smoke failed: {ex.Message}";
+            _state.SetError($"Foundry Local catalog could not be loaded: {ex.Message}");
         }
-        finally
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Task ResetCatalogAsync()
+    {
+        _state.ResetToCuratedDefault();
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task OnSearchChangedAsync(ChangeEventArgs args)
+    {
+        var value = args.Value?.ToString();
+        _state.Filter = _state.Filter with { SearchText = value };
+        _state.Recompute();
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task OnDeviceChangedAsync(ChangeEventArgs args)
+    {
+        var value = args.Value?.ToString();
+        var device = Enum.TryParse<Device>(value, ignoreCase: true, out var parsed) ? parsed : (Device?)null;
+        _state.Filter = _state.Filter with { Device = device };
+        _state.Recompute();
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task OnTaskChangedAsync(ChangeEventArgs args)
+    {
+        _state.Filter = _state.Filter with { Task = NormalizeOptional(args.Value?.ToString()) };
+        _state.Recompute();
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task OnProviderChangedAsync(ChangeEventArgs args)
+    {
+        _state.Filter = _state.Filter with { Provider = NormalizeOptional(args.Value?.ToString()) };
+        _state.Recompute();
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task OnCachedOnlyChangedAsync(ChangeEventArgs args)
+    {
+        _state.Filter = _state.Filter with { CachedOnly = args.Value is true };
+        _state.Recompute();
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task OnViewModeChangedAsync(ChangeEventArgs args)
+    {
+        if (Enum.TryParse<CatalogViewState.CatalogViewMode>(args.Value?.ToString(), ignoreCase: true, out var mode))
         {
-            _busy = false;
-            await InvokeAsync(StateHasChanged);
+            _state.ViewMode = mode;
+            _state.Recompute();
         }
+
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private static string? NormalizeOptional(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value;
     }
 }

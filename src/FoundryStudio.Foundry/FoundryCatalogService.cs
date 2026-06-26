@@ -3,14 +3,16 @@ using FoundryStudio.Core.Catalog;
 using FoundryStudio.Core.Models;
 using ICatalog = Microsoft.AI.Foundry.Local.ICatalog;
 using IModel = Microsoft.AI.Foundry.Local.IModel;
+using FlDeviceType = Microsoft.AI.Foundry.Local.DeviceType;
 
 namespace FoundryStudio.Foundry;
 
 /// <summary>
 /// Wraps Foundry Local catalog/model operations behind the FL-free <see cref="IFoundryCatalogService"/>.
-/// Every load/unload/delete routes through the <see cref="IModelStateGate"/> (Constitution V) and cache
-/// deletion requires explicit consent (Constitution IV). Rich per-model metadata (size/variants/device)
-/// is enriched in M2 — M1 establishes the seam and the gate/consent routing.
+/// M2 enriches each model from real FL metadata (<c>IModel.Info</c> + <c>IModel.Variants</c>) into the
+/// Core <see cref="ModelInfo"/> DTO with honest nullable fields. Load/unload/delete still route through the
+/// <see cref="IModelStateGate"/> (Constitution V) and cache deletion requires consent (Constitution IV) —
+/// but M2 is browse-only and triggers none of those.
 /// </summary>
 public sealed class FoundryCatalogService : IFoundryCatalogService
 {
@@ -32,7 +34,8 @@ public sealed class FoundryCatalogService : IFoundryCatalogService
             ? await catalog.GetCachedModelsAsync(cancellationToken).ConfigureAwait(false)
             : await catalog.ListModelsAsync(cancellationToken).ConfigureAwait(false);
 
-        var infos = models.Select(m => MapBasic(m, isCached: filter.CachedOnly)).ToList();
+        var loadedIds = await LoadedIdsAsync(catalog, cancellationToken).ConfigureAwait(false);
+        var infos = models.Select(m => MapEnriched(m, loadedIds.Contains(m.Info.Id))).ToList();
         return filter.Apply(infos);
     }
 
@@ -40,28 +43,40 @@ public sealed class FoundryCatalogService : IFoundryCatalogService
     {
         var catalog = await CatalogAsync(cancellationToken).ConfigureAwait(false);
         var model = await catalog.GetModelAsync(alias, cancellationToken).ConfigureAwait(false);
-        return model is null ? null : MapBasic(model);
+        if (model is null)
+        {
+            return null;
+        }
+
+        var loadedIds = await LoadedIdsAsync(catalog, cancellationToken).ConfigureAwait(false);
+        return MapEnriched(model, loadedIds.Contains(model.Info.Id));
     }
 
     public async Task<IReadOnlyList<ModelVariant>> GetVariantsAsync(string alias, CancellationToken cancellationToken = default)
     {
-        // TODO(M2): map FL model variants (quant/device) via GetModelVariantAsync. M1 returns the empty seam.
-        _ = await GetModelAsync(alias, cancellationToken).ConfigureAwait(false);
-        return Array.Empty<ModelVariant>();
+        var catalog = await CatalogAsync(cancellationToken).ConfigureAwait(false);
+        var model = await catalog.GetModelAsync(alias, cancellationToken).ConfigureAwait(false);
+        if (model is null)
+        {
+            return Array.Empty<ModelVariant>();
+        }
+
+        return model.Variants.Select(MapVariant).ToList();
     }
 
     public async Task<IReadOnlyList<ModelInfo>> ListCachedAsync(CancellationToken cancellationToken = default)
     {
         var catalog = await CatalogAsync(cancellationToken).ConfigureAwait(false);
+        var loadedIds = await LoadedIdsAsync(catalog, cancellationToken).ConfigureAwait(false);
         var models = await catalog.GetCachedModelsAsync(cancellationToken).ConfigureAwait(false);
-        return models.Select(m => MapBasic(m, isCached: true)).ToList();
+        return models.Select(m => MapEnriched(m, loadedIds.Contains(m.Info.Id))).ToList();
     }
 
     public async Task<IReadOnlyList<ModelInfo>> ListLoadedAsync(CancellationToken cancellationToken = default)
     {
         var catalog = await CatalogAsync(cancellationToken).ConfigureAwait(false);
         var models = await catalog.GetLoadedModelsAsync(cancellationToken).ConfigureAwait(false);
-        return models.Select(m => MapBasic(m, isCached: true, isLoaded: true)).ToList();
+        return models.Select(m => MapEnriched(m, isLoaded: true)).ToList();
     }
 
     public async Task DownloadAsync(string alias, IProgress<double>? progress = null, CancellationToken cancellationToken = default)
@@ -73,7 +88,6 @@ public sealed class FoundryCatalogService : IFoundryCatalogService
 
     public async Task LoadAsync(string alias, CancellationToken cancellationToken = default)
     {
-        // Routed through the gate: never load while a generation streams on this model.
         await _gate.MutateAsync(alias, MutationPolicy.Drain, async () =>
         {
             var model = await ResolveModelAsync(alias, cancellationToken).ConfigureAwait(false)
@@ -105,14 +119,12 @@ public sealed class FoundryCatalogService : IFoundryCatalogService
 
     public async Task DeleteFromCacheAsync(string alias, bool userConfirmed, CancellationToken cancellationToken = default)
     {
-        // Constitution IV: the multi-GB model cache is protected user data. No deletion without consent.
         if (!userConfirmed)
         {
             throw new InvalidOperationException(
                 $"Deleting cached model '{alias}' requires explicit user confirmation (protected user data).");
         }
 
-        // Drain through the gate so we never delete out from under an in-flight generation.
         await _gate.MutateAsync(alias, MutationPolicy.Drain, async () =>
         {
             var model = await ResolveModelAsync(alias, cancellationToken).ConfigureAwait(false);
@@ -123,7 +135,6 @@ public sealed class FoundryCatalogService : IFoundryCatalogService
         }, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>Strongly-typed model access for the in-process chat adapter (same Foundry project).</summary>
     internal async Task<IModel?> ResolveModelAsync(string alias, CancellationToken cancellationToken = default)
     {
         var catalog = await CatalogAsync(cancellationToken).ConfigureAwait(false);
@@ -136,16 +147,75 @@ public sealed class FoundryCatalogService : IFoundryCatalogService
         return await manager.GetCatalogAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    // TODO(M2): enrich Device/Task/Provider/SizeGb/Variants from FL model metadata.
-    private static ModelInfo MapBasic(IModel model, bool isCached = false, bool isLoaded = false) => new(
-        Alias: model.Alias,
-        Id: model.Id,
-        DisplayName: model.Alias,
-        SizeGb: 0,
-        Device: Device.Gpu,
-        Task: string.Empty,
-        Provider: string.Empty,
-        Variants: Array.Empty<ModelVariant>(),
-        IsCached: isCached,
-        IsLoaded: isLoaded);
+    private static async Task<HashSet<string>> LoadedIdsAsync(ICatalog catalog, CancellationToken cancellationToken)
+    {
+        var loaded = await catalog.GetLoadedModelsAsync(cancellationToken).ConfigureAwait(false);
+        return loaded.Select(m => m.Info.Id).ToHashSet(StringComparer.Ordinal);
+    }
+
+    // FL IModel.Info (rich metadata) -> Core ModelInfo. Honest nullable mapping: a missing FL field becomes
+    // null/empty so the card renders "unknown", never a fabricated value.
+    private static ModelInfo MapEnriched(IModel model, bool isLoaded)
+    {
+        var info = model.Info;
+        var capabilities = CapabilityParser.Parse(info.Capabilities, info.InputModalities, info.SupportsToolCalling);
+
+        return new ModelInfo(
+            Alias: info.Alias,
+            Id: info.Id,
+            DisplayName: string.IsNullOrWhiteSpace(info.DisplayName) ? info.Alias : info.DisplayName!,
+            SizeGb: ToGb(info.FileSizeMb),
+            Device: MapDevice(info.Runtime?.DeviceType),
+            Task: info.Task ?? string.Empty,
+            Provider: info.ProviderType ?? string.Empty,
+            Variants: model.Variants.Select(MapVariant).ToList(),
+            IsCached: info.Cached,
+            IsLoaded: isLoaded,
+            ExecutionProvider: info.Runtime?.ExecutionProvider,
+            ContextLength: ToInt(info.ContextLength),
+            MaxOutputTokens: ToInt(info.MaxOutputTokens),
+            License: info.License,
+            LicenseDescription: info.LicenseDescription,
+            Publisher: info.Publisher,
+            ModelType: info.ModelType,
+            Capabilities: capabilities);
+    }
+
+    private static ModelVariant MapVariant(IModel variant)
+    {
+        var info = variant.Info;
+        return new ModelVariant(
+            VariantId: info.Id,
+            Quantization: ParseQuantization(info.Id),
+            Device: MapDevice(info.Runtime?.DeviceType),
+            SizeGb: ToGb(info.FileSizeMb));
+    }
+
+    private static double? ToGb(int? fileSizeMb) =>
+        fileSizeMb is int mb && mb > 0 ? Math.Round(mb / 1024.0, 2) : null;
+
+    private static int? ToInt(long? value) =>
+        value is long v ? (int?)Math.Clamp(v, int.MinValue, int.MaxValue) : null;
+
+    private static Device? MapDevice(FlDeviceType? deviceType) => deviceType switch
+    {
+        FlDeviceType.CPU => Device.Cpu,
+        FlDeviceType.GPU => Device.Gpu,
+        FlDeviceType.NPU => Device.Npu,
+        _ => null, // Invalid / null -> unknown
+    };
+
+    private static string? ParseQuantization(string id)
+    {
+        string[] tokens = { "int4", "int8", "fp16", "fp32", "q4", "q8", "bf16" };
+        foreach (var token in tokens)
+        {
+            if (id.Contains(token, StringComparison.OrdinalIgnoreCase))
+            {
+                return token;
+            }
+        }
+
+        return null;
+    }
 }

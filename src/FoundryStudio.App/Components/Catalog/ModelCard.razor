@@ -1,0 +1,157 @@
+@using System.Globalization
+
+<article class="model-card"
+         data-testid="model-card"
+         data-alias="@Model.Alias"
+         tabindex="0"
+         aria-labelledby="@_titleId">
+    <header class="model-card__header">
+        <div>
+            <p class="eyebrow" data-testid="card-alias">@DisplayOrUnknown(Model.Alias)</p>
+            <h2 id="@_titleId" data-testid="card-displayname">@DisplayOrUnknown(Model.DisplayName)</h2>
+        </div>
+        <span class="cache-badge @(Model.IsCached ? "cache-badge--cached" : "cache-badge--not-cached")"
+              data-testid="card-cached-badge"
+              aria-label="@(Model.IsCached ? "Cached model" : "Not cached model")">
+            <span aria-hidden="true">@(Model.IsCached ? "✓" : "○")</span>
+            @(Model.IsCached ? "Cached" : "Not cached")
+        </span>
+    </header>
+
+    <dl class="model-facts">
+        <div>
+            <dt>Size</dt>
+            <dd data-testid="card-size">@FormatSize(Model.SizeGb)</dd>
+        </div>
+        <div>
+            <dt>Device / execution provider</dt>
+            <dd data-testid="card-device">@FormatDevice(Model)</dd>
+        </div>
+        <div>
+            <dt>Context length</dt>
+            <dd data-testid="card-context">@FormatNumber(Model.ContextLength)</dd>
+        </div>
+        <div>
+            <dt>License</dt>
+            <dd data-testid="card-license" title="@Model.LicenseDescription">@DisplayOrUnknown(Model.License)</dd>
+        </div>
+        <div class="model-facts__wide">
+            <dt>Capabilities</dt>
+            <dd data-testid="card-capabilities">
+                @if (CapabilityChips.Count == 0)
+                {
+                    <span class="metadata-muted">not reported</span>
+                }
+                else
+                {
+                    foreach (var chip in CapabilityChips)
+                    {
+                        <span class="capability-chip">@chip</span>
+                    }
+                }
+            </dd>
+        </div>
+        <div class="model-facts__wide">
+            <dt>Variants</dt>
+            <dd data-testid="card-variants">@FormatVariants(Model.Variants)</dd>
+        </div>
+    </dl>
+</article>
+
+@code {
+    [Parameter, EditorRequired] public ModelInfo Model { get; set; } = default!;
+
+    private string _titleId = string.Empty;
+
+    private IReadOnlyList<string> CapabilityChips
+    {
+        get
+        {
+            var chips = new List<string>();
+            if (Model.Capabilities.Vision)
+            {
+                chips.Add("Vision");
+            }
+
+            if (!Model.Capabilities.ToolCallingKnown)
+            {
+                chips.Add("Tool calling unknown");
+            }
+            else if (Model.Capabilities.ToolCalling)
+            {
+                chips.Add("Tool calling");
+            }
+
+            if (Model.Capabilities.Reasoning)
+            {
+                chips.Add("Reasoning");
+            }
+
+            return chips;
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        _titleId = $"model-title-{SanitizeForId(Model.Alias)}";
+    }
+
+    private static string DisplayOrUnknown(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? "unknown" : value.Trim();
+
+    private static string FormatSize(double? sizeGb) =>
+        sizeGb is null or <= 0 ? "unknown" : $"{sizeGb.Value.ToString("0.0", CultureInfo.InvariantCulture)} GB";
+
+    private static string FormatDevice(ModelInfo model)
+    {
+        var device = model.Device?.ToString() ?? "unknown";
+        return string.IsNullOrWhiteSpace(model.ExecutionProvider)
+            ? device
+            : $"{device} · {model.ExecutionProvider}";
+    }
+
+    private static string FormatNumber(int? value) =>
+        value is null or <= 0 ? "unknown" : value.Value.ToString("N0", CultureInfo.CurrentCulture);
+
+    private static string FormatVariants(IReadOnlyList<ModelVariant>? variants)
+    {
+        if (variants is null || variants.Count == 0)
+        {
+            return "no variants reported";
+        }
+
+        var summaries = variants.Select(FormatVariant);
+        return $"{variants.Count} reported: {string.Join("; ", summaries)}";
+    }
+
+    private static string FormatVariant(ModelVariant variant)
+    {
+        var parts = new List<string> { DisplayOrUnknown(variant.VariantId) };
+
+        if (!string.IsNullOrWhiteSpace(variant.Quantization))
+        {
+            parts.Add(variant.Quantization.Trim());
+        }
+
+        if (variant.Device is { } device)
+        {
+            parts.Add(device.ToString());
+        }
+
+        if (variant.SizeGb is > 0)
+        {
+            parts.Add(FormatSize(variant.SizeGb));
+        }
+
+        return string.Join(" · ", parts);
+    }
+
+    private static string SanitizeForId(string value)
+    {
+        var chars = value
+            .Select(c => char.IsLetterOrDigit(c) ? c : '-')
+            .ToArray();
+
+        return new string(chars).Trim('-').ToLowerInvariant();
+    }
+}

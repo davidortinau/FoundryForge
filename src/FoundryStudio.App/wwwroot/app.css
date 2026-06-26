@@ -38,3 +38,245 @@ h1 {
 .status {
   color: color-mix(in srgb, CanvasText 70%, transparent);
 }
+
+.button,
+button {
+  border: 1px solid color-mix(in srgb, CanvasText 28%, transparent);
+  border-radius: 10px;
+  padding: 0.65rem 0.9rem;
+  background: CanvasText;
+  color: Canvas;
+  font: inherit;
+  cursor: pointer;
+}
+
+.button:hover,
+button:hover,
+.button:focus-visible,
+button:focus-visible {
+  outline: 3px solid color-mix(in srgb, Highlight 70%, CanvasText 30%);
+  outline-offset: 2px;
+}
+
+.button:disabled,
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.button-secondary {
+  background: Canvas;
+  color: CanvasText;
+}
+
+.catalog-shell {
+  display: grid;
+  gap: 18px;
+}
+
+.catalog-hero {
+  border-bottom: 1px solid color-mix(in srgb, CanvasText 14%, transparent);
+  padding-bottom: 18px;
+}
+
+.catalog-hero__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.catalog-controls {
+  display: grid;
+  grid-template-columns: minmax(220px, 2fr) repeat(4, minmax(150px, 1fr));
+  gap: 16px;
+  align-items: end;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field label {
+  font-weight: 650;
+}
+
+.field input,
+.field select {
+  min-height: 42px;
+  border: 1px solid color-mix(in srgb, CanvasText 34%, transparent);
+  border-radius: 10px;
+  padding: 0.55rem 0.65rem;
+  background: Canvas;
+  color: CanvasText;
+  font: inherit;
+}
+
+.field input:focus,
+.field select:focus {
+  outline: 3px solid color-mix(in srgb, Highlight 70%, CanvasText 30%);
+  outline-offset: 2px;
+}
+
+.field-search {
+  grid-column: span 2;
+}
+
+.field-checkbox {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 8px;
+}
+
+.field-checkbox input {
+  width: 22px;
+  min-height: 22px;
+}
+
+.catalog-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.curated-banner,
+.catalog-count {
+  margin: 0;
+}
+
+.curated-banner {
+  border: 1px solid color-mix(in srgb, CanvasText 24%, transparent);
+  border-radius: 999px;
+  padding: 0.45rem 0.75rem;
+  background: color-mix(in srgb, CanvasText 9%, Canvas);
+  font-weight: 650;
+}
+
+.catalog-count {
+  font-weight: 650;
+}
+
+.metadata-muted {
+  color: color-mix(in srgb, CanvasText 68%, transparent);
+}
+
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 18px;
+}
+
+.model-card {
+  border: 1px solid color-mix(in srgb, CanvasText 18%, transparent);
+  border-radius: 18px;
+  padding: 18px;
+  background: color-mix(in srgb, Canvas 94%, CanvasText 6%);
+  box-shadow: 0 12px 34px color-mix(in srgb, CanvasText 8%, transparent);
+}
+
+.model-card:focus-visible {
+  outline: 3px solid color-mix(in srgb, Highlight 70%, CanvasText 30%);
+  outline-offset: 3px;
+}
+
+.model-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.model-card h2 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.cache-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 0.35rem 0.6rem;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.cache-badge--cached {
+  color: color-mix(in srgb, CanvasText 88%, green 35%);
+  background: color-mix(in srgb, Canvas 86%, green 14%);
+}
+
+.cache-badge--not-cached {
+  color: CanvasText;
+  background: color-mix(in srgb, Canvas 86%, CanvasText 8%);
+}
+
+.model-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+  margin: 18px 0 0;
+}
+
+.model-facts > div {
+  display: grid;
+  gap: 4px;
+}
+
+.model-facts dt {
+  color: color-mix(in srgb, CanvasText 68%, transparent);
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+
+.model-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.model-facts__wide {
+  grid-column: 1 / -1;
+}
+
+.capability-chip {
+  display: inline-flex;
+  margin: 0 0.35rem 0.35rem 0;
+  border: 1px solid color-mix(in srgb, CanvasText 22%, transparent);
+  border-radius: 999px;
+  padding: 0.3rem 0.55rem;
+  background: color-mix(in srgb, CanvasText 8%, Canvas);
+  font-weight: 650;
+}
+
+.catalog-state {
+  text-align: left;
+}
+
+.catalog-state--error {
+  border-color: color-mix(in srgb, CanvasText 45%, red 45%);
+}
+
+@media (max-width: 920px) {
+  .catalog-hero__heading,
+  .catalog-summary,
+  .model-card__header {
+    display: grid;
+  }
+
+  .catalog-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .field-search {
+    grid-column: auto;
+  }
+
+  .model-facts {
+    grid-template-columns: 1fr;
+  }
+}
