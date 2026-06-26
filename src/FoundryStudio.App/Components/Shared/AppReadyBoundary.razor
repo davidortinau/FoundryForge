@@ -1,0 +1,62 @@
+@using FoundryStudio.Core.Abstractions
+@inject IFoundryLifecycle Lifecycle
+
+@if (_state == FoundryReadyState.Ready)
+{
+    @ChildContent
+}
+else if (_state == FoundryReadyState.Failed)
+{
+    <main class="shell">
+        <section class="card">
+            <p class="eyebrow">Foundry Local</p>
+            <h1>Initialization failed</h1>
+            <p id="ready-status" class="status status-failed">@_message</p>
+            <button id="btn-retry" @onclick="RetryAsync">Retry</button>
+        </section>
+    </main>
+}
+else
+{
+    <main class="shell">
+        <section class="card">
+            <p class="eyebrow">Foundry Local</p>
+            <h1>Starting up…</h1>
+            <p id="ready-status" class="status">@_message</p>
+        </section>
+    </main>
+}
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private FoundryReadyState _state = FoundryReadyState.Initializing;
+    private string _message = "Initializing Foundry Local…";
+
+    protected override async Task OnInitializedAsync() => await AwaitReadyAsync();
+
+    private async Task AwaitReadyAsync()
+    {
+        _state = FoundryReadyState.Initializing;
+        _message = "Initializing Foundry Local…";
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            // Lifecycle runs the heavy native init on a background thread (KI-005); we only await it.
+            await Lifecycle.ReadyAsync();
+            _state = FoundryReadyState.Ready;
+            _message = "Foundry Local is ready.";
+        }
+        catch (Exception ex)
+        {
+            // The gate is never satisfied by a failed init; surface the diagnosed cause.
+            _state = FoundryReadyState.Failed;
+            _message = $"Foundry Local could not start: {ex.Message}";
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Task RetryAsync() => AwaitReadyAsync(); // KI-007 #4: lifecycle retries a previously faulted init
+}

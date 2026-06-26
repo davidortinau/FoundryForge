@@ -20,7 +20,7 @@ description: "Task list for M1 — App Shell + Foundry Local Service Layer + DI 
 
 ## Prerequisite risk (non-blocking)
 
-The **net11 toolchain pin** (the separate open chore referred to as **T004** in PLAN/spec) is **out of M1 scope**. M1 builds on the proven `net10.0-macos` baseline and does **not** block on it (Assumptions; FR-019). Tasks below flag where it is relevant but planning does not wait on it.
+UPDATE (2026-06-25): net11 is DONE (DEC-016). M1 was built and verified on **net11.0-macos**. The text below is historical.  M1 builds on the proven `net10.0-macos` baseline and does **not** block on it (Assumptions; FR-019). Tasks below flag where it is relevant but planning does not wait on it.
 
 ---
 

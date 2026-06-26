@@ -7,21 +7,43 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# TENET (Constitution / PLAN): An engineer should never see a red X on CI.
+# This job gates the dylib-free seam — the FL-free Core, the FL-managed Foundry
+# layer, and the unit tests — all of which restore purely from nuget.org under
+# locked mode, so they run on a hosted runner.
+#
+# NOT built here: src/FoundryStudio.App (net11.0-macos AppKit + Blazor). It depends
+# on the maui-labs AppKit packages from a local feed (/Users/.../LocalNuGets) and the
+# macOS workload, so it requires a self-hosted Apple Silicon runner / local build.
+# Tracked in KNOWN-ISSUES.md (KI-007 #1) until a portable feed is available.
 jobs:
-  build:
-    # macOS runner: FoundryStudio is a net11.0-macos AppKit app (Apple Silicon).
+  seam:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
 
-      # TENET: An engineer should never see a red X on CI.
-      # When this job fails, diagnose the root cause and open a remediation PR;
-      # CI failures are a project failure mode, not a contributor task.
-      #
-      # Placeholder until the M0 gate proves the toolchain and the first
-      # project lands. Replace with:
-      #   - pin the net11 macOS workload + maui-labs AppKit feed (see KNOWN-GOOD-VERSIONS.md)
-      #   - dotnet restore + dotnet build against the pinned versions
-      #   - dotnet test (xUnit pure-logic seams, no native dylib needed)
-      - name: Placeholder build step
-        run: echo "Replace with restore + build + test once M0 is green and the first project exists."
+      - name: Set up .NET (pinned via global.json)
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-quality: preview
+
+      # Locked-mode restore FAILS if any dependency resolves off the pinned
+      # Directory.Packages.props set (FR-017, SC-009). packages.lock.json files are committed.
+      - name: Restore (locked) - Core
+        run: dotnet restore src/FoundryStudio.Core --locked-mode
+      - name: Restore (locked) - Foundry
+        run: dotnet restore src/FoundryStudio.Foundry --locked-mode
+      - name: Restore (locked) - Tests
+        run: dotnet restore tests/FoundryStudio.Tests --locked-mode
+
+      - name: Build - Core
+        run: dotnet build src/FoundryStudio.Core -c Debug --no-restore
+      - name: Build - Foundry
+        run: dotnet build src/FoundryStudio.Foundry -c Debug --no-restore
+
+      # Pure-logic seam tests run with NO native Foundry Local dylib present (SC-008).
+      # Includes the KI-005 no-blocking-init guard (T021/T028) and the concurrency-gate
+      # tests (T024) - a regression in either fails the build (SC-012).
+      - name: Test - pure-logic seams (dylib-free)
+        run: dotnet test tests/FoundryStudio.Tests -c Debug

@@ -1,0 +1,40 @@
+:root {
+  color-scheme: light dark;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+}
+
+body {
+  margin: 0;
+  background: Canvas;
+  color: CanvasText;
+}
+
+.shell {
+  min-height: 100vh;
+  padding: 28px;
+  box-sizing: border-box;
+}
+
+.card {
+  border: 1px solid color-mix(in srgb, CanvasText 14%, transparent);
+  border-radius: 18px;
+  padding: 24px;
+  background: color-mix(in srgb, Canvas 92%, transparent);
+  box-shadow: 0 18px 50px color-mix(in srgb, CanvasText 10%, transparent);
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  color: color-mix(in srgb, CanvasText 62%, transparent);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+h1 {
+  margin-top: 0;
+}
+
+.status {
+  color: color-mix(in srgb, CanvasText 70%, transparent);
+}

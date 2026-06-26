@@ -107,6 +107,19 @@
 **Gate status:** Clean for committing the spike evidence; KI-007 items are M1-bound, not M0/net11 blockers.
 **References:** `/review`; `KNOWN-ISSUES.md` KI-007.
 
+### DEC-016 — M1 App Shell + FL Service Layer COMPLETE (autonomous run; net11.0-macos)
+**Date:** 2026-06-25 · **Status:** Active
+**Context:** Built autonomously (David away) from specs/002-m1-app-shell-foundation. Targets **net11.0-macos** (per the ratified net11 move, DEC of 2026-06-25 — supersedes the net10 baseline written in the M1 spec/plan/tasks).
+**Decisions made in David's absence:**
+- D1: M1 on net11.0-macos (Core/Foundry/Tests net11.0; App net11.0-macos).
+- D2: KI-007 fixes applied in code — empty-Choices stream guard + standard Delta fallback (FoundryMessageMapper); Betalgo isolated to that single internal mapper + pinned explicitly (9.1.0); faulted-init RETRY in FoundryLifecycle (not Lazy-memoized).
+- D5: file-based `FileSettingsService` (human-readable JSON, consent-gated, .bak recovery) in Foundry with app-data path injected by the App — keeps MAUI out of the managed layer (spec said "Preferences"; a JSON file better serves FR-014 auditability).
+- D6: post-v1 stubs live in Core (FL-free, just throw) so they're testable in the Core-only test project.
+**Delivered (4-project solution replacing the throwaway spikes):** FoundryStudio.Core (FL-free seams/abstractions/DTOs/concurrency gate/catalog+RAM-fit/settings/post-v1 stubs), FoundryStudio.Foundry (FoundryLifecycle, FoundryCatalogService, in-process FoundryChatClient IChatClient adapter, ChatService, FileSettingsService), FoundryStudio.App (AppKit+Blazor head, AppReadyBoundary gate, DI), FoundryStudio.Tests (Core-only, dylib-free). One FoundryLocalManager singleton + ReadyAsync gate off-dispatcher (KI-005, no .Result/.Wait); one ModelStateGate (drain/reject/serialize/per-model isolation); in-process chat (no loopback); consent-gated settings; full _Imports (KI-006); lock files + seam CI gate.
+**Review:** independent code-review CLEAN — no Critical/High; faulted-retry race, drain race, and mutate-then-lease ordering all confirmed correct. Two shutdown-only dispose-race nits deferred to M2 (KI-008).
+**Open follow-ups:** KI-007 #1 (LocalNuGets/-dev portability — App build is self-hosted; seam CI gates the rest); KI-008 (M2 dispose hardening); catalog metadata/variants TODO(M2); cache-delete UI is M3; tools(yes)/structured-output(best-effort) wiring is M4.
+**Verified:** Real Apple Silicon, net11.0-macos — `dotnet build FoundryStudio.sln` 0 errors; **31/31 xUnit pass dylib-free** (no-blocking-init guard, concurrency gate, catalog filter, RAM-fit, settings, post-v1 stubs); locked-mode restore valid on the seam (CI gate); app launches → AppReadyBoundary "initializing" → "ready" with no deadlock (DevFlow DOM); in-process chat smoke streamed a real reply with **0 active loopback connections** (`lsof`, SC-006).
+
 ## Governance
 
 - All meaningful changes require team consensus

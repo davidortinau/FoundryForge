@@ -80,3 +80,12 @@ Ownership routing:
   5. **[Low] Native re-sign ordering:** `build/BundleFoundryLocalNative.targets` copies the FL dylib chain `AfterTargets="Build"` (after codesign). M0d empirically loaded fine under ad-hoc hardened-runtime signing (see DEC M0d / KI-003), but for M1/M7 the native bundling MUST be folded into the signing pipeline so the `.app` is signed AFTER payloads land (or `disable-library-validation` enabled deliberately). Tie-in: KI-003.
 - Remove when: each item is resolved in M1 (or M7 for #5) and verified.
 - Status: open (M1 backlog)
+
+### KI-008 — M1 code-review deferrals (FoundryLifecycle dispose race, shutdown only)
+- Area: app architecture (our code) — from the M1 /review (reviewer-independent). No Critical/High; the concurrency design (faulted-retry, drain, mutate-then-lease) was confirmed correct.
+- Items (both benign — only manifest at app shutdown, M2 hardening):
+  1. `FoundryLifecycle.DisposeAsync` disposes the manager only if init `IsCompletedSuccessfully` at the check; an init completing *after* the check (shutdown race) leaves that process-global manager undisposed. Impact nil for M1.
+  2. `_disposed` is non-volatile and disposal isn't synchronized with `_initLock`; a concurrent `GetManagerTypedAsync` between its disposed-check and `_initLock.WaitAsync` could see a disposed semaphore at shutdown. Benign.
+- Workaround: none needed for M1 (shutdown-only, process-global manager).
+- Remove when: M2 hardens the lifecycle dispose path (volatile `_disposed`, dispose under lock, continuation-dispose for late-completing init).
+- Status: open (M2 hardening)

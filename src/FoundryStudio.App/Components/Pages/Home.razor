@@ -1,0 +1,57 @@
+@page "/"
+@using FoundryStudio.Core.Abstractions
+@using Microsoft.Extensions.AI
+@inject IChatService ChatService
+
+<main class="shell">
+    <section class="card">
+        <p class="eyebrow">M1 foundation</p>
+        <h1 id="home-ready">FoundryStudio</h1>
+        <p class="status">Foundry Local is ready. Catalog, chat, and settings wire in next.</p>
+
+        @* M1 foundation smoke ONLY - proves the in-process IChatService path (DI -> ChatService ->
+           FoundryChatClient -> FL, no loopback socket). The real chat experience is M4. *@
+        <button id="btn-chat-smoke" @onclick="RunChatSmokeAsync" disabled="@_busy">Run in-process chat smoke</button>
+        <p id="chat-progress" class="status">@_progress</p>
+        <pre id="chat-output" class="output">@_output</pre>
+    </section>
+</main>
+
+@code {
+    private bool _busy;
+    private string _progress = "Idle.";
+    private string _output = string.Empty;
+
+    private async Task RunChatSmokeAsync()
+    {
+        _busy = true;
+        _output = string.Empty;
+        _progress = "Loading model + streaming in-process…";
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            var messages = new List<ChatMessage>
+            {
+                new(ChatRole.User, "In one short sentence, why is the sky blue?"),
+            };
+
+            await foreach (var update in ChatService.StreamAsync(messages))
+            {
+                _output += update.Text;
+                await InvokeAsync(StateHasChanged);
+            }
+
+            _progress = "Reply complete.";
+        }
+        catch (Exception ex)
+        {
+            _progress = $"Chat smoke failed: {ex.Message}";
+        }
+        finally
+        {
+            _busy = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+}
