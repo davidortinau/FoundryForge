@@ -554,3 +554,47 @@ textarea:focus-visible { outline: 3px solid var(--fs-accent-ring); outline-offse
   .chat-sidebar { position: static; }
   .chat-message { max-width: 100%; }
 }
+
+/* Settings — Appearance / theme toggle */
+.settings-section-title {
+  font: var(--fs-type-title);
+  margin: 0 0 var(--fs-space-2);
+  color: var(--fs-text);
+}
+
+.theme-toggle {
+  display: inline-flex;
+  gap: var(--fs-space-1);
+  padding: var(--fs-space-1);
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius-md);
+  background: var(--fs-surface-inset);
+  margin-top: var(--fs-space-3);
+}
+
+.theme-option {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--fs-text-secondary);
+  font: var(--fs-type-label);
+  padding: var(--fs-space-2) var(--fs-space-4);
+  border-radius: var(--fs-radius-sm);
+  cursor: pointer;
+}
+
+.theme-option:hover {
+  color: var(--fs-text);
+  background: color-mix(in srgb, var(--fs-text) 6%, transparent);
+}
+
+.theme-option.is-active {
+  background: var(--fs-surface);
+  color: var(--fs-accent-text);
+  border-color: var(--fs-border-strong);
+}
+
+.theme-option:focus-visible {
+  outline: 2px solid var(--fs-accent-ring);
+  outline-offset: 2px;
+}

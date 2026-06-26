@@ -1,5 +1,6 @@
 @page "/settings"
 @inject ISettingsService SettingsService
+@inject Microsoft.JSInterop.IJSRuntime JS
 
 <div class="settings-shell" data-testid="settings-page">
     <PageHeader TitleId="settings-title"
@@ -55,6 +56,23 @@
         }
     </section>
 
+    <section class="card settings-panel" aria-labelledby="settings-appearance-title" data-testid="settings-appearance">
+        <h2 id="settings-appearance-title" class="settings-section-title">Appearance</h2>
+        <p class="metadata-muted">Choose the theme. "System" follows macOS Light/Dark; the others override it.</p>
+        <div class="theme-toggle" role="group" aria-label="Theme" data-testid="theme-toggle">
+            @foreach (var option in ThemeOptions)
+            {
+                <button type="button"
+                        class="theme-option @(_theme == option.Value ? "is-active" : string.Empty)"
+                        data-testid="theme-@option.Value"
+                        aria-pressed="@(_theme == option.Value ? "true" : "false")"
+                        @onclick="() => SetThemeAsync(option.Value)">
+                    @option.Label
+                </button>
+            }
+        </div>
+    </section>
+
     <ConfirmDialog IsOpen="@_showConfirm"
                    Eyebrow="Change cache directory"
                    Title="Use a new model cache directory?"
@@ -78,6 +96,48 @@
     private bool _isLoading = true;
     private bool _isSaving;
     private bool _showConfirm;
+    private string _theme = "system";
+
+    private static readonly (string Value, string Label)[] ThemeOptions =
+    {
+        ("system", "System"),
+        ("light", "Light"),
+        ("dark", "Dark")
+    };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var current = await JS.InvokeAsync<string>("foundryStudioTheme.current");
+                if (!string.IsNullOrWhiteSpace(current) && current != _theme)
+                {
+                    _theme = current;
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+            catch
+            {
+                // JS not ready / unavailable -> keep the default "system"; the UI still works.
+            }
+        }
+    }
+
+    private async Task SetThemeAsync(string value)
+    {
+        _theme = value;
+        try
+        {
+            await JS.InvokeVoidAsync("foundryStudioTheme.apply", value);
+        }
+        catch
+        {
+            // Best-effort; the visible state reflects the user's choice regardless.
+        }
+        await InvokeAsync(StateHasChanged);
+    }
 
     private string ConfirmMessage => string.IsNullOrWhiteSpace(_candidateDirectory)
         ? string.Empty
