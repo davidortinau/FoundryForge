@@ -1,0 +1,61 @@
+<Project>
+  <!--
+    Central package pins for the M0 feasibility gates.
+    Source of truth: KNOWN-GOOD-VERSIONS.md. Do not float to "latest"; every bump is
+    a deliberate, isolated change that re-runs the M0 gate before it can be trusted.
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <!--
+    net11-primary track — PROVEN against SentenceStudio (David's working net11.0-macos
+    AppKit + Blazor app, same package family). maui-labs AppKit + DevFlow resolve from
+    LocalNuGets; MAUI 11 previews from the dnceng dotnet10 feed. See NuGet.config.
+    SDK: installed 11.0.100-preview.5 (global.json). TFM: net11.0-macos.
+  -->
+  <ItemGroup Label="net11-primary (maui-labs 0.26 / MAUI 11 preview.4)">
+    <PackageVersion Include="Microsoft.Maui.Platforms.MacOS" Version="0.26.0-dev" />
+    <PackageVersion Include="Microsoft.Maui.Platforms.MacOS.BlazorWebView" Version="0.26.0-dev" />
+    <PackageVersion Include="Microsoft.Maui.Platforms.MacOS.Essentials" Version="0.26.0-dev" />
+    <PackageVersion Include="Microsoft.Maui.Controls" Version="11.0.0-preview.4.26230.3" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="11.0.0-preview.4.26230.3" />
+    <PackageVersion Include="Markdig" Version="0.44.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.QuickGrid" Version="10.0.1" />
+    <PackageVersion Include="Microsoft.Maui.DevFlow.Agent" Version="0.25.0-dev" />
+    <PackageVersion Include="Microsoft.Maui.DevFlow.Blazor" Version="0.25.0-dev" />
+  </ItemGroup>
+
+  <!--
+    Superseded net10 Sherpa reference baseline (nuget.org). Disabled (Condition=false);
+    kept for reference / fallback only. Was the M0a–M0d proving set before the net11 move.
+  -->
+  <ItemGroup Label="net10 Sherpa baseline (reference only)" Condition="false">
+    <PackageVersion Include="Microsoft.Maui.Platforms.MacOS" Version="0.1.0-preview.8.26256.5" />
+    <PackageVersion Include="Microsoft.Maui.Platforms.MacOS.BlazorWebView" Version="0.1.0-preview.8.26256.5" />
+    <PackageVersion Include="Microsoft.Maui.Platforms.MacOS.Essentials" Version="0.1.0-preview.8.26256.5" />
+    <PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.41" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="10.0.1" />
+    <PackageVersion Include="Microsoft.Maui.DevFlow.Agent" Version="0.1.0-preview.8.26256.5" />
+    <PackageVersion Include="Microsoft.Maui.DevFlow.Blazor" Version="0.1.0-preview.8.26256.5" />
+  </ItemGroup>
+
+  <!--
+    Foundry Local SDK — proposed per T011 research; confirm on hardware in M0b.
+    Citation: .squad/decisions/inbox/bishop-fl-package-identity.md, which cites
+    NuGet flat-container metadata, microsoft/Foundry-Local source, and Microsoft Learn.
+    Pin NuGet 1.2.3 even though GitHub release notes currently lag at v1.2.1;
+    record that mismatch in M0b evidence. Do NOT pin sdk_v2 or
+    Microsoft.AI.Foundry.Local.Runtime: not published on NuGet as of T011 (404).
+    Microsoft.AI.Foundry.Local pulls Microsoft.AI.Foundry.Local.Core 1.2.3 transitively.
+  -->
+  <ItemGroup Label="Foundry Local proposed M0b pins">
+    <PackageVersion Include="Microsoft.AI.Foundry.Local" Version="1.2.3" />
+    <PackageVersion Include="Microsoft.ML.OnnxRuntime.Foundry" Version="1.26.0" />
+    <PackageVersion Include="Microsoft.ML.OnnxRuntimeGenAI.Foundry" Version="0.14.1" />
+  </ItemGroup>
+
+  <ItemGroup Label="M0d MEAI adapter pin">
+    <PackageVersion Include="Microsoft.Extensions.AI" Version="10.0.1" />
+  </ItemGroup>
+</Project>

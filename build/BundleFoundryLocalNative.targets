@@ -1,0 +1,37 @@
+<Project>
+  <!--
+    Import this file from any M0 spike .csproj to bundle Foundry Local native payloads.
+    Pattern source: KNOWN-GOOD-VERSIONS.md and docs/PLAN.md describe Sherpa's
+    _BundleNativeForMacOS-style AfterTargets="Build" native copy into
+    Contents/MonoBundle/runtimes/{rid}/native/.
+  -->
+
+  <PropertyGroup>
+    <FoundryLocalNativeRuntimeIdentifier Condition="'$(FoundryLocalNativeRuntimeIdentifier)' == ''">osx-arm64</FoundryLocalNativeRuntimeIdentifier>
+    <FoundryLocalNativeSourceDir Condition="'$(FoundryLocalNativeSourceDir)' == ''">$(OutDir)runtimes/$(FoundryLocalNativeRuntimeIdentifier)/native/</FoundryLocalNativeSourceDir>
+    <FoundryLocalAppBundleName Condition="'$(FoundryLocalAppBundleName)' == '' and '$(ApplicationTitle)' != ''">$(ApplicationTitle)</FoundryLocalAppBundleName>
+    <FoundryLocalAppBundleName Condition="'$(FoundryLocalAppBundleName)' == ''">$(AssemblyName)</FoundryLocalAppBundleName>
+    <FoundryLocalNativeBundleDir Condition="'$(FoundryLocalNativeBundleDir)' == ''">$(OutDir)$(FoundryLocalAppBundleName).app/Contents/MonoBundle/runtimes/$(FoundryLocalNativeRuntimeIdentifier)/native/</FoundryLocalNativeBundleDir>
+  </PropertyGroup>
+
+  <Target Name="BundleFoundryLocalNativeForMacOS"
+          AfterTargets="Build"
+          Condition="'$(TargetFramework)' != '' and $([System.String]::Copy('$(TargetFramework)').Contains('-macos')) and Exists('$(FoundryLocalNativeSourceDir)') and Exists('$(OutDir)$(FoundryLocalAppBundleName).app')">
+    <!--
+      T011 research confirms the public sdk osx-arm64 chain as:
+      Microsoft.AI.Foundry.Local.Core.dylib + libonnxruntime.dylib +
+      libonnxruntime-genai.dylib. Keep the wildcard copy so restore-time native
+      assets, including any WebGPU execution-provider plugin files, are preserved.
+      M0b T014 confirms exact filenames on hardware with find + otool -L; T016
+      handles any nested-dylib re-signing and library-validation entitlement.
+    -->
+    <ItemGroup>
+      <FoundryLocalNativePayload Include="$(FoundryLocalNativeSourceDir)*" />
+    </ItemGroup>
+
+    <MakeDir Directories="$(FoundryLocalNativeBundleDir)" />
+    <Copy SourceFiles="@(FoundryLocalNativePayload)"
+          DestinationFolder="$(FoundryLocalNativeBundleDir)"
+          SkipUnchangedFiles="true" />
+  </Target>
+</Project>

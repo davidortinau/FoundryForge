@@ -149,7 +149,7 @@ Do **not** build app code until M0d passes. Each gate fails cheap.
 | Streaming chat | ✅ in-process + server | M4 |
 | Inference params | ⚠️ temp/max_tokens/top_p/frequency_penalty only (no top_k/min_p/repeat_penalty/seed) | M4 (documented limit) |
 | Tool/function calling | ✅ via FL server + MEAI `UseFunctionInvocation` | M4 |
-| Structured JSON output | ✅ (server `response_format`, verify in M0/M4) | M4 |
+| Structured JSON output | ⚠️ server **accepts** `response_format` but does **not enforce** it (M0d: json_object → markdown-fenced JSON + prose; json_schema → ignored). No constrained decoding. Ship as best-effort only, never "guaranteed JSON" | M4 (descope the guarantee) |
 | Local OpenAI server | ✅ `StartWebServiceAsync` (`/v1/*`) | M5 |
 | Server auth + LAN bind | ❌ FL is localhost-only, no token auth | M5 (surface as not-supported) |
 | Embeddings / RAG | ✅ FL embeddings; RAG is app-level | M6 |
@@ -157,8 +157,38 @@ Do **not** build app code until M0d passes. Each gate fails cheap.
 | Presets / per-model config | ➕ app-level (FL has prompt templates in metadata) | M6 |
 | Themes / languages | ➕ app-level | M6 |
 | MCP host | ❌ not FL; app-level MCP client | M6 stretch |
-| Speculative decoding / parallel batching | ❌ not exposed by FL | out of scope |
+| Speculative decoding / parallel batching | ❌ not exposed by FL (LM Studio shipped spec-decoding in 0.3.10; users report it's hit-or-miss / often slower) | out of scope |
 | Auto-update / notarized installer | n/a v1 (dogfood) | future |
+
+## Competitive positioning (vs LM Studio / Ollama / Jan)
+
+> Grounded in current (2025–2026) developer sentiment from the LM Studio bug tracker, Reddit, and comparison reviews, plus Foundry Local's own GitHub issues. Two corrections to stale assumptions: **LM Studio became free for commercial/work use in July 2025** (only its Enterprise tier — SSO, model gating, private sharing — is paid), and **LM Studio now ships speculative decoding**. Do not pitch "we're free, they cost money" or treat spec-decoding as a unique LM Studio edge.
+
+**The reframe — we are not a general-purpose local-LLM runner.** On the single most-wanted capability (run *any* GGUF from HuggingFace), we lose decisively and it is **not fixable at our layer** — we inherit Foundry Local's curated, ONNX-only, Microsoft-gated catalog. A hobbyist who wants tonight's new HF model picks LM Studio or Ollama. We do not compete for that buyer. **FoundryStudio is the on-device client for the Foundry platform**: trusted/curated models, NPU/ONNX optimization, governance, and a path to Foundry cloud. That framing turns the curated catalog from a *limitation* into a *feature* (trust/compliance) and concedes the "run-anything" crowd on purpose.
+
+**Where we look weak to someone comparing side by side (and whose limit it is):**
+
+| Gap | Severity | Owner |
+|---|---|---|
+| No arbitrary GGUF / HF models (curated ONNX catalog only) | 🔴 Critical | Foundry Local — product feedback to Maanav/Meng, not our debt |
+| macOS-only in v1 (LM Studio is Win/Mac/Linux) | 🔴 Critical for breadth | Our scope choice |
+| No RAG / document chat at v1 (M6) | 🟠 High | Our scope |
+| No model-import breadth (BYOM is ONNX/Olive only) | 🟠 High | Foundry Local |
+| No voice at v1 (M6) | 🟡 Med | Our scope |
+| Limited sampling params (no top_k/min_p/repeat_penalty/seed) | 🟡 Med | Foundry Local |
+| No speculative decoding | 🟢 Low (hit-or-miss in practice) | Foundry Local |
+
+Most reds/oranges trace to **Foundry Local**, not FoundryStudio — they are product-feedback bullets, not app engineering debt.
+
+**LM Studio complaints = our opportunities (current, sourced):**
+
+1. **Closed source + unverifiable privacy/telemetry** — LM Studio's most-cited criticism and a real enterprise-compliance blocker. The FL backend is already open. **If FoundryStudio ships open-source with our constitution's "no PII in logs, OpenTelemetry-only" telemetry, that's a wedge LM Studio structurally cannot match.** (OSS for FoundryStudio is an open decision — see DEC entry — currently v1 is build-locally dogfood.)
+2. **Model import / directory friction** (manual folder placement, surprise re-downloads, broken symlinks) — we sidestep it entirely; FL manages the cache. "Models just work, no folder archaeology" is a demo-able contrast.
+3. **Enterprise governance is paywalled in LM Studio** (SSO / model gating / private sharing = paid Enterprise). Foundry Local + Entra/Azure could offer **model gating + governance natively** as a differentiator, not an upsell.
+4. **Resource/memory opacity** — recurring complaint. Lean into honest RAM-fit UX + clear EP/device visibility (see M2 memory-fit badge, rated as a *size-vs-free-RAM* indicator, not a confident verdict).
+5. **REST API stability gripes** — our in-process `IChatClient` (no loopback for our own chat) + the exposed server is architecturally cleaner. Reliability as a feature.
+
+**Positioning one-liner for the README / pitch:** *"The on-device tier of the Foundry platform — trusted models, transparent and open, governed, on Apple Silicon."* Not "LM Studio but Microsoft."
 
 ## Reference implementation
 - **Closest first-party reference:** `microsoft/Foundry-Local` `samples/js/electron-chat-application` — full GUI (model sidebar download/load/delete, streaming chat w/ token stats, context tracker, Whisper voice, markdown). Use its feature list + UX as the v1 spec; we reimplement in Blazor Hybrid against the C# SDK. No MAUI + FL prior art exists today (confirmed via search).

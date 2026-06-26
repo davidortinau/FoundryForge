@@ -30,3 +30,6 @@ obj/
 .squad/.cache/
 # Squad: SubSquad activation file (local to this machine)
 .squad-workstream
+
+# M0 feasibility spikes — throwaway proof heads, not tracked
+spikes/

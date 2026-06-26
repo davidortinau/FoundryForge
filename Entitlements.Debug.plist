@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Source: docs/PLAN.md + KNOWN-GOOD-VERSIONS.md record Sherpa's proven Debug entitlement set. -->
+  <key>com.apple.security.app-sandbox</key>
+  <false/>
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+  <key>com.apple.security.network.client</key>
+  <true/>
+  <key>com.apple.security.network.server</key>
+  <true/>
+  <key>com.apple.security.get-task-allow</key>
+  <true/>
+  <!-- Enable in M0b ONLY IF the dlopen'd Foundry Local dylibs fail library validation (T016).
+  <key>com.apple.security.cs.disable-library-validation</key>
+  <true/>
+  -->
+</dict>
+</plist>
