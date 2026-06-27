@@ -73,6 +73,9 @@ public static class FoundryStudioServiceCollectionExtensions
 
         // Phase 0 — shared serving-state service (single source of truth for Dock + Serve screen).
         services.AddSingleton<ServingStateService>();
+        // Phase 2 — 3-stage serve macro (Cast → Temper → Serve). Transient so each component gets
+        // its own progress-event bus; the underlying catalog/state services are shared singletons.
+        services.AddTransient<ServeMacroService>();
         // Phase 0 — one-time startup landing redirect tracker.
         services.AddSingleton<StartupNavigationService>();
 

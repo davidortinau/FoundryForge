@@ -1,0 +1,277 @@
+@*
+  ServeMacro — "Use in your tool" primary-job macro. 
+  Runs Cast (download) → Temper (load) → Serve (start server) with visible per-stage progress.
+  Ends on a Peak-End success moment: "Endpoint live" + real Test-connection + copy-confirm.
+  A secondary "Temper only" path loads without turning the server on.
+*@
+@using FoundryStudio.Core.Server
+@inject ServeMacroService MacroService
+@inject IFoundryCatalogService Catalog
+@inject ServingStateService ServingState
+@implements IDisposable
+
+<section class="card serve-macro-section"
+         data-testid="serve-macro"
+         aria-labelledby="serve-macro-title">
+    <p class="eyebrow">Primary job</p>
+    <h2 id="serve-macro-title">Use in your tool</h2>
+
+    @if (_stage == ServeStage.Idle)
+    {
+        @* ── Model picker + actions ────────────────────────────────────────────────────────── *@
+        @if (_loading)
+        {
+            <p class="server-note" role="status">Loading cached models…</p>
+        }
+        else if (_cachedModels.Count == 0)
+        {
+            <p class="server-note server-note--info" role="note">
+                No models are cached. Go to Discover to cast (download) a model first.
+            </p>
+        }
+        else
+        {
+            <div class="serve-macro-picker">
+                <label class="serve-macro-picker__label" for="serve-macro-model">
+                    Choose a cached model
+                </label>
+                <select id="serve-macro-model"
+                        class="serve-macro-picker__select"
+                        @bind="_selectedAlias"
+                        aria-label="Select a cached model to serve">
+                    @foreach (var model in _cachedModels)
+                    {
+                        <option value="@model.Alias">@model.DisplayName</option>
+                    }
+                </select>
+                <div class="serve-macro-actions">
+                    <button type="button"
+                            class="button"
+                            disabled="@(_selectedAlias is null)"
+                            @onclick="() => StartMacroAsync(temperOnly: false)">
+                        Cast · Temper · Serve
+                    </button>
+                    <button type="button"
+                            class="button button-secondary"
+                            data-testid="serve-temper-only"
+                            aria-label="Temper only — load into memory without starting the server"
+                            disabled="@(_selectedAlias is null)"
+                            @onclick="() => StartMacroAsync(temperOnly: true)">
+                        Temper only
+                    </button>
+                </div>
+            </div>
+        }
+    }
+    else if (_stage == ServeStage.Failed)
+    {
+        @* ── Error state — names the failing stage ─────────────────────────────────────────── *@
+        <div class="serve-macro-error">
+            <p class="operation-error" role="alert">
+                @(_failedAtStage is not null ? $"{_failedAtStage} failed: " : string.Empty)@_errorMessage
+            </p>
+            <button type="button" class="button button-secondary" @onclick="ResetMacro">
+                Try again
+            </button>
+        </div>
+    }
+    else if (_stage == ServeStage.Done)
+    {
+        @* ── Peak-End success moment ────────────────────────────────────────────────────────── *@
+        <div class="serve-macro-success" data-testid="serve-macro-success" role="status" aria-live="polite">
+            <div class="serve-macro-success__headline">
+                <span class="server-pilot-light is-lit" aria-hidden="true"></span>
+                <h3>Endpoint live</h3>
+            </div>
+            @if (BaseEndpoint is not null)
+            {
+                <code class="serve-macro-success__url">@BaseEndpoint</code>
+            }
+            <p class="serve-macro-success__hint">
+                @(_completedModelId is not null
+                    ? $"Model id for API calls: {_completedModelId}"
+                    : "Scroll up to copy the endpoint and model id.")
+            </p>
+            <div class="serve-macro-success__actions">
+                <button type="button"
+                        class="button"
+                        data-testid="serve-test-connection"
+                        disabled="@(_testingConnection || BaseEndpoint is null)"
+                        @onclick="TestConnectionAsync">
+                    @(_testingConnection ? "Testing…" : "Test connection")
+                </button>
+                <button type="button"
+                        class="button button-ghost"
+                        aria-label="Serve another model"
+                        @onclick="ResetMacro">
+                    Serve another
+                </button>
+            </div>
+            @if (_testResult is not null)
+            {
+                <p class="server-note @(_testResult.Value.Ok ? "server-note--info" : "server-note--error")"
+                   role="alert">
+                    @(_testResult.Value.Ok ? "✓ " : "✗ ")@_testResult.Value.Message
+                </p>
+            }
+        </div>
+    }
+    else
+    {
+        @* ── In-progress stages: Casting / Tempering / Serving ─────────────────────────────── *@
+        <div class="serve-macro-stages" aria-live="polite" aria-label="Macro progress">
+            <div class="serve-macro-stage @StageClass(ServeStage.Casting)"
+                 data-testid="serve-macro-stage"
+                 data-stage="cast">
+                <span class="serve-macro-stage__indicator" aria-hidden="true"></span>
+                <div class="serve-macro-stage__text">
+                    <strong>Cast</strong>
+                    <span>Download model to local cache</span>
+                </div>
+            </div>
+            <div class="serve-macro-stage @StageClass(ServeStage.Tempering)"
+                 data-testid="serve-macro-stage"
+                 data-stage="temper">
+                <span class="serve-macro-stage__indicator" aria-hidden="true"></span>
+                <div class="serve-macro-stage__text">
+                    <strong>Temper</strong>
+                    <span>Load model into memory</span>
+                </div>
+            </div>
+            <div class="serve-macro-stage @StageClass(ServeStage.Serving)"
+                 data-testid="serve-macro-stage"
+                 data-stage="serve">
+                <span class="serve-macro-stage__indicator" aria-hidden="true"></span>
+                <div class="serve-macro-stage__text">
+                    <strong>Serve</strong>
+                    <span>Start the local server</span>
+                </div>
+            </div>
+        </div>
+    }
+</section>
+
+@code {
+    private IReadOnlyList<Core.Models.ModelInfo> _cachedModels = Array.Empty<Core.Models.ModelInfo>();
+    private string? _selectedAlias;
+    private bool _loading = true;
+
+    private ServeStage _stage = ServeStage.Idle;
+    private string? _failedAtStage;
+    private string? _errorMessage;
+    private string? _completedModelId;
+
+    private bool _testingConnection;
+    private (bool Ok, string? Message)? _testResult;
+
+    private string? BaseEndpoint =>
+        ServingState.IsRunning ? ServerEndpoints.BaseUrl(ServingState.Urls) : null;
+
+    // ── Stage helpers ──────────────────────────────────────────────────────────────────────────
+
+    private string StageClass(ServeStage stage)
+    {
+        if (_stage == stage) return "is-active";
+        if (IsStageCompleted(stage)) return "is-done";
+        return string.Empty;
+    }
+
+    private bool IsStageCompleted(ServeStage stage)
+    {
+        return (_stage, stage) switch
+        {
+            // Tempering → Casting is done
+            (ServeStage.Tempering, ServeStage.Casting) => true,
+            // Serving → Casting and Tempering are done
+            (ServeStage.Serving, ServeStage.Casting) => true,
+            (ServeStage.Serving, ServeStage.Tempering) => true,
+            // Done → all three are done
+            (ServeStage.Done, ServeStage.Casting) => true,
+            (ServeStage.Done, ServeStage.Tempering) => true,
+            (ServeStage.Done, ServeStage.Serving) => true,
+            _ => false,
+        };
+    }
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────────────────────
+
+    protected override async Task OnInitializedAsync()
+    {
+        MacroService.OnProgress += HandleProgress;
+        ServingState.OnChanged += HandleServingStateChanged;
+        await LoadCachedModelsAsync();
+    }
+
+    private async Task LoadCachedModelsAsync()
+    {
+        _loading = true;
+        try
+        {
+            _cachedModels = await Catalog.ListCachedAsync();
+            _selectedAlias ??= _cachedModels.FirstOrDefault()?.Alias;
+        }
+        catch
+        {
+            _cachedModels = Array.Empty<Core.Models.ModelInfo>();
+        }
+        finally
+        {
+            _loading = false;
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // ── Progress event ─────────────────────────────────────────────────────────────────────────
+
+    private void HandleProgress(ServeProgress progress)
+    {
+        _stage = progress.Stage;
+        _failedAtStage = progress.FailedAtStage;
+        _errorMessage = progress.ErrorMessage;
+        _completedModelId ??= progress.CompletedModelId;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleServingStateChanged() => InvokeAsync(StateHasChanged);
+
+    // ── Actions ────────────────────────────────────────────────────────────────────────────────
+
+    private async Task StartMacroAsync(bool temperOnly)
+    {
+        if (_selectedAlias is null) return;
+
+        _testResult = null;
+        _completedModelId = null;
+        await MacroService.RunAsync(_selectedAlias, variantId: null, temperOnly: temperOnly);
+    }
+
+    private async Task TestConnectionAsync()
+    {
+        var endpoint = BaseEndpoint;
+        if (endpoint is null) return;
+
+        _testingConnection = true;
+        _testResult = null;
+        await InvokeAsync(StateHasChanged);
+
+        _testResult = await MacroService.TestConnectionAsync(endpoint);
+        _testingConnection = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void ResetMacro()
+    {
+        _stage = ServeStage.Idle;
+        _failedAtStage = null;
+        _errorMessage = null;
+        _completedModelId = null;
+        _testResult = null;
+        _ = LoadCachedModelsAsync();
+    }
+
+    public void Dispose()
+    {
+        MacroService.OnProgress -= HandleProgress;
+        ServingState.OnChanged -= HandleServingStateChanged;
+    }
+}

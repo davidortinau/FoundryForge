@@ -1,4 +1,5 @@
 using FoundryStudio.Core.Abstractions;
+using FoundryStudio.Core.Models;
 using FoundryStudio.Core.Server;
 
 namespace FoundryStudio.App.Services;
@@ -16,6 +17,7 @@ public sealed class ServingStateService : IAsyncDisposable
     private ServerStatus _status = ServerStatus.Stopped;
     private bool _emptyEndpointAfterStart;
     private int _loadedCount;
+    private IReadOnlyList<ModelInfo> _loadedModels = Array.Empty<ModelInfo>();
 
     /// <summary>Fired on any state change; observers should call StateHasChanged.</summary>
     public event Action? OnChanged;
@@ -30,6 +32,9 @@ public sealed class ServingStateService : IAsyncDisposable
 
     /// <summary>Count of currently-loaded (tempered) models.</summary>
     public int LoadedCount => _loadedCount;
+
+    /// <summary>Currently-loaded (tempered) models — the set reachable at the endpoint right now.</summary>
+    public IReadOnlyList<ModelInfo> LoadedModels => _loadedModels;
 
     public ServingStateService(ILocalServerService localServer, IFoundryCatalogService catalogService)
     {
@@ -53,13 +58,32 @@ public sealed class ServingStateService : IAsyncDisposable
         {
             var loaded = await _catalogService.ListLoadedAsync(cancellationToken);
             _loadedCount = loaded.Count;
+            _loadedModels = loaded;
         }
         catch
         {
             _loadedCount = 0;
+            _loadedModels = Array.Empty<ModelInfo>();
         }
 
         NotifyChanged();
+    }
+
+    /// <summary>
+    /// Unload a model from memory (non-destructive — cache is preserved) and refresh the list.
+    /// </summary>
+    public async Task UnloadModelAsync(string alias, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _catalogService.UnloadAsync(alias, cancellationToken);
+        }
+        catch
+        {
+            // Best-effort: fall through and refresh so the list reflects reality.
+        }
+
+        await RefreshLoadedCountAsync(cancellationToken);
     }
 
     public async Task StartAsync(CancellationToken cancellationToken = default)

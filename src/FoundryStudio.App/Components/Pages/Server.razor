@@ -1,5 +1,6 @@
 @page "/server"
 @using System.Globalization
+@using FoundryStudio.App.Components.Server
 @inject ServingStateService ServingState
 @inject IJSRuntime Js
 @implements IDisposable
@@ -81,6 +82,14 @@
             </div>
         }
     </section>
+    @* ── Phase 2: Tempered models reachable list ──────────────────────────────────────── *@
+    <ServeModelList />
+
+    @* ── Phase 2: "Use in your tool" primary-job macro ────────────────────────────────── *@
+    <ServeMacro />
+
+    @* ── Phase 2: Copy-paste consumer snippets ────────────────────────────────────────── *@
+    <ServeSnippets />
 
     <section class="server-grid" aria-label="Server facts">
         <section class="card server-routes" data-testid="server-routes" aria-labelledby="server-routes-title">
