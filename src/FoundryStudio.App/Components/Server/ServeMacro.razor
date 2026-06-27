@@ -200,6 +200,16 @@
         MacroService.OnProgress += HandleProgress;
         ServingState.OnChanged += HandleServingStateChanged;
         await LoadCachedModelsAsync();
+
+        // One-click bridge from Discover: if the user asked to "Use in your tool" there, auto-run the macro
+        // for that model now (read-and-clear so a manual revisit to Serve doesn't re-trigger it).
+        var pending = ServingState.ConsumePendingServeAlias();
+        if (pending is not null && _cachedModels.Any(m => m.Alias == pending))
+        {
+            _selectedAlias = pending;
+            await InvokeAsync(StateHasChanged);
+            await StartMacroAsync(temperOnly: false);
+        }
     }
 
     private async Task LoadCachedModelsAsync()

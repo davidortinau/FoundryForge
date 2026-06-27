@@ -36,6 +36,23 @@ public sealed class ServingStateService : IAsyncDisposable
     /// <summary>Currently-loaded (tempered) models — the set reachable at the endpoint right now.</summary>
     public IReadOnlyList<ModelInfo> LoadedModels => _loadedModels;
 
+    /// <summary>
+    /// One-shot navigation intent: an alias the user asked to serve from Discover ("Use in your tool").
+    /// The Serve screen's macro reads and clears this on navigation to auto-run the Cast→Temper→Serve flow.
+    /// </summary>
+    public string? PendingServeAlias { get; private set; }
+
+    /// <summary>Set the pending serve intent (called from Discover before navigating to Serve).</summary>
+    public void RequestServe(string alias) => PendingServeAlias = alias;
+
+    /// <summary>Read-and-clear the pending serve intent (called once by the Serve macro on init).</summary>
+    public string? ConsumePendingServeAlias()
+    {
+        var alias = PendingServeAlias;
+        PendingServeAlias = null;
+        return alias;
+    }
+
     public ServingStateService(ILocalServerService localServer, IFoundryCatalogService catalogService)
     {
         _localServer = localServer;

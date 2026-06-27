@@ -1,5 +1,7 @@
 @using System.Globalization
 @inject IFoundryCatalogService CatalogService
+@inject ServingStateService ServingState
+@inject NavigationManager Navigation
 
 <article class="model-card @(IsLoaded ? "model-card--loaded" : string.Empty) @(Operation.Phase == ModelOpPhase.Loading ? "model-card--working" : string.Empty)"
          data-testid="model-card"
@@ -164,6 +166,16 @@
         else
         {
             <div class="model-management__actions">
+                @if (IsCached)
+                {
+                    <button type="button"
+                            class="button"
+                            data-testid="card-use-in-tool"
+                            @onclick="UseInToolAsync"
+                            disabled="@Operation.IsWorking">
+                        Use in your tool
+                    </button>
+                }
                 @if (IsLoaded)
                 {
                     <button id="@_unloadId"
@@ -179,7 +191,7 @@
                 {
                     <button id="@_loadId"
                             type="button"
-                            class="button"
+                            class="button button-secondary"
                             data-testid="card-load"
                             @onclick="LoadAsync"
                             disabled="@Operation.IsWorking">
@@ -391,6 +403,14 @@
         }
 
         await InvokeAsync(StateHasChanged);
+    }
+
+    // Primary-job bridge: record the serve intent for this cached model and jump to Serve, where the macro
+    // auto-runs Cast→Temper→Serve and reveals the connection snippet. One click from Discover to "running."
+    private void UseInToolAsync()
+    {
+        ServingState.RequestServe(Model.Alias);
+        Navigation.NavigateTo("/server");
     }
 
     private async Task UnloadAsync()
