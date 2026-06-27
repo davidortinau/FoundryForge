@@ -999,3 +999,121 @@ textarea:focus-visible { outline: 3px solid var(--fs-accent-ring); outline-offse
   margin: 0;
   font: var(--fs-type-body);
 }
+
+/* ── Phase 1 — Discover redux additions ────────────────────── */
+
+/* Search row: search box + filter toggle side-by-side */
+.catalog-controls__search-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--fs-space-2);
+  width: 100%;
+}
+
+.catalog-controls__search-row .field-search {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Filter toggle button — wider than icon-only to show label */
+.catalog-filters-toggle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fs-space-2);
+  height: 32px;
+  padding: 0 var(--fs-space-3);
+  width: auto;
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius-sm);
+  background: var(--fs-surface-raised);
+  color: var(--fs-text-secondary);
+  font: var(--fs-type-label);
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.catalog-filters-toggle:hover {
+  background: var(--fs-surface-inset);
+  color: var(--fs-text);
+  border-color: var(--fs-border-strong);
+}
+
+.catalog-filters-toggle.is-active {
+  border-color: color-mix(in srgb, var(--fs-accent) 60%, var(--fs-border));
+  background: color-mix(in srgb, var(--fs-accent) 10%, var(--fs-surface));
+  color: var(--fs-accent-text);
+}
+
+.catalog-filters-toggle svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Active filter count badge on the toggle */
+.filter-active-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: var(--fs-radius-pill);
+  background: var(--fs-accent-fill);
+  color: var(--fs-text-inverse);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* Filter drawer — the collapsible panel inside catalog-controls */
+.catalog-filters-drawer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fs-space-3);
+  align-items: end;
+  width: 100%;
+  padding-top: var(--fs-space-2);
+  border-top: 1px solid var(--fs-border);
+  margin-top: var(--fs-space-1);
+  animation: drawer-open 140ms var(--fs-ease-heat) both;
+}
+
+@keyframes drawer-open {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.catalog-filters-drawer > .field { flex: 1 1 132px; }
+.catalog-filters-drawer > .field-checkbox { flex: 0 0 auto; min-height: 32px; }
+
+/* Context length chip in model row */
+.model-row__context {
+  font: var(--fs-type-eyebrow);
+  color: var(--fs-text-secondary);
+  white-space: nowrap;
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius-pill);
+  padding: 1px var(--fs-space-2);
+  font-size: 10px;
+}
+
+/* Full-width list when detail panel is not rendered */
+.models-layout--no-detail .models-list {
+  border-right: none;
+}
+
+/* Detail panel toolbar (pin button) */
+.models-detail-panel__toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding-bottom: var(--fs-space-3);
+  margin-bottom: var(--fs-space-3);
+  border-bottom: 1px solid var(--fs-border);
+}
+
+.models-detail-panel__toolbar .icon-button.is-active {
+  border-color: color-mix(in srgb, var(--fs-accent) 60%, var(--fs-border));
+  background: color-mix(in srgb, var(--fs-accent) 12%, var(--fs-surface));
+  color: var(--fs-accent-text);
+}

@@ -3,6 +3,7 @@
 @inject ISettingsService SettingsService
 @inject NavigationManager Navigation
 @inject StartupNavigationService StartupNav
+@inject IJSRuntime JS
 
 <div class="catalog-shell" data-testid="catalog-page">
     <PageHeader TitleId="catalog-title"
@@ -27,66 +28,85 @@
     }
     else
     {
-        <!-- Toolbar: search, filters, view controls, refresh -->
+        <!-- Toolbar: search (always visible) + collapsible filter drawer -->
         <section class="catalog-controls card" aria-label="Catalog search, filters, and view controls">
-            <div class="field field-search">
-                <label for="catalog-search">Search models</label>
-                <input id="catalog-search"
-                       type="search"
-                       value="@_state.Filter.SearchText"
-                       @oninput="OnSearchChangedAsync"
-                       placeholder="Alias, display name, or id"
-                       autocomplete="off" />
-            </div>
-
-            <div class="field">
-                <label for="filter-device">Device</label>
-                <select id="filter-device" value="@DeviceFilterValue" @onchange="OnDeviceChangedAsync">
-                    <option value="">All devices</option>
-                    @foreach (var device in _state.Facets.Devices)
+            <div class="catalog-controls__search-row">
+                <div class="field field-search">
+                    <label for="catalog-search">Search models</label>
+                    <input id="catalog-search"
+                           type="search"
+                           value="@_state.Filter.SearchText"
+                           @oninput="OnSearchChangedAsync"
+                           placeholder="Alias, display name, or id"
+                           autocomplete="off" />
+                </div>
+                <button type="button"
+                        class="catalog-filters-toggle icon-button @(_filtersOpen ? "is-active" : string.Empty)"
+                        aria-expanded="@_filtersOpen.ToString().ToLowerInvariant()"
+                        aria-controls="catalog-filters-drawer"
+                        title="@(_filtersOpen ? "Hide filters" : "Show filters")"
+                        @onclick="ToggleFilters">
+                    <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4" /></svg>
+                    @if (ActiveFilterCount > 0)
                     {
-                        <option value="@device">@device.ToString().ToUpperInvariant()</option>
+                        <span class="filter-active-count" aria-label="@ActiveFilterCount active filter@(ActiveFilterCount == 1 ? "" : "s")">@ActiveFilterCount</span>
                     }
-                </select>
+                </button>
             </div>
 
-            <div class="field">
-                <label for="filter-task">Task</label>
-                <select id="filter-task" value="@(_state.Filter.Task ?? string.Empty)" @onchange="OnTaskChangedAsync">
-                    <option value="">All tasks</option>
-                    @foreach (var task in _state.Facets.Tasks)
-                    {
-                        <option value="@task">@task</option>
-                    }
-                </select>
-            </div>
+            @if (_filtersOpen)
+            {
+                <div id="catalog-filters-drawer" class="catalog-filters-drawer" role="group" aria-label="Filters">
+                    <div class="field">
+                        <label for="filter-device">Device</label>
+                        <select id="filter-device" value="@DeviceFilterValue" @onchange="OnDeviceChangedAsync">
+                            <option value="">All devices</option>
+                            @foreach (var device in _state.Facets.Devices)
+                            {
+                                <option value="@device">@device.ToString().ToUpperInvariant()</option>
+                            }
+                        </select>
+                    </div>
 
-            <div class="field">
-                <label for="filter-provider">Provider</label>
-                <select id="filter-provider" value="@(_state.Filter.Provider ?? string.Empty)" @onchange="OnProviderChangedAsync">
-                    <option value="">All providers</option>
-                    @foreach (var provider in _state.Facets.Providers)
-                    {
-                        <option value="@provider">@provider</option>
-                    }
-                </select>
-            </div>
+                    <div class="field">
+                        <label for="filter-task">Task</label>
+                        <select id="filter-task" value="@(_state.Filter.Task ?? string.Empty)" @onchange="OnTaskChangedAsync">
+                            <option value="">All tasks</option>
+                            @foreach (var task in _state.Facets.Tasks)
+                            {
+                                <option value="@task">@task</option>
+                            }
+                        </select>
+                    </div>
 
-            <div class="field field-checkbox">
-                <input id="filter-cached"
-                       type="checkbox"
-                       checked="@_state.Filter.CachedOnly"
-                       @onchange="OnCachedOnlyChangedAsync" />
-                <label for="filter-cached">Cached only</label>
-            </div>
+                    <div class="field">
+                        <label for="filter-provider">Provider</label>
+                        <select id="filter-provider" value="@(_state.Filter.Provider ?? string.Empty)" @onchange="OnProviderChangedAsync">
+                            <option value="">All providers</option>
+                            @foreach (var provider in _state.Facets.Providers)
+                            {
+                                <option value="@provider">@provider</option>
+                            }
+                        </select>
+                    </div>
 
-            <div class="field">
-                <label for="view-toggle">Catalog view</label>
-                <select id="view-toggle" value="@_state.ViewMode" @onchange="OnViewModeChangedAsync">
-                    <option value="@CatalogViewState.CatalogViewMode.Curated">Curated</option>
-                    <option value="@CatalogViewState.CatalogViewMode.Full">Full catalog</option>
-                </select>
-            </div>
+                    <div class="field field-checkbox">
+                        <input id="filter-cached"
+                               type="checkbox"
+                               checked="@_state.Filter.CachedOnly"
+                               @onchange="OnCachedOnlyChangedAsync" />
+                        <label for="filter-cached">Cached only</label>
+                    </div>
+
+                    <div class="field">
+                        <label for="view-toggle">Catalog view</label>
+                        <select id="view-toggle" value="@_state.ViewMode" @onchange="OnViewModeChangedAsync">
+                            <option value="@CatalogViewState.CatalogViewMode.Curated">Curated</option>
+                            <option value="@CatalogViewState.CatalogViewMode.Full">Full catalog</option>
+                        </select>
+                    </div>
+                </div>
+            }
         </section>
 
         <section class="catalog-summary" aria-label="Catalog result summary">
@@ -127,7 +147,7 @@
         else
         {
             <!-- Two-pane layout: compact list (left) + detail panel (right) -->
-            <div class="models-layout">
+            <div class="models-layout @(!DetailPanelVisible ? "models-layout--no-detail" : string.Empty)">
                 <!-- LEFT: compact model list -->
                 <div class="models-list" role="listbox" aria-label="Model list">
                     <section class="catalog-group models-list__group" data-testid="group-cached" aria-labelledby="group-cached-title">
@@ -148,6 +168,7 @@
                                         role="option"
                                         aria-selected="@IsSelected(model).ToString().ToLowerInvariant()"
                                         data-alias="@model.Alias"
+                                        title="@RowHoverTitle(model)"
                                         @onclick="() => SelectModelAsync(model)">
                                     <span class="model-row__name">
                                         <span class="model-row__displayname">@RowDisplayName(model)</span>
@@ -157,6 +178,10 @@
                                         @if (!string.IsNullOrWhiteSpace(model.ModelType))
                                         {
                                             <span class="format-badge model-row__format">@model.ModelType.Trim()</span>
+                                        }
+                                        @if (model.ContextLength is > 0)
+                                        {
+                                            <span class="model-row__context" title="Context length">@FormatContextK(model.ContextLength.Value)</span>
                                         }
                                         @if (model.SizeGb is > 0)
                                         {
@@ -188,6 +213,7 @@
                                         role="option"
                                         aria-selected="@IsSelected(model).ToString().ToLowerInvariant()"
                                         data-alias="@model.Alias"
+                                        title="@RowHoverTitle(model)"
                                         @onclick="() => SelectModelAsync(model)">
                                     <span class="model-row__name">
                                         <span class="model-row__displayname">@RowDisplayName(model)</span>
@@ -197,6 +223,10 @@
                                         @if (!string.IsNullOrWhiteSpace(model.ModelType))
                                         {
                                             <span class="format-badge model-row__format">@model.ModelType.Trim()</span>
+                                        }
+                                        @if (model.ContextLength is > 0)
+                                        {
+                                            <span class="model-row__context" title="Context length">@FormatContextK(model.ContextLength.Value)</span>
                                         }
                                         @if (model.SizeGb is > 0)
                                         {
@@ -220,27 +250,39 @@
                     </footer>
                 </div>
 
-                <!-- RIGHT: detail panel -->
-                <aside class="models-detail-panel" aria-label="Model details">
-                    @if (SelectedModel is { } selected)
-                    {
-                        <ModelCard Model="selected"
-                                   IsCached="_state.IsCached(selected)"
-                                   IsLoaded="_state.IsLoaded(selected)"
-                                   Operation="_state.GetOperation(selected)"
-                                   VariantSelection="_state.GetVariantSelection(selected)"
-                                   FreeDiskGb="_freeDiskGb"
-                                   OnMutationCompleted="RefreshCatalogAsync"
-                                   OnDeleteRequested="OpenDeleteDialogAsync" />
-                    }
-                    else
-                    {
-                        <div class="models-detail-panel__empty">
-                            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 6.5h14v11H5z" /><path d="M8 17.5V9h8" /><path d="M8 12.75h6.5" /></svg>
-                            <p>Select a model to see details and manage it.</p>
+                <!-- RIGHT: detail panel (collapsed by default; visible when a model is selected or pinned) -->
+                @if (DetailPanelVisible)
+                {
+                    <aside class="models-detail-panel" aria-label="Model details">
+                        <div class="models-detail-panel__toolbar">
+                            <button type="button"
+                                    class="icon-button @(_detailPinned ? "is-active" : string.Empty)"
+                                    title="@(_detailPinned ? "Unpin detail panel" : "Pin detail panel always open")"
+                                    aria-pressed="@_detailPinned.ToString().ToLowerInvariant()"
+                                    @onclick="ToggleDetailPinAsync">
+                                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M12 2v10m0 0-3-3m3 3 3-3M4 20h16" /><line x1="12" y1="12" x2="12" y2="20" /></svg>
+                            </button>
                         </div>
-                    }
-                </aside>
+                        @if (SelectedModel is { } selected)
+                        {
+                            <ModelCard Model="selected"
+                                       IsCached="_state.IsCached(selected)"
+                                       IsLoaded="_state.IsLoaded(selected)"
+                                       Operation="_state.GetOperation(selected)"
+                                       VariantSelection="_state.GetVariantSelection(selected)"
+                                       FreeDiskGb="_freeDiskGb"
+                                       OnMutationCompleted="RefreshCatalogAsync"
+                                       OnDeleteRequested="OpenDeleteDialogAsync" />
+                        }
+                        else
+                        {
+                            <div class="models-detail-panel__empty">
+                                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 6.5h14v11H5z" /><path d="M8 17.5V9h8" /><path d="M8 12.75h6.5" /></svg>
+                                <p>Select a model to see details and manage it.</p>
+                            </div>
+                        }
+                    </aside>
+                }
             </div>
         }
     }
@@ -265,8 +307,27 @@
     private double? _freeDiskGb;
     private string? _selectedAlias;
     private string? _modelCachePath;
+    private bool _filtersOpen;
+    private bool _detailPinned;
+    private bool _pinStateLoaded;
+
+    private bool DetailPanelVisible => _detailPinned || SelectedModel != null;
 
     private bool IsBusy => _state.Status == CatalogViewState.CatalogStatus.Loading;
+
+    private int ActiveFilterCount
+    {
+        get
+        {
+            var count = 0;
+            if (_state.Filter.Device is not null) count++;
+            if (!string.IsNullOrWhiteSpace(_state.Filter.Task)) count++;
+            if (!string.IsNullOrWhiteSpace(_state.Filter.Provider)) count++;
+            if (_state.Filter.CachedOnly) count++;
+            if (_state.ViewMode == CatalogViewState.CatalogViewMode.Full) count++;
+            return count;
+        }
+    }
 
     private string DeviceFilterValue => _state.Filter.Device?.ToString() ?? string.Empty;
 
@@ -331,6 +392,44 @@
         }
 
         await RefreshCatalogAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_pinStateLoaded)
+        {
+            _pinStateLoaded = true;
+            try
+            {
+                var pinned = await JS.InvokeAsync<string?>("eval", "window.localStorage.getItem('fs-detail-pinned')");
+                _detailPinned = pinned == "1";
+                StateHasChanged();
+            }
+            catch
+            {
+                // localStorage unavailable (e.g. test environment) — keep default false
+            }
+        }
+    }
+
+    private void ToggleFilters()
+    {
+        _filtersOpen = !_filtersOpen;
+    }
+
+    private async Task ToggleDetailPinAsync()
+    {
+        _detailPinned = !_detailPinned;
+        try
+        {
+            await JS.InvokeVoidAsync("eval", $"window.localStorage.setItem('fs-detail-pinned', '{(_detailPinned ? "1" : "0")}')");
+        }
+        catch
+        {
+            // localStorage unavailable — state is still toggled in memory
+        }
+
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task RefreshCatalogAsync()
@@ -482,6 +581,32 @@
         }
 
         await InvokeAsync(StateHasChanged);
+    }
+
+    private static string? RowHoverTitle(ModelInfo model)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(model.License))
+        {
+            parts.Add($"License: {model.License.Trim()}");
+        }
+
+        var variantCount = model.Variants?.Count ?? 0;
+        parts.Add(variantCount == 0 ? "Variants: none reported" : $"Variants: {variantCount}");
+
+        return parts.Count > 0 ? string.Join(" · ", parts) : null;
+    }
+
+    private static string FormatContextK(int contextLength)
+    {
+        if (contextLength >= 1000)
+        {
+            var k = contextLength / 1000.0;
+            var label = k == Math.Floor(k) ? $"{(int)k}K" : $"{k.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)}K";
+            return $"{label} ctx";
+        }
+
+        return $"{contextLength} ctx";
     }
 
     private static string FormatSize(double? sizeGb) =>
