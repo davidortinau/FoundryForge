@@ -18,28 +18,10 @@
             </div>
         </div>
         <div class="model-card__badges">
-            <span class="cache-badge @(IsCached ? "cache-badge--cached" : "cache-badge--not-cached")"
-                  data-testid="card-cached-badge"
-                  aria-label="@(IsCached ? "Cached model" : "Not cached model")">
-                @if (IsCached)
-                {
-                    <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></svg>
-                }
-                else
-                {
-                    <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" /></svg>
-                }
-                @(IsCached ? "Cached" : "Not cached")
-            </span>
-            @if (IsLoaded)
-            {
-                <span class="cache-badge cache-badge--loaded"
-                      data-testid="card-loaded-badge"
-                      aria-label="Loaded model">
-                    <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" /><path d="M12 8v4l2.5 2.5" /></svg>
-                    Loaded
-                </span>
-            }
+            <ModelStateBadge IsCached="IsCached"
+                             IsLoaded="IsLoaded"
+                             CachedTestId="card-cached-badge"
+                             LoadedTestId="card-loaded-badge" />
             @if (IsCached)
             {
                 <span class="copper-stamp" aria-label="Cached locally">cached locally</span>

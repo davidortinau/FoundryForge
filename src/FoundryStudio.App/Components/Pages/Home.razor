@@ -1,6 +1,8 @@
 @page "/"
 @inject IFoundryCatalogService CatalogService
 @inject ISettingsService SettingsService
+@inject NavigationManager Navigation
+@inject StartupNavigationService StartupNav
 
 <div class="catalog-shell" data-testid="catalog-page">
     <PageHeader TitleId="catalog-title"
@@ -160,14 +162,8 @@
                                         {
                                             <span class="model-row__size">@model.SizeGb!.Value.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) GB</span>
                                         }
-                                        @if (_state.IsLoaded(model))
-                                        {
-                                            <span class="cache-badge cache-badge--loaded model-row__badge">Loaded</span>
-                                        }
-                                        else if (_state.IsCached(model))
-                                        {
-                                            <span class="cache-badge cache-badge--cached model-row__badge">Cached</span>
-                                        }
+                                        <ModelStateBadge IsCached="_state.IsCached(model)"
+                                                         IsLoaded="_state.IsLoaded(model)" />
                                     </span>
                                 </button>
                             }
@@ -315,6 +311,25 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Stateful landing: on first app visit to "/", redirect to Serve if models are cached.
+        // Subsequent navigations to "/" (user-explicit) are not redirected.
+        if (StartupNav.ShouldCheckStartupRedirect())
+        {
+            try
+            {
+                var cached = await CatalogService.ListCachedAsync();
+                if (cached.Count > 0)
+                {
+                    Navigation.NavigateTo("/server");
+                    return;
+                }
+            }
+            catch
+            {
+                // If the catalog fails here, fall through to normal Discover load.
+            }
+        }
+
         await RefreshCatalogAsync();
     }
 

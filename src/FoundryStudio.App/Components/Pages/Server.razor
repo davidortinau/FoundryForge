@@ -1,7 +1,8 @@
 @page "/server"
 @using System.Globalization
-@inject ILocalServerService LocalServer
+@inject ServingStateService ServingState
 @inject IJSRuntime Js
+@implements IDisposable
 
 <div class="server-shell" data-testid="server-page">
     <PageHeader TitleId="server-title"
@@ -28,23 +29,23 @@
                     class="button @ToggleButtonClass"
                     data-testid="server-toggle"
                     aria-label="@ToggleAriaLabel"
-                    aria-pressed="@Status.IsRunning.ToString().ToLowerInvariant()"
-                    disabled="@(!LocalServer.IsSupported || Status.IsBusy)"
+                    aria-pressed="@ServingState.IsRunning.ToString().ToLowerInvariant()"
+                    disabled="@(!ServingState.IsSupported || ServingState.IsBusy)"
                     @onclick="ToggleServerAsync">
                 @ToggleText
             </button>
         </div>
 
-        @if (!LocalServer.IsSupported)
+        @if (!ServingState.IsSupported)
         {
             <p class="server-note server-note--info" data-testid="server-unsupported" role="note">
                 The local server is not supported by this build or platform.
             </p>
         }
 
-        @if (!string.IsNullOrWhiteSpace(Status.Message))
+        @if (!string.IsNullOrWhiteSpace(ServingState.Message))
         {
-            <p class="operation-error" data-testid="server-error" role="alert">@Status.Message</p>
+            <p class="operation-error" data-testid="server-error" role="alert">@ServingState.Message</p>
         }
 
         @if (ShowEndpointEmpty)
@@ -54,7 +55,7 @@
             </p>
         }
 
-        @if (Status.IsRunning && BaseEndpoint is not null && CopyPayload is not null)
+        @if (ServingState.IsRunning && BaseEndpoint is not null && CopyPayload is not null)
         {
             <div class="server-endpoint-card" data-testid="server-endpoint" aria-label="Bound server endpoint">
                 <div>
@@ -75,7 +76,7 @@
                         data-testid="server-endpoint-copy"
                         aria-label="Copy exact bound server endpoint"
                         @onclick="CopyEndpointAsync">
-                    @CopyButtonText
+                    @_copyButtonText
                 </button>
             </div>
         }
@@ -91,7 +92,7 @@
                     <li>
                         <code>@route.Path</code>
                         <span>@route.Description</span>
-                        @if (Status.IsRunning && BaseEndpoint is not null)
+                        @if (ServingState.IsRunning && BaseEndpoint is not null)
                         {
                             <small>@ServerEndpoints.RouteUrl(BaseEndpoint, route)</small>
                         }
@@ -152,22 +153,19 @@
 </div>
 
 @code {
-    private ServerStatus Status { get; set; } = ServerStatus.Stopped;
-    private bool _emptyEndpointAfterStart;
     private string _copyButtonText = "Copy endpoint";
 
     private RequestLogView RequestLog { get; } = RequestActivityProjection.Project(null);
 
-    private string StateName => Status.State.ToString().ToLowerInvariant();
-    private bool PilotLightLit => ServerStateMachine.PilotLightLit(Status.State);
-    private string? BaseEndpoint => Status.IsRunning ? ServerEndpoints.BaseUrl(Status.Urls) : null;
-    private IReadOnlyList<string> AllEndpoints => Status.IsRunning ? ServerEndpoints.AllBaseUrls(Status.Urls) : Array.Empty<string>();
-    private string? CopyPayload => Status.IsRunning ? ServerEndpoints.CopyPayload(Status.Urls) : null;
-    private bool ShowEndpointEmpty => _emptyEndpointAfterStart && Status.State == ServerState.Error;
-    private string CopyButtonText => _copyButtonText;
+    private string StateName => ServingState.Status.State.ToString().ToLowerInvariant();
+    private bool PilotLightLit => ServerStateMachine.PilotLightLit(ServingState.Status.State);
+    private string? BaseEndpoint => ServingState.IsRunning ? ServerEndpoints.BaseUrl(ServingState.Urls) : null;
+    private IReadOnlyList<string> AllEndpoints => ServingState.IsRunning ? ServerEndpoints.AllBaseUrls(ServingState.Urls) : Array.Empty<string>();
+    private string? CopyPayload => ServingState.IsRunning ? ServerEndpoints.CopyPayload(ServingState.Urls) : null;
+    private bool ShowEndpointEmpty => ServingState.EmptyEndpointAfterStart && ServingState.Status.State == ServerState.Error;
 
-    private string ToggleButtonClass => Status.IsRunning ? "button-secondary" : string.Empty;
-    private string ToggleText => Status.State switch
+    private string ToggleButtonClass => ServingState.IsRunning ? "button-secondary" : string.Empty;
+    private string ToggleText => ServingState.Status.State switch
     {
         ServerState.Starting => "Lighting server…",
         ServerState.Running => "Stop server",
@@ -175,9 +173,9 @@
         _ => "Light local server"
     };
 
-    private string ToggleAriaLabel => Status.IsRunning ? "Stop the local server" : "Start the local server";
+    private string ToggleAriaLabel => ServingState.IsRunning ? "Stop the local server" : "Start the local server";
 
-    private string ForgeTitle => Status.State switch
+    private string ForgeTitle => ServingState.Status.State switch
     {
         ServerState.Starting => "Igniting the server",
         ServerState.Running => BaseEndpoint is null ? "Server running" : $"Forge lit at {BaseEndpoint}",
@@ -188,88 +186,41 @@
 
     protected override void OnInitialized()
     {
-        var urls = LocalServer.Urls;
-        Status = LocalServer.IsSupported && urls.Count > 0
-            ? new ServerStatus(ServerState.Running, urls)
-            : ServerStatus.Stopped;
+        ServingState.OnChanged += OnServingStateChanged;
+    }
+
+    private void OnServingStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
     }
 
     private async Task ToggleServerAsync()
     {
-        if (!LocalServer.IsSupported || Status.IsBusy)
-        {
-            return;
-        }
+        if (!ServingState.IsSupported || ServingState.IsBusy) return;
 
-        if (Status.IsRunning)
+        _copyButtonText = "Copy endpoint";
+        if (ServingState.IsRunning)
         {
-            await StopServerAsync();
+            await ServingState.StopAsync();
         }
         else
         {
-            await StartServerAsync();
+            await ServingState.StartAsync();
         }
-    }
-
-    private async Task StartServerAsync()
-    {
-        _emptyEndpointAfterStart = false;
-        _copyButtonText = "Copy endpoint";
-        Status = new ServerStatus(ServerState.Starting, Array.Empty<string>());
-        await InvokeAsync(StateHasChanged);
-
-        try
-        {
-            var urls = await LocalServer.StartAsync();
-            if (ServerEndpoints.BaseUrl(urls) is null)
-            {
-                _emptyEndpointAfterStart = true;
-                Status = new ServerStatus(
-                    ServerState.Error,
-                    Array.Empty<string>(),
-                    "Foundry Local reported a start but returned no bound address.");
-            }
-            else
-            {
-                Status = new ServerStatus(ServerState.Running, urls);
-            }
-        }
-        catch (Exception ex)
-        {
-            Status = new ServerStatus(ServerState.Error, Array.Empty<string>(), ex.Message);
-        }
-
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task StopServerAsync()
-    {
-        _emptyEndpointAfterStart = false;
-        _copyButtonText = "Copy endpoint";
-        Status = new ServerStatus(ServerState.Stopping, Status.Urls);
-        await InvokeAsync(StateHasChanged);
-
-        try
-        {
-            await LocalServer.StopAsync();
-            Status = ServerStatus.Stopped;
-        }
-        catch (Exception ex)
-        {
-            Status = new ServerStatus(ServerState.Error, Array.Empty<string>(), ex.Message);
-        }
-
-        await InvokeAsync(StateHasChanged);
     }
 
     private async Task CopyEndpointAsync()
     {
-        if (CopyPayload is null)
-        {
-            return;
-        }
+        if (CopyPayload is null) return;
 
         await Js.InvokeVoidAsync("foundryStudioClipboard.copy", CopyPayload);
         _copyButtonText = "Copied exact endpoint";
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        ServingState.OnChanged -= OnServingStateChanged;
     }
 }
+

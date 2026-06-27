@@ -1,22 +1,52 @@
 @inject NavigationManager Navigation
+@inject ServingStateService ServingState
+@implements IDisposable
 
 <aside class="sidebar" aria-label="FoundryStudio navigation">
     <a class="sidebar__skip" href="#main-content">Skip to content</a>
     <nav class="sidebar-nav" aria-label="Primary">
         <div class="sidebar-nav__group" aria-labelledby="nav-group-workshop">
             <p id="nav-group-workshop" class="sidebar-nav__eyebrow">Workshop</p>
-            <NavLink id="nav-models" data-testid="nav-models" class="sidebar-nav__row" href="/" Match="NavLinkMatch.All" aria-label="Models catalog">
-                <span class="sidebar-nav__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M6 7v12h12V7"/><path d="M9 11h6"/><path d="M9 15h4"/></svg></span>
-                <span>Models</span>
+            <NavLink id="nav-discover" data-testid="nav-discover" class="sidebar-nav__row" href="/" Match="NavLinkMatch.All" aria-label="Discover models">
+                <span class="sidebar-nav__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16.5 16.5 3.5 3.5"/></svg>
+                </span>
+                <span>Discover</span>
             </NavLink>
-            <NavLink id="nav-chat" data-testid="nav-chat" class="sidebar-nav__row" href="/chat" aria-label="Chat">
-                <span class="sidebar-nav__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 6.5h14v9H8l-3 3z"/><path d="M8 10h8"/><path d="M8 13h5"/></svg></span>
-                <span>Chat</span>
+            <NavLink id="nav-serve" data-testid="nav-serve" class="sidebar-nav__row" href="/server" aria-label="Serve — manage the local server">
+                <span class="sidebar-nav__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M5 7h14v4H5z"/><path d="M5 13h14v4H5z"/><path d="M8 9h.01"/><path d="M8 15h.01"/></svg>
+                </span>
+                <span>Serve</span>
+                @if (ServingState.IsRunning)
+                {
+                    <span class="sidebar-nav__live-dot" aria-label="Server is running" title="Server is running"></span>
+                }
             </NavLink>
-            <NavLink id="nav-server" data-testid="nav-server" class="sidebar-nav__row" href="/server" aria-label="Server">
-                <span class="sidebar-nav__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 7h14v4H5z"/><path d="M5 13h14v4H5z"/><path d="M8 9h.01"/><path d="M8 15h.01"/></svg></span>
-                <span>Server</span>
+            <NavLink id="nav-workbench" data-testid="nav-workbench" class="sidebar-nav__row" href="/chat" aria-label="Workbench — chat and compare">
+                <span class="sidebar-nav__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M5 6.5h14v9H8l-3 3z"/><path d="M8 10h8"/><path d="M8 13h5"/></svg>
+                </span>
+                <span>Workbench</span>
             </NavLink>
         </div>
     </nav>
 </aside>
+
+@code {
+    protected override void OnInitialized()
+    {
+        ServingState.OnChanged += OnServingStateChanged;
+    }
+
+    private void OnServingStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        ServingState.OnChanged -= OnServingStateChanged;
+    }
+}
+

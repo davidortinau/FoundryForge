@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Maui.Hosting;
 using Microsoft.Maui.Platforms.MacOS.Essentials;
 using Microsoft.Maui.Platforms.MacOS.Hosting;
+using FoundryStudio.App.Services;
 using FoundryStudio.Core.Abstractions;
 using FoundryStudio.Core.Chat;
 using FoundryStudio.Core.Concurrency;
@@ -69,6 +70,11 @@ public static class FoundryStudioServiceCollectionExtensions
         services.AddSingleton<ITranscriptionService, StubTranscriptionService>();
         // M5: the real exposed server over the single shared FoundryLocalManager (the only new FL-bound piece).
         services.AddSingleton<ILocalServerService, LocalServerService>();
+
+        // Phase 0 — shared serving-state service (single source of truth for Dock + Serve screen).
+        services.AddSingleton<ServingStateService>();
+        // Phase 0 — one-time startup landing redirect tracker.
+        services.AddSingleton<StartupNavigationService>();
 
         // Settings: human-readable JSON in app data; consent-gated, never wiped without confirmation.
         services.AddSingleton<ISettingsService>(_ =>

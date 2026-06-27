@@ -21,15 +21,18 @@
         Open settings
     </button>
     <Sidebar />
-    <main class="app-content" id="main-content">
-        <CascadingValue Name="SidebarCollapsed" Value="_isSidebarCollapsed">
-            <CascadingValue Name="ToggleSidebar" Value="_toggleSidebarCallback">
-                <CascadingValue Name="OpenSettings" Value="_openSettingsCallback">
-                    @Body
+    <div class="app-main-area">
+        <main class="app-content" id="main-content">
+            <CascadingValue Name="SidebarCollapsed" Value="_isSidebarCollapsed">
+                <CascadingValue Name="ToggleSidebar" Value="_toggleSidebarCallback">
+                    <CascadingValue Name="OpenSettings" Value="_openSettingsCallback">
+                        @Body
+                    </CascadingValue>
                 </CascadingValue>
             </CascadingValue>
-        </CascadingValue>
-    </main>
+        </main>
+        <ServingDock />
+    </div>
     <SettingsModal IsOpen="_isSettingsOpen" OnClose="_closeSettingsCallback" />
 </div>
 
@@ -64,3 +67,4 @@
         _isSettingsOpen = false;
     }
 }
+
