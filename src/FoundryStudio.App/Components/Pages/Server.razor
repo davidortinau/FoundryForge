@@ -7,8 +7,23 @@
     <PageHeader TitleId="server-title"
                 Eyebrow="External OpenAI server"
                 Title="Light the local server"
-                Subtitle="Expose Foundry Local's local OpenAI-compatible server for external tools. FoundryStudio chat stays in-process.">
-        <Toolbar>
+                Subtitle="Expose Foundry Local's local OpenAI-compatible server for external tools. FoundryStudio chat stays in-process." />
+
+    <section class="server-forge card" aria-labelledby="server-forge-title">
+        <div class="server-forge__header">
+            <div class="server-forge__status">
+                <span class="server-pilot-light @(PilotLightLit ? "is-lit" : string.Empty)"
+                      data-testid="server-pilot-light"
+                      data-state="@StateName"
+                      aria-hidden="true"></span>
+                <div>
+                    <p class="eyebrow">Forge state</p>
+                    <h2 id="server-forge-title">@ForgeTitle</h2>
+                    <p class="server-status-line" data-testid="server-status" role="status" aria-live="polite">
+                        @StateName
+                    </p>
+                </div>
+            </div>
             <button type="button"
                     class="button @ToggleButtonClass"
                     data-testid="server-toggle"
@@ -18,22 +33,6 @@
                     @onclick="ToggleServerAsync">
                 @ToggleText
             </button>
-        </Toolbar>
-    </PageHeader>
-
-    <section class="server-forge card" aria-labelledby="server-forge-title">
-        <div class="server-forge__status">
-            <span class="server-pilot-light @(PilotLightLit ? "is-lit" : string.Empty)"
-                  data-testid="server-pilot-light"
-                  data-state="@StateName"
-                  aria-hidden="true"></span>
-            <div>
-                <p class="eyebrow">Forge state</p>
-                <h2 id="server-forge-title">@ForgeTitle</h2>
-                <p class="server-status-line" data-testid="server-status" role="status" aria-live="polite">
-                    @StateName
-                </p>
-            </div>
         </div>
 
         @if (!LocalServer.IsSupported)

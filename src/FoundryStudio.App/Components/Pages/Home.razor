@@ -6,14 +6,7 @@
     <PageHeader TitleId="catalog-title"
                 Eyebrow="Foundry Local catalog"
                 Title="Browse models"
-                Subtitle="Install, load, and safely manage Foundry Local models.">
-        <Toolbar>
-            <a id="catalog-settings-link" data-testid="settings-link" class="button button-secondary" href="/settings">Settings</a>
-            <button id="catalog-refresh" type="button" class="button button-secondary" @onclick="RefreshCatalogAsync" disabled="@IsBusy">
-                Refresh catalog
-            </button>
-        </Toolbar>
-    </PageHeader>
+                Subtitle="Install, load, and safely manage Foundry Local models." />
 
     @if (_state.Status == CatalogViewState.CatalogStatus.Loading)
     {
@@ -32,6 +25,7 @@
     }
     else
     {
+        <!-- Toolbar: search, filters, view controls, refresh -->
         <section class="catalog-controls card" aria-label="Catalog search, filters, and view controls">
             <div class="field field-search">
                 <label for="catalog-search">Search models</label>
@@ -98,13 +92,23 @@
             {
                 <p class="curated-banner" data-testid="curated-banner">Recommended — curated by FoundryStudio, not a quality ranking</p>
             }
-            <p class="loaded-summary" data-testid="loaded-indicator" aria-live="polite">
-                @LoadedSummary
-            </p>
-            <p class="catalog-count" data-testid="catalog-count" aria-live="polite">
-                @_state.Visible.Count.ToString("N0") model@(_state.Visible.Count == 1 ? string.Empty : "s") shown
-                <span class="metadata-muted">from @_state.AllModels.Count.ToString("N0") available</span>
-            </p>
+            <span class="visually-hidden" data-testid="loaded-indicator" aria-live="polite">@LoadedSummary</span>
+            <div class="catalog-summary__end">
+                <p class="catalog-count" data-testid="catalog-count" aria-live="polite">
+                    @_state.Visible.Count.ToString("N0") model@(_state.Visible.Count == 1 ? string.Empty : "s") shown
+                    <span class="metadata-muted">from @_state.AllModels.Count.ToString("N0") available</span>
+                </p>
+                <button id="catalog-refresh"
+                        data-testid="refresh-catalog"
+                        type="button"
+                        class="icon-button catalog-refresh"
+                        aria-label="Refresh catalog"
+                        title="Refresh catalog"
+                        @onclick="RefreshCatalogAsync"
+                        disabled="@IsBusy">
+                    <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M20 11a8 8 0 1 0-.5 4" /><path d="M20 5v6h-6" /></svg>
+                </button>
+            </div>
         </section>
 
         @if (_state.Status == CatalogViewState.CatalogStatus.Empty)
@@ -120,59 +124,128 @@
         }
         else
         {
-            <section class="catalog-group" data-testid="group-cached" aria-labelledby="group-cached-title">
-                <div class="catalog-group__header">
-                    <h2 id="group-cached-title" data-testid="group-label"><span>Installed / cached</span>Ready on this Mac</h2>
-                    <span data-testid="group-count" aria-live="polite">@_state.VisibleCached.Count.ToString("N0")</span>
-                </div>
-                @if (_state.VisibleCached.Count == 0)
-                {
-                    <p class="status">No cached models match this view.</p>
-                }
-                else
-                {
-                    <div class="catalog-grid" aria-label="Cached model catalog results">
-                        @foreach (var model in _state.VisibleCached)
+            <!-- Two-pane layout: compact list (left) + detail panel (right) -->
+            <div class="models-layout">
+                <!-- LEFT: compact model list -->
+                <div class="models-list" role="listbox" aria-label="Model list">
+                    <section class="catalog-group models-list__group" data-testid="group-cached" aria-labelledby="group-cached-title">
+                        <div class="catalog-group__header">
+                            <h2 id="group-cached-title" data-testid="group-label"><span>Installed / cached</span>Ready on this Mac</h2>
+                            <span data-testid="group-count" aria-live="polite">@_state.VisibleCached.Count.ToString("N0")</span>
+                        </div>
+                        @if (_state.VisibleCached.Count == 0)
                         {
-                            <ModelCard Model="model"
-                                       IsCached="_state.IsCached(model)"
-                                       IsLoaded="_state.IsLoaded(model)"
-                                       Operation="_state.GetOperation(model)"
-                                       VariantSelection="_state.GetVariantSelection(model)"
-                                       FreeDiskGb="_freeDiskGb"
-                                       OnMutationCompleted="RefreshCatalogAsync"
-                                       OnDeleteRequested="OpenDeleteDialogAsync" />
+                            <p class="status models-list__empty-group">No cached models match this view.</p>
                         }
-                    </div>
-                }
-            </section>
+                        else
+                        {
+                            @foreach (var model in _state.VisibleCached)
+                            {
+                                <button type="button"
+                                        class="model-row @(IsSelected(model) ? "model-row--selected" : string.Empty) @(_state.IsLoaded(model) ? "model-row--loaded" : string.Empty)"
+                                        role="option"
+                                        aria-selected="@IsSelected(model).ToString().ToLowerInvariant()"
+                                        data-alias="@model.Alias"
+                                        @onclick="() => SelectModelAsync(model)">
+                                    <span class="model-row__name">
+                                        <span class="model-row__displayname">@RowDisplayName(model)</span>
+                                        <span class="model-row__alias">@model.Alias</span>
+                                    </span>
+                                    <span class="model-row__meta">
+                                        @if (!string.IsNullOrWhiteSpace(model.ModelType))
+                                        {
+                                            <span class="format-badge model-row__format">@model.ModelType.Trim()</span>
+                                        }
+                                        @if (model.SizeGb is > 0)
+                                        {
+                                            <span class="model-row__size">@model.SizeGb!.Value.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) GB</span>
+                                        }
+                                        @if (_state.IsLoaded(model))
+                                        {
+                                            <span class="cache-badge cache-badge--loaded model-row__badge">Loaded</span>
+                                        }
+                                        else if (_state.IsCached(model))
+                                        {
+                                            <span class="cache-badge cache-badge--cached model-row__badge">Cached</span>
+                                        }
+                                    </span>
+                                </button>
+                            }
+                        }
+                    </section>
 
-            <section class="catalog-group" data-testid="group-available" aria-labelledby="group-available-title">
-                <div class="catalog-group__header">
-                    <h2 id="group-available-title" data-testid="group-label"><span>Available to download</span>Cast to local cache</h2>
-                    <span data-testid="group-count" aria-live="polite">@_state.VisibleAvailable.Count.ToString("N0")</span>
-                </div>
-                @if (_state.VisibleAvailable.Count == 0)
-                {
-                    <p class="status">No available models match this view.</p>
-                }
-                else
-                {
-                    <div class="catalog-grid" aria-label="Available model catalog results">
-                        @foreach (var model in _state.VisibleAvailable)
+                    <section class="catalog-group models-list__group" data-testid="group-available" aria-labelledby="group-available-title">
+                        <div class="catalog-group__header">
+                            <h2 id="group-available-title" data-testid="group-label"><span>Available to download</span>Cast to local cache</h2>
+                            <span data-testid="group-count" aria-live="polite">@_state.VisibleAvailable.Count.ToString("N0")</span>
+                        </div>
+                        @if (_state.VisibleAvailable.Count == 0)
                         {
-                            <ModelCard Model="model"
-                                       IsCached="_state.IsCached(model)"
-                                       IsLoaded="_state.IsLoaded(model)"
-                                       Operation="_state.GetOperation(model)"
-                                       VariantSelection="_state.GetVariantSelection(model)"
-                                       FreeDiskGb="_freeDiskGb"
-                                       OnMutationCompleted="RefreshCatalogAsync"
-                                       OnDeleteRequested="OpenDeleteDialogAsync" />
+                            <p class="status models-list__empty-group">No available models match this view.</p>
                         }
-                    </div>
-                }
-            </section>
+                        else
+                        {
+                            @foreach (var model in _state.VisibleAvailable)
+                            {
+                                <button type="button"
+                                        class="model-row @(IsSelected(model) ? "model-row--selected" : string.Empty)"
+                                        role="option"
+                                        aria-selected="@IsSelected(model).ToString().ToLowerInvariant()"
+                                        data-alias="@model.Alias"
+                                        @onclick="() => SelectModelAsync(model)">
+                                    <span class="model-row__name">
+                                        <span class="model-row__displayname">@RowDisplayName(model)</span>
+                                        <span class="model-row__alias">@model.Alias</span>
+                                    </span>
+                                    <span class="model-row__meta">
+                                        @if (!string.IsNullOrWhiteSpace(model.ModelType))
+                                        {
+                                            <span class="format-badge model-row__format">@model.ModelType.Trim()</span>
+                                        }
+                                        @if (model.SizeGb is > 0)
+                                        {
+                                            <span class="model-row__size">@model.SizeGb!.Value.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) GB</span>
+                                        }
+                                    </span>
+                                </button>
+                            }
+                        }
+                    </section>
+
+                    <!-- Footer summary -->
+                    <footer class="models-footer" aria-label="Local model storage summary">
+                        <span class="models-footer__summary">
+                            You have <strong>@_state.VisibleCached.Count</strong> local model@(_state.VisibleCached.Count == 1 ? string.Empty : "s")@(CachedSizeLabel)
+                        </span>
+                        @if (!string.IsNullOrWhiteSpace(_modelCachePath))
+                        {
+                            <span class="models-footer__path" title="@_modelCachePath">@_modelCachePath</span>
+                        }
+                    </footer>
+                </div>
+
+                <!-- RIGHT: detail panel -->
+                <aside class="models-detail-panel" aria-label="Model details">
+                    @if (SelectedModel is { } selected)
+                    {
+                        <ModelCard Model="selected"
+                                   IsCached="_state.IsCached(selected)"
+                                   IsLoaded="_state.IsLoaded(selected)"
+                                   Operation="_state.GetOperation(selected)"
+                                   VariantSelection="_state.GetVariantSelection(selected)"
+                                   FreeDiskGb="_freeDiskGb"
+                                   OnMutationCompleted="RefreshCatalogAsync"
+                                   OnDeleteRequested="OpenDeleteDialogAsync" />
+                    }
+                    else
+                    {
+                        <div class="models-detail-panel__empty">
+                            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 6.5h14v11H5z" /><path d="M8 17.5V9h8" /><path d="M8 12.75h6.5" /></svg>
+                            <p>Select a model to see details and manage it.</p>
+                        </div>
+                    }
+                </aside>
+            </div>
         }
     }
 
@@ -194,6 +267,8 @@
     private bool _deleteBusy;
     private string? _deleteError;
     private double? _freeDiskGb;
+    private string? _selectedAlias;
+    private string? _modelCachePath;
 
     private bool IsBusy => _state.Status == CatalogViewState.CatalogStatus.Loading;
 
@@ -206,6 +281,37 @@
     private string DeleteMessage => _deleteTarget is null
         ? string.Empty
         : $"Delete cached model '{_deleteTarget.Alias}'? This frees {FormatSize(_deleteTarget.SizeGb)} and cannot be undone.";
+
+    private ModelInfo? SelectedModel =>
+        _selectedAlias is not null
+            ? _state.Visible.FirstOrDefault(m => string.Equals(m.Alias, _selectedAlias, StringComparison.OrdinalIgnoreCase))
+            : _state.Visible.Count > 0 ? _state.Visible[0] : null;
+
+    private bool IsSelected(ModelInfo model) =>
+        string.Equals(model.Alias, SelectedModel?.Alias, StringComparison.OrdinalIgnoreCase);
+
+    private string CachedSizeLabel
+    {
+        get
+        {
+            var knownSizes = _state.VisibleCached
+                .Where(m => m.SizeGb is > 0)
+                .Select(m => m.SizeGb!.Value)
+                .ToList();
+
+            if (knownSizes.Count == 0)
+            {
+                return _state.VisibleCached.Count > 0 ? ", size unknown" : string.Empty;
+            }
+
+            var total = knownSizes.Sum();
+            var suffix = knownSizes.Count < _state.VisibleCached.Count ? "+" : string.Empty;
+            return $", taking up {total.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)}{suffix} GB";
+        }
+    }
+
+    private static string RowDisplayName(ModelInfo model) =>
+        string.IsNullOrWhiteSpace(model.DisplayName) ? model.Alias : model.DisplayName;
 
     protected override async Task OnInitializedAsync()
     {
@@ -230,6 +336,7 @@
             _state.SetAuthoritativeState(await cachedTask, await loadedTask);
             var settings = await settingsTask;
             _freeDiskGb = CatalogDiskSpace.GetFreeDiskGb(settings.ModelCacheDirectory);
+            _modelCachePath = settings.ModelCacheDirectory;
             _state.Recompute();
         }
         catch (Exception ex)
@@ -298,6 +405,12 @@
     private static string? NormalizeOptional(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : value;
+    }
+
+    private Task SelectModelAsync(ModelInfo model)
+    {
+        _selectedAlias = model.Alias;
+        return InvokeAsync(StateHasChanged);
     }
 
     private Task OpenDeleteDialogAsync(ModelInfo model)

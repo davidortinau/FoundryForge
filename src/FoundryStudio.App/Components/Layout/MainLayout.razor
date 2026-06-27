@@ -1,8 +1,66 @@
 @inherits LayoutComponentBase
 
-<div class="app-shell">
+<div class="app-shell @(_isSidebarCollapsed ? "is-collapsed" : string.Empty)">
+    <button id="sidebar-toggle"
+            data-testid="sidebar-toggle"
+            type="button"
+            class="visually-hidden bridge-proxy"
+            aria-label="Toggle sidebar"
+            aria-expanded="@(!SidebarCollapsed).ToString().ToLowerInvariant()"
+            tabindex="-1"
+            @onclick="ToggleSidebar">
+        Toggle sidebar
+    </button>
+    <button id="open-settings"
+            data-testid="open-settings"
+            type="button"
+            class="visually-hidden bridge-proxy"
+            aria-label="Open settings"
+            tabindex="-1"
+            @onclick="OpenSettings">
+        Open settings
+    </button>
     <Sidebar />
     <main class="app-content" id="main-content">
-        @Body
+        <CascadingValue Name="SidebarCollapsed" Value="_isSidebarCollapsed">
+            <CascadingValue Name="ToggleSidebar" Value="_toggleSidebarCallback">
+                <CascadingValue Name="OpenSettings" Value="_openSettingsCallback">
+                    @Body
+                </CascadingValue>
+            </CascadingValue>
+        </CascadingValue>
     </main>
+    <SettingsModal IsOpen="_isSettingsOpen" OnClose="_closeSettingsCallback" />
 </div>
+
+@code {
+    private bool _isSidebarCollapsed;
+    private bool _isSettingsOpen;
+    private EventCallback _toggleSidebarCallback;
+    private EventCallback _openSettingsCallback;
+    private EventCallback _closeSettingsCallback;
+
+    private bool SidebarCollapsed => _isSidebarCollapsed;
+
+    protected override void OnInitialized()
+    {
+        _toggleSidebarCallback = EventCallback.Factory.Create(this, ToggleSidebar);
+        _openSettingsCallback = EventCallback.Factory.Create(this, OpenSettings);
+        _closeSettingsCallback = EventCallback.Factory.Create(this, CloseSettings);
+    }
+
+    private void ToggleSidebar()
+    {
+        _isSidebarCollapsed = !_isSidebarCollapsed;
+    }
+
+    private void OpenSettings()
+    {
+        _isSettingsOpen = true;
+    }
+
+    private void CloseSettings()
+    {
+        _isSettingsOpen = false;
+    }
+}

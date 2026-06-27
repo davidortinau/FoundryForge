@@ -45,6 +45,15 @@
     <RazorComponent Include="_Imports.razor" />
   </ItemGroup>
 
+  <!-- App icon: the maui-labs macOS target (_MacOSGenerateAppIcon) renders this SVG into AppIcon.icns
+       via sips + iconutil. Its CFBundleIconFile PartialAppManifest is registered too late (after
+       _CompileAppManifestInputs captures @(PartialAppManifest)), so we register our Info.plist as a
+       static PartialAppManifest here — this merges CFBundleIconFile (and our other manifest keys). -->
+  <ItemGroup>
+    <MauiIcon Include="Resources\AppIcon\appicon.svg" />
+    <PartialAppManifest Include="Info.plist" />
+  </ItemGroup>
+
   <ItemGroup>
     <BundleResource Include="wwwroot/**" Link="wwwroot/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>

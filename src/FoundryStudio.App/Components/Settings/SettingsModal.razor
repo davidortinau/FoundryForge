@@ -1,0 +1,355 @@
+@inject ISettingsService SettingsService
+@inject IJSRuntime JS
+
+@if (IsOpen)
+{
+    <div class="modal-backdrop modal-backdrop--settings" @onclick="CloseAsync">
+        <section @ref="_dialog"
+                 class="settings-modal card"
+                 data-testid="settings-modal"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-labelledby="@_titleId"
+                 aria-describedby="@_descriptionId"
+                 tabindex="-1"
+                 @onclick:stopPropagation="true"
+                 @onkeydown="HandleKeyDownAsync">
+            <header class="settings-modal__header">
+                <div>
+                    <p class="eyebrow">FoundryStudio settings</p>
+                    <h2 id="@_titleId">Settings</h2>
+                    <p id="@_descriptionId" class="settings-modal__subtitle">
+                        Manage local model storage and desktop appearance.
+                    </p>
+                </div>
+                <button id="settings-close"
+                        data-testid="settings-close"
+                        type="button"
+                        class="button button-secondary settings-modal__close"
+                        aria-label="Close settings"
+                        data-autofocus="true"
+                        @onclick="CloseAsync"
+                        disabled="@_isSaving">
+                    Close
+                </button>
+            </header>
+
+            <div class="settings-modal__body">
+                <section class="card settings-panel settings-modal__section" aria-labelledby="settings-cache-title">
+                    <h3 id="settings-cache-title" class="settings-section-title">Model cache</h3>
+                    <p class="metadata-muted">Change only the cache pointer. Existing cached models are never moved or deleted by this setting.</p>
+
+                    @if (_isLoading)
+                    {
+                        <p class="status" role="status">Loading settings…</p>
+                    }
+                    else
+                    {
+                        <div class="settings-grid">
+                            <div class="field">
+                                <label for="settings-cache-dir">Model cache directory</label>
+                                <input id="settings-cache-dir"
+                                       data-testid="cache-dir-input"
+                                       type="text"
+                                       value="@_pendingDirectory"
+                                       @oninput="OnDirectoryChanged"
+                                       autocomplete="off" />
+                            </div>
+                            <p class="metadata-muted">Current: @_currentSettings?.ModelCacheDirectory</p>
+
+                            @if (!string.IsNullOrWhiteSpace(_error))
+                            {
+                                <p data-testid="settings-cache-dir-error" class="operation-error" role="alert">@_error</p>
+                            }
+
+                            @if (!string.IsNullOrWhiteSpace(_status))
+                            {
+                                <p class="status" role="status">@_status</p>
+                            }
+
+                            <div class="settings-actions">
+                                <button id="settings-cache-dir-save"
+                                        data-testid="settings-cache-dir-save"
+                                        type="button"
+                                        class="button"
+                                        @onclick="OpenSaveConfirmationAsync"
+                                        disabled="@_isSaving">
+                                    Save cache directory
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </section>
+
+                <section class="card settings-panel settings-modal__section" aria-labelledby="settings-appearance-title" data-testid="settings-appearance">
+                    <h3 id="settings-appearance-title" class="settings-section-title">Appearance</h3>
+                    <p class="metadata-muted">Choose the theme. "System" follows macOS Light/Dark; the others override it.</p>
+                    <div class="theme-toggle" role="group" aria-label="Theme" data-testid="theme-toggle">
+                        @foreach (var option in ThemeOptions)
+                        {
+                            <button type="button"
+                                    class="theme-option @(_theme == option.Value ? "is-active" : string.Empty)"
+                                    data-testid="theme-@option.Value"
+                                    aria-pressed="@(_theme == option.Value ? "true" : "false")"
+                                    @onclick="() => SetThemeAsync(option.Value)">
+                                @option.Label
+                            </button>
+                        }
+                    </div>
+                </section>
+            </div>
+
+            <ConfirmDialog IsOpen="@_showConfirm"
+                           Eyebrow="Change cache directory"
+                           Title="Use a new model cache directory?"
+                           Message="@ConfirmMessage"
+                           ConfirmText="Use this directory"
+                           BusyText="Saving…"
+                           ConfirmButtonId="confirm-cache-dir-btn"
+                           CancelButtonId="cancel-cache-dir-btn"
+                           IsBusy="@_isSaving"
+                           ErrorMessage="@_error"
+                           OnConfirm="ConfirmSaveAsync"
+                           OnCancel="CloseSaveConfirmationAsync" />
+        </section>
+    </div>
+}
+
+@code {
+    private readonly string _titleId = $"settings-title-{Guid.NewGuid():N}";
+    private readonly string _descriptionId = $"settings-description-{Guid.NewGuid():N}";
+    private ElementReference _dialog;
+    private AppSettings? _currentSettings;
+    private string _pendingDirectory = string.Empty;
+    private string? _candidateDirectory;
+    private string? _error;
+    private string? _status;
+    private bool _isLoading = true;
+    private bool _isSaving;
+    private bool _showConfirm;
+    private bool _needsFocus;
+    private bool _themeLoaded;
+    private bool _wasOpen;
+    private string _theme = "system";
+
+    [Parameter] public bool IsOpen { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private static readonly (string Value, string Label)[] ThemeOptions =
+    {
+        ("system", "System"),
+        ("light", "Light"),
+        ("dark", "Dark")
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSettingsAsync();
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen && !_wasOpen)
+        {
+            _needsFocus = true;
+        }
+
+        _wasOpen = IsOpen;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!IsOpen)
+        {
+            return;
+        }
+
+        if (_needsFocus)
+        {
+            _needsFocus = false;
+            await JS.InvokeVoidAsync("foundryStudioDialog.focusAndTrap", _dialog);
+        }
+
+        if (!_themeLoaded)
+        {
+            _themeLoaded = true;
+            await LoadThemeAsync();
+        }
+    }
+
+    private async Task LoadThemeAsync()
+    {
+        try
+        {
+            var current = await JS.InvokeAsync<string>("foundryStudioTheme.current");
+            if (!string.IsNullOrWhiteSpace(current) && current != _theme)
+            {
+                _theme = current;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch
+        {
+            // JS not ready / unavailable -> keep the default "system"; the UI still works.
+        }
+    }
+
+    private async Task LoadSettingsAsync()
+    {
+        try
+        {
+            _currentSettings = await SettingsService.GetAsync();
+            _pendingDirectory = _currentSettings.ModelCacheDirectory;
+        }
+        catch (Exception ex)
+        {
+            _error = $"Settings could not be loaded: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task SetThemeAsync(string value)
+    {
+        _theme = value;
+        try
+        {
+            await JS.InvokeVoidAsync("foundryStudioTheme.apply", value);
+        }
+        catch
+        {
+            // Best-effort; the visible state reflects the user's choice regardless.
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private string ConfirmMessage => string.IsNullOrWhiteSpace(_candidateDirectory)
+        ? string.Empty
+        : $"Use '{_candidateDirectory}' for future model downloads? Existing cached models under the old directory may not appear; nothing is moved or deleted.";
+
+    private void OnDirectoryChanged(ChangeEventArgs args)
+    {
+        _pendingDirectory = args.Value?.ToString() ?? string.Empty;
+        _error = null;
+        _status = null;
+    }
+
+    private Task OpenSaveConfirmationAsync()
+    {
+        _error = null;
+        _status = null;
+
+        var candidate = _pendingDirectory.Trim();
+        if (string.IsNullOrWhiteSpace(candidate))
+        {
+            _error = "Enter an existing writable directory.";
+            return InvokeAsync(StateHasChanged);
+        }
+
+        if (!Directory.Exists(candidate))
+        {
+            _error = "Directory does not exist. Create it first; FoundryStudio will not create, move, or wipe cache folders here.";
+            return InvokeAsync(StateHasChanged);
+        }
+
+        if (!CanWriteToDirectory(candidate))
+        {
+            _error = "Directory is not writable. Choose a directory where FoundryStudio can create model files.";
+            return InvokeAsync(StateHasChanged);
+        }
+
+        _candidateDirectory = candidate;
+        _showConfirm = true;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task CloseSaveConfirmationAsync()
+    {
+        _showConfirm = false;
+        _candidateDirectory = null;
+        _error = null;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ConfirmSaveAsync()
+    {
+        if (_currentSettings is null || string.IsNullOrWhiteSpace(_candidateDirectory))
+        {
+            return;
+        }
+
+        _isSaving = true;
+        _error = null;
+
+        try
+        {
+            var updated = _currentSettings with { ModelCacheDirectory = _candidateDirectory };
+            await SettingsService.UpdateAsync(updated);
+            _currentSettings = updated;
+            _pendingDirectory = updated.ModelCacheDirectory;
+            _status = "Cache directory saved. Existing cached models were not moved or deleted.";
+            _showConfirm = false;
+            _candidateDirectory = null;
+        }
+        catch (Exception ex)
+        {
+            _error = $"Cache directory could not be saved: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task CloseAsync()
+    {
+        if (_isSaving)
+        {
+            return;
+        }
+
+        if (_showConfirm)
+        {
+            await CloseSaveConfirmationAsync();
+            return;
+        }
+
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task HandleKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (args.Key == "Escape" && !_showConfirm)
+        {
+            await CloseAsync();
+        }
+    }
+
+    private static bool CanWriteToDirectory(string directory)
+    {
+        try
+        {
+            var probePath = Path.Combine(directory, $".foundrystudio-write-test-{Guid.NewGuid():N}");
+            using (new FileStream(probePath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1, FileOptions.DeleteOnClose))
+            {
+            }
+
+            if (File.Exists(probePath))
+            {
+                File.Delete(probePath);
+            }
+
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+}

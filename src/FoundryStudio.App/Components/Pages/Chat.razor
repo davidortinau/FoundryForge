@@ -11,11 +11,9 @@
     <PageHeader TitleId="chat-title"
                 Eyebrow="Local chat"
                 Title="Chat with a loaded model"
-                Subtitle="Stream replies in-process from Foundry Local. Every token and metric shown comes from the real stream.">
-        <Toolbar>
-            <p class="loaded-summary" data-testid="chat-active-model" aria-live="polite">@ActiveModelSummary</p>
-        </Toolbar>
-    </PageHeader>
+                Subtitle="Stream replies in-process from Foundry Local. Every token and metric shown comes from the real stream." />
+
+    <span class="visually-hidden" data-testid="chat-active-model" aria-live="polite">@ActiveModelSummary</span>
 
     <div class="chat-layout">
         <aside class="chat-sidebar card" aria-label="Chat conversations and controls">

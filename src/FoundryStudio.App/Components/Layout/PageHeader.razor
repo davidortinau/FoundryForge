@@ -1,26 +1,12 @@
-<section class="page-header" aria-labelledby="@TitleId">
-    <div class="page-header__identity">
-        <span class="page-header__glyph" aria-hidden="true">
-            @if (Glyph is not null)
-            {
-                @Glyph
-            }
-            else
-            {
-                <span class="foundry-mark"><svg viewBox="0 0 24 24" focusable="false"><path d="M5 6.5h14v11H5z" /><path d="M8 17.5V9h8" /><path d="M8 12.75h6.5" /></svg></span>
-            }
-        </span>
-        <div>
-            <p class="eyebrow">@Eyebrow</p>
-            <h1 id="@TitleId">@Title</h1>
-            <p class="page-header__subtitle">@Subtitle</p>
-        </div>
-    </div>
-    @if (Toolbar is not null)
+<section class="page-title" aria-labelledby="@TitleId">
+    @if (!string.IsNullOrWhiteSpace(Eyebrow))
     {
-        <div class="page-header__toolbar">
-            @Toolbar
-        </div>
+        <p class="eyebrow page-title__eyebrow">@Eyebrow</p>
+    }
+    <h1 id="@TitleId">@Title</h1>
+    @if (!string.IsNullOrWhiteSpace(Subtitle))
+    {
+        <p class="page-title__subtitle">@Subtitle</p>
     }
 </section>
 

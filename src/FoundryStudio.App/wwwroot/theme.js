@@ -17,6 +17,7 @@
             root.setAttribute("data-theme", value);
         }
         try { localStorage.setItem(KEY, value); } catch { /* storage may be unavailable */ }
+        syncNativeWindow(value);
         return value;
     }
 
@@ -29,7 +30,40 @@
         }
     }
 
-    window.foundryStudioTheme = { apply, current };
+    function pushBackground() {
+        try {
+            var bg = getComputedStyle(document.body).backgroundColor;
+            if (window.DotNet && bg) {
+                window.DotNet.invokeMethodAsync('FoundryStudio.App', 'SetWindowBackgroundColor', bg);
+            }
+        } catch (e) { /* interop not ready yet */ }
+    }
+
+    function syncNativeWindow(mode, attempt) {
+        // Drive the native window from the in-app theme. Order matters:
+        //  1. Set the window APPEARANCE from the mode. "system" clears the forced appearance so the
+        //     window inherits the OS theme and the WebView's prefers-color-scheme reports correctly.
+        //  2. THEN push the body canvas color so the titlebar band matches. For "system" the body color
+        //     depends on the (just-cleared) appearance, so push a few times to catch the recompute.
+        // Blazor's DotNet interop may not be ready at first paint, so retry briefly until it is.
+        attempt = attempt || 0;
+        try {
+            if (window.DotNet) {
+                window.DotNet.invokeMethodAsync('FoundryStudio.App', 'SetWindowThemeMode', mode);
+                pushBackground();
+                setTimeout(pushBackground, 120);
+                setTimeout(pushBackground, 300);
+                return;
+            }
+        } catch (e) { /* interop not ready yet */ }
+        if (attempt < 40) {
+            setTimeout(function () { syncNativeWindow(mode, attempt + 1); }, 100);
+        }
+    }
+
+    function syncWindowBackground() { pushBackground(); }
+
+    window.foundryStudioTheme = { apply, current, syncWindowBackground };
 
     // Apply the persisted choice immediately (the inline head script already did a first pass to avoid a
     // flash; this re-applies once this script loads, in case it ran later).
