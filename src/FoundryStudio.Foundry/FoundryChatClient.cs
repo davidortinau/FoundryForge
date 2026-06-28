@@ -107,9 +107,11 @@ public sealed class FoundryChatClient : IChatClient
     }
 
     /// <summary>
-    /// Apply ONLY the four Foundry-Local-honored inference params (US5, FR-019). We deliberately never set
-    /// <c>TopK</c>/<c>RandomSeed</c>/<c>PresencePenalty</c> — those properties exist on the settings object but
-    /// FL does not honor them, so surfacing/setting them would be a fabricated control (Constitution III).
+    /// Apply ONLY the inference params Foundry Local actually honors WITHOUT corrupting generation:
+    /// Temperature, MaxTokens, TopP. We deliberately never set <c>TopK</c>/<c>RandomSeed</c>/
+    /// <c>PresencePenalty</c> (FL ignores them) — and crucially never set <c>FrequencyPenalty</c>:
+    /// hardware testing showed that setting it AT ALL (even to 0) makes FL emit degenerate output
+    /// (endless '.'/'?' repetition). Surfacing or sending it would be a broken control (Constitution III).
     /// </summary>
     private static void ApplyInferenceSettings(OpenAIChatClient chatClient, ChatOptions? options)
     {
@@ -132,11 +134,6 @@ public sealed class FoundryChatClient : IChatClient
         if (options.TopP is { } topP)
         {
             settings.TopP = topP;
-        }
-
-        if (options.FrequencyPenalty is { } freq)
-        {
-            settings.FrequencyPenalty = freq;
         }
     }
 

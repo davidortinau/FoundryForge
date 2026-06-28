@@ -319,10 +319,6 @@
                             <label for="param-top-p-input">Top-p</label>
                             <input id="param-top-p-input" data-testid="param-top-p" type="number" min="0" max="1" step="0.05" value="@FormatDouble(CurrentParameters.TopP)" @onchange="OnTopPChangedAsync" disabled="@(CurrentSession is null || IsStreaming)" />
                         </div>
-                        <div class="field">
-                            <label for="param-frequency-penalty-input">Frequency penalty</label>
-                            <input id="param-frequency-penalty-input" data-testid="param-frequency-penalty" type="number" min="-2" max="2" step="0.1" value="@FormatDouble(CurrentParameters.FrequencyPenalty)" @onchange="OnFrequencyPenaltyChangedAsync" disabled="@(CurrentSession is null || IsStreaming)" />
-                        </div>
                     </div>
                 </div>
 
@@ -803,8 +799,6 @@
     private Task OnMaxTokensChangedAsync(ChangeEventArgs args) => UpdateParametersAsync(CurrentParameters with { MaxOutputTokens = ParseInt(args.Value?.ToString()) });
 
     private Task OnTopPChangedAsync(ChangeEventArgs args) => UpdateParametersAsync(CurrentParameters with { TopP = ParseDouble(args.Value?.ToString()) });
-
-    private Task OnFrequencyPenaltyChangedAsync(ChangeEventArgs args) => UpdateParametersAsync(CurrentParameters with { FrequencyPenalty = ParseDouble(args.Value?.ToString()) });
 
     private async Task UpdateParametersAsync(InferenceParameters parameters)
     {

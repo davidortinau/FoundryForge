@@ -119,3 +119,11 @@ Ownership routing:
 - Resolution (M5): `FoundryLifecycle` sets `Configuration.Web = new Configuration.WebService { Urls = "http://127.0.0.1:5273" }`. The Server panel shows the ACTUAL bound URL from `manager.Urls` (verbatim), never a fabricated/assumed value. Localhost-only by design; no runtime port control (FL doesn't expose one).
 - Remove when: n/a (documents the required FL configuration). If a configurable port is ever wanted, it requires recreating the singleton manager (out of v1 scope).
 - Status: resolved (M5); informational.
+
+### KI-013 — FL corrupts generation when `frequency_penalty` is set (chat output garbage)
+- Area: FL integration (Foundry Local + Betalgo.Ranul.OpenAI streaming).
+- Symptom: setting `frequency_penalty` on the chat request — **even to `0`** — makes Foundry Local emit degenerate output: an endless run of repeated characters (e.g. `.` or `?`) that never stops until max-tokens. Because the chat UI defaulted `FrequencyPenalty = 0` and sent it on every request, **every** chat reply was garbage; manually stopping was the only escape. Isolated by per-parameter hardware testing on phi-4-mini: `temperature` alone → clean ("Paris."), `top_p` alone → clean, **`frequency_penalty=0` alone → 256 chars of `.`**, no params → clean.
+- Root cause: NOT our pipeline (per-token codepoint capture proved FoundryChatClient/ChatService pass correct Unicode). FL (or the FL↔Betalgo bridge) mishandles `frequency_penalty`.
+- Workaround: never send `frequency_penalty`. Removed it from `InferenceParameters` (record + `ToChatOptions`), from `FoundryChatClient.ApplyInferenceSettings`, and from the Chat inference-parameter UI (honesty rule — no control for a param FL breaks on). Supported params are now temperature, max tokens, top-p only.
+- Remove when: a future FL build honors `frequency_penalty` without corrupting generation; then re-add the param + UI control after hardware re-verification.
+- Status: resolved in app (param removed); upstream FL issue to file.

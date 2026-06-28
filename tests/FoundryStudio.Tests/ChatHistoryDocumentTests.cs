@@ -13,7 +13,7 @@ public class ChatHistoryDocumentTests
             Id: "abc123",
             Title: "Why is the sky blue",
             SystemPrompt: "You are concise.",
-            Parameters: new InferenceParameters(0.5, 256, 0.9, 0.1),
+            Parameters: new InferenceParameters(0.5, 256, 0.9),
             ModelAlias: "qwen2.5-0.5b",
             Messages: new[]
             {
