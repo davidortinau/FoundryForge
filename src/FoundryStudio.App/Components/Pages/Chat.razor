@@ -169,29 +169,32 @@
                 <!-- State C: model loaded — live workbench -->
                 <section class="chat-workbench card" aria-label="Conversation workbench">
                     <div class="chat-workbench__header">
-                        @if (_loadedModels.Count > 1)
-                        {
-                            <select class="chat-model-switcher"
-                                    data-testid="chat-active-model"
-                                    aria-label="Active model — select to switch"
-                                    @onchange="OnActiveModelChangedAsync">
-                                @foreach (var m in _loadedModels)
-                                {
-                                    if (m.Alias == ActiveModel?.Alias)
+                        <div class="chat-model-select">
+                            <span class="chat-model-select__label" id="chat-model-label">Model</span>
+                            @if (_loadedModels.Count > 1)
+                            {
+                                <select class="chat-model-switcher"
+                                        data-testid="chat-active-model"
+                                        aria-labelledby="chat-model-label"
+                                        @onchange="OnActiveModelChangedAsync">
+                                    @foreach (var m in _loadedModels)
                                     {
-                                        <option value="@m.Alias" selected>@DisplayName(m) · loaded</option>
+                                        if (m.Alias == ActiveModel?.Alias)
+                                        {
+                                            <option value="@m.Alias" selected>@DisplayName(m)</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@m.Alias">@DisplayName(m)</option>
+                                        }
                                     }
-                                    else
-                                    {
-                                        <option value="@m.Alias">@DisplayName(m) · loaded</option>
-                                    }
-                                }
-                            </select>
-                        }
-                        else
-                        {
-                            <span class="chat-active-model-chip" data-testid="chat-active-model" aria-live="polite">@ActiveModelLabel</span>
-                        }
+                                </select>
+                            }
+                            else
+                            {
+                                <span class="chat-model-name" data-testid="chat-active-model" aria-live="polite">@DisplayName(ActiveModel)</span>
+                            }
+                        </div>
 
                         <!-- Workbench mode segmented control -->
                         <div class="workbench-mode-tabs" role="group" aria-label="Workbench mode">
@@ -206,19 +209,6 @@
                                     aria-pressed="@(_workbenchMode == WorkbenchMode.Compare)"
                                     @onclick="() => _workbenchMode = WorkbenchMode.Compare">Compare</button>
                         </div>
-
-                        @if (_workbenchMode == WorkbenchMode.Chat)
-                        {
-                            <button type="button"
-                                    class="icon-button chat-settings-toggle @(_settingsOpen ? "is-active" : string.Empty)"
-                                    data-testid="chat-settings-toggle"
-                                    aria-pressed="@_settingsOpen.ToString().ToLowerInvariant()"
-                                    title="@(_settingsOpen ? "Hide settings panel" : "Show settings panel")"
-                                    aria-label="@(_settingsOpen ? "Hide settings panel" : "Show settings panel")"
-                                    @onclick="() => _settingsOpen = !_settingsOpen">
-                                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M3 5h13M3 12h13M3 19h13" /><circle cx="19.5" cy="5" r="1.6" /><circle cx="19.5" cy="12" r="1.6" /><circle cx="19.5" cy="19" r="1.6" /></svg>
-                            </button>
-                        }
                     </div>
 
                     @if (_workbenchMode == WorkbenchMode.Chat)
@@ -303,9 +293,23 @@
             }
         </main>
 
+        @if (_workbenchMode == WorkbenchMode.Chat && ActiveModel is not null)
+        {
+            <button type="button"
+                    class="chat-settings-rail @(_settingsOpen ? "is-open" : string.Empty)"
+                    data-testid="chat-settings-toggle"
+                    aria-pressed="@_settingsOpen.ToString().ToLowerInvariant()"
+                    aria-controls="chat-settings-panel"
+                    title="@(_settingsOpen ? "Hide parameters" : "Show parameters")"
+                    aria-label="@(_settingsOpen ? "Hide parameters panel" : "Show parameters panel")"
+                    @onclick="() => _settingsOpen = !_settingsOpen">
+                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="@(_settingsOpen ? "M9 6l6 6-6 6" : "M15 6l-6 6 6 6")" /></svg>
+            </button>
+        }
+
         @if (ShowSettingsColumn)
         {
-            <aside class="chat-settings" data-testid="chat-settings-panel" aria-label="Chat prompt and inference settings">
+            <aside class="chat-settings" id="chat-settings-panel" data-testid="chat-settings-panel" aria-label="Chat prompt and inference settings">
                 <div class="chat-settings__scroll">
                     <section class="chat-panel">
                         <p class="chat-panel__title eyebrow">System prompt</p>

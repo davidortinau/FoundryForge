@@ -21,8 +21,8 @@
         }
     </span>
 
-    <span class="serving-dock__count" data-testid="serving-dock-count" aria-label="Loaded models count">
-        @ServingState.LoadedCount @(ServingState.LoadedCount == 1 ? "model loaded" : "models loaded")
+    <span class="serving-dock__count" data-testid="serving-dock-count" aria-label="Models in memory count">
+        @ServingState.LoadedCount @(ServingState.LoadedCount == 1 ? "model in memory" : "models in memory")
     </span>
 
     @if (ServingState.IsRunning && DockEndpoint is not null)

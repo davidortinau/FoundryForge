@@ -30,34 +30,27 @@ else
                 <span class="pill chat-message__streaming">Generating…</span>
             }
         </div>
-        @if (IsAssistant)
+        <div class="chat-markdown" data-testid="chat-markdown">@((MarkupString)Rendered.Html)</div>
+        @if (Rendered.CodeBlocks.Count > 0)
         {
-            <div class="chat-markdown" data-testid="chat-markdown">@((MarkupString)Rendered.Html)</div>
-            @if (Rendered.CodeBlocks.Count > 0)
-            {
-                <div class="chat-codeblocks" aria-label="Code blocks in assistant reply">
-                    @foreach (var block in EnumerateCodeBlocks())
-                    {
-                        <figure class="chat-codeblock" data-testid="chat-codeblock">
-                            <figcaption>
-                                <span>@(string.IsNullOrWhiteSpace(block.Value.Language) ? "code" : block.Value.Language)</span>
-                                <button type="button"
-                                        class="button button-secondary chat-code-copy"
-                                        data-testid="chat-code-copy"
-                                        aria-label="Copy exact code block"
-                                        @onclick="() => CopyCodeAsync(block.Value.Code)">
-                                    Copy code
-                                </button>
-                            </figcaption>
-                            <pre><code>@block.Value.Code</code></pre>
-                        </figure>
-                    }
-                </div>
-            }
-        }
-        else
-        {
-            <p>@Content</p>
+            <div class="chat-codeblocks" aria-label="Code blocks in this message">
+                @foreach (var block in EnumerateCodeBlocks())
+                {
+                    <figure class="chat-codeblock" data-testid="chat-codeblock">
+                        <figcaption>
+                            <span>@(string.IsNullOrWhiteSpace(block.Value.Language) ? "code" : block.Value.Language)</span>
+                            <button type="button"
+                                    class="button button-secondary chat-code-copy"
+                                    data-testid="chat-code-copy"
+                                    aria-label="Copy exact code block"
+                                    @onclick="() => CopyCodeAsync(block.Value.Code)">
+                                Copy code
+                            </button>
+                        </figcaption>
+                        <pre><code>@block.Value.Code</code></pre>
+                    </figure>
+                }
+            </div>
         }
     </article>
 }
@@ -85,7 +78,7 @@ else
 
     private string RoleLabel => IsAssistant ? "Assistant" : "You";
 
-    private RenderedMarkdown Rendered => IsAssistant ? ChatMarkdown.Render(Content) : new RenderedMarkdown(string.Empty, Array.Empty<CodeBlock>());
+    private RenderedMarkdown Rendered => ChatMarkdown.Render(Content);
 
     private IEnumerable<KeyValuePair<int, CodeBlock>> EnumerateCodeBlocks() => Rendered.CodeBlocks.Select((value, index) => new KeyValuePair<int, CodeBlock>(index, value));
 
