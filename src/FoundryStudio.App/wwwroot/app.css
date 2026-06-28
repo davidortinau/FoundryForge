@@ -369,10 +369,9 @@ button:disabled { cursor: not-allowed; opacity: 0.65; transform: none; }
 }
 
 .catalog-controls {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: var(--fs-space-3);
-  align-items: end;
+  align-items: stretch;
 }
 .field { display: grid; gap: var(--fs-space-1); min-width: 0; }
 .field label { color: var(--fs-text-secondary); font: var(--fs-type-label); }
@@ -963,23 +962,25 @@ details[open] > .chat-metrics-summary::before { transform: rotate(90deg); }
 
 /* LEFT: compact model list */
 .models-list {
-  flex: 1 1 0;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  border-right: 1px solid var(--fs-border);
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius-lg);
+  overflow: hidden;
+  background: var(--fs-surface);
 }
 
-.models-list__group {
+/* Each catalog group stacks header + rows in the single column. */
+.models-list .catalog-group {
   display: block;
-  padding: var(--fs-space-3) 0 var(--fs-space-2);
+  padding: 0;
 }
 
-.models-list__group .catalog-group__header {
-  padding: 0 var(--fs-space-4) var(--fs-space-2);
+.models-list .catalog-group__header {
+  padding: var(--fs-space-3) var(--fs-space-4) var(--fs-space-2);
   border-bottom: 1px solid var(--fs-border);
-  margin-bottom: var(--fs-space-1);
+  background: var(--fs-surface-raised);
 }
 
 .models-list__empty-group {
@@ -1003,7 +1004,10 @@ details[open] > .chat-metrics-summary::before { transform: rotate(90deg); }
   font: var(--fs-type-body);
   text-align: left;
   cursor: pointer;
-  transition: background var(--fs-dur-fast) ease;
+  /* Transition only the selected-accent border, NOT background: a color-mix()
+     background bound to a theme custom property gets stuck mid-transition on
+     theme toggle in WKWebView. Instant background = robust theme switching. */
+  transition: border-left-color var(--fs-dur-fast) ease;
 }
 
 .model-row:hover {
@@ -1765,3 +1769,154 @@ details[open] > .chat-metrics-summary::before { transform: rotate(90deg); }
   font: var(--fs-type-body);
   color: var(--fs-text-secondary);
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+   Discover redesign — one search field, single-column action-forward list
+   with inline-expand, action-first detail (design-review 2026-06-28).
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* One search field: search icon + input + docked interpret/submit arrow. */
+.catalog-search-row {
+  display: flex;
+  align-items: center;
+  gap: var(--fs-space-2);
+}
+.catalog-search-field {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.catalog-search-field__icon {
+  position: absolute;
+  left: var(--fs-space-3);
+  width: 16px;
+  height: 16px;
+  color: var(--fs-text-tertiary);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.catalog-search-field__input {
+  width: 100%;
+  height: 40px;
+  padding: 0 44px 0 38px;
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius-pill);
+  background: var(--fs-surface-inset);
+  color: var(--fs-text);
+  font: var(--fs-type-body);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.catalog-search-field__input::placeholder {
+  color: var(--fs-text-placeholder, var(--fs-text-secondary));
+}
+.catalog-search-field__input:focus {
+  border-color: var(--fs-accent);
+  box-shadow: 0 0 0 2px var(--fs-accent-ring);
+}
+.catalog-search-field__submit {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--fs-text-secondary);
+  border-radius: var(--fs-radius-sm);
+  cursor: pointer;
+}
+/* Re-assert centering across base/disabled/hover (global button rules clobber it). */
+.catalog-search-field__submit,
+.catalog-search-field__submit:disabled,
+.catalog-search-field__submit:hover:not(:disabled) {
+  transform: translateY(-50%);
+}
+.catalog-search-field__submit svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.catalog-search-field__submit:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--fs-accent) 16%, transparent);
+  color: var(--fs-text);
+}
+.catalog-search-field__submit:disabled { opacity: 0.4; cursor: default; }
+
+/* Result line: count + demoted Recommended tag + refresh, grouped under search. */
+.catalog-result-line {
+  display: flex;
+  align-items: center;
+  gap: var(--fs-space-3);
+}
+.catalog-result-line .catalog-count { margin: 0; font: var(--fs-type-body); color: var(--fs-text-secondary); }
+.catalog-result-line .catalog-count strong { color: var(--fs-text); }
+.catalog-result-line .catalog-refresh { margin-left: auto; }
+.catalog-recommended-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fs-space-1);
+  padding: 2px var(--fs-space-2);
+  border-radius: var(--fs-radius-pill);
+  background: color-mix(in srgb, var(--fs-accent) 10%, transparent);
+  color: var(--fs-accent-text);
+  font: var(--fs-type-label);
+  cursor: help;
+}
+.catalog-recommended-tag svg {
+  width: 14px; height: 14px;
+  fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
+
+/* Single-column list rows: collapsed row + inline-expand detail. */
+.model-row-wrap { border-bottom: 1px solid var(--fs-border); }
+.model-row-wrap:last-child { border-bottom: none; }
+.model-row__chevron {
+  width: 16px; height: 16px;
+  flex-shrink: 0;
+  color: var(--fs-text-tertiary);
+  fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  transition: transform var(--fs-dur-fast) ease;
+}
+.model-row-wrap.is-expanded .model-row__chevron { transform: rotate(90deg); color: var(--fs-accent); }
+
+/* Selected/expanded row shares the detail's copper tint so the two read as one
+   block. Uses the same color-mix family as .model-row__detail. */
+.model-row-wrap.is-expanded .model-row {
+  background: color-mix(in srgb, var(--fs-accent) 6%, var(--fs-surface));
+}
+
+/* Inline-expanded detail reads as a continuation of the selected row. */
+.model-row__detail {
+  border-left: 3px solid var(--fs-accent);
+  padding: 0 var(--fs-space-4) var(--fs-space-4);
+  background: color-mix(in srgb, var(--fs-accent) 5%, var(--fs-surface));
+}
+.model-row__detail .model-card {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  padding: var(--fs-space-2) 0 0;
+}
+.model-row__detail .model-card::before { display: none; }
+
+/* Action-first ModelCard: actions render above the spec table.
+   .model-card is normally block-flow (header, facts, management); make it a
+   flex column and push facts after management via order. */
+.model-card { display: flex; flex-direction: column; }
+.model-card > .model-facts { order: 1; }

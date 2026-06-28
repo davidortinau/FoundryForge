@@ -4,13 +4,12 @@
 @inject LocalContextReader ContextReader
 @inject NavigationManager Navigation
 @inject StartupNavigationService StartupNav
-@inject IJSRuntime JS
 
 <div class="catalog-shell" data-testid="catalog-page">
     <PageHeader TitleId="catalog-title"
                 Eyebrow=""
                 Title="Browse models"
-                Subtitle="Install, load, and manage local models." />
+                Subtitle="Find and download ONNX models for this Mac." />
 
     @if (_state.Status == CatalogViewState.CatalogStatus.Loading)
     {
@@ -31,64 +30,34 @@
     {
         <!-- Toolbar: search (always visible) + collapsible filter drawer -->
         <section class="catalog-controls card" aria-label="Catalog search, filters, and view controls">
-            <!-- NL assist: describe what you need, interpreted as editable filter chips -->
-            <div class="catalog-nl-row" role="search" aria-label="Describe what you need">
-                <div class="catalog-nl-input-group">
-                    <label for="catalog-nl-input" class="visually-hidden">Describe what you need</label>
-                    <input id="catalog-nl-input"
-                           type="text"
-                           class="catalog-nl-input"
+            <!-- One search field: accepts literal tokens (alias / name / id) and
+                 natural language. Filters literally as you type; Enter or the submit
+                 arrow interprets the phrase into editable filter chips below. -->
+            <div class="catalog-search-row" role="search" aria-label="Search or describe what you need">
+                <div class="catalog-search-field">
+                    <svg class="catalog-search-field__icon" viewBox="0 0 24 24" focusable="false" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
+                    <label for="catalog-search" class="visually-hidden">Search or describe what you need</label>
+                    <input id="catalog-search"
+                           type="search"
+                           class="catalog-search-field__input"
                            data-testid="discover-nl-input"
                            value="@_state.NlInputText"
-                           @oninput="OnNlInputChangedAsync"
-                           @onkeydown="OnNlKeyDownAsync"
-                           placeholder="Describe what you need…"
+                           @oninput="OnSearchInputAsync"
+                           @onkeydown="OnSearchKeyDownAsync"
+                           placeholder="Search or describe what you need…"
                            autocomplete="off"
                            spellcheck="false"
-                           aria-label="Describe what you need"
+                           aria-label="Search or describe what you need"
                            aria-describedby="catalog-nl-hint" />
                     <button type="button"
-                            class="catalog-nl-submit icon-button"
+                            class="catalog-search-field__submit"
                             data-testid="discover-nl-submit"
-                            title="Interpret request"
-                            aria-label="Interpret request"
+                            title="Interpret as filters"
+                            aria-label="Interpret as filters"
                             disabled="@(string.IsNullOrWhiteSpace(_state.NlInputText))"
                             @onclick="ApplyNlQueryAsync">
                         <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
                     </button>
-                </div>
-                @if (_state.NlResult is { IsEmpty: false })
-                {
-                    <div class="catalog-nl-chips" data-testid="discover-nl-chips" role="group" aria-label="Interpreted filters">
-                        <span id="catalog-nl-hint" class="catalog-nl-interpreted-label">Interpreted as:</span>
-                        @foreach (var chip in _state.NlResult.Chips)
-                        {
-                            <button type="button"
-                                    class="catalog-nl-chip"
-                                    title="Remove @chip.Label"
-                                    aria-label="Remove filter: @chip.Label"
-                                    @onclick="() => RemoveNlChipAsync(chip)">
-                                @chip.Label
-                                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
-                            </button>
-                        }
-                        <button type="button"
-                                class="catalog-nl-clear"
-                                aria-label="Clear all inferred filters"
-                                @onclick="ClearNlAsync">Clear all</button>
-                    </div>
-                }
-            </div>
-
-            <div class="catalog-controls__search-row">
-                <div class="field field-search">
-                    <label for="catalog-search">Search models</label>
-                    <input id="catalog-search"
-                           type="search"
-                           value="@_state.Filter.SearchText"
-                           @oninput="OnSearchChangedAsync"
-                           placeholder="Alias, display name, or id"
-                           autocomplete="off" />
                 </div>
                 <button type="button"
                         class="catalog-filters-toggle icon-button @(_filtersOpen ? "is-active" : string.Empty)"
@@ -103,6 +72,28 @@
                     }
                 </button>
             </div>
+
+            @if (_state.NlResult is { IsEmpty: false })
+            {
+                <div class="catalog-nl-chips" data-testid="discover-nl-chips" role="group" aria-label="Interpreted filters">
+                    <span id="catalog-nl-hint" class="catalog-nl-interpreted-label">Interpreted as</span>
+                    @foreach (var chip in _state.NlResult.Chips)
+                    {
+                        <button type="button"
+                                class="catalog-nl-chip"
+                                title="Remove @chip.Label"
+                                aria-label="Remove filter: @chip.Label"
+                                @onclick="() => RemoveNlChipAsync(chip)">
+                            @chip.Label
+                            <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                        </button>
+                    }
+                    <button type="button"
+                            class="catalog-nl-clear"
+                            aria-label="Clear all inferred filters"
+                            @onclick="ClearNlAsync">Clear all</button>
+                </div>
+            }
 
             @if (_filtersOpen)
             {
@@ -159,11 +150,35 @@
             }
         </section>
 
-        <section class="catalog-summary" aria-label="Catalog result summary">
-            @if (_state.IsShowingCurated)
-            {
-                <p class="curated-banner" data-testid="curated-banner">Recommended — curated by FoundryStudio, not a quality ranking</p>
-            }
+        @if (_state.Status != CatalogViewState.CatalogStatus.Loading
+             && _state.Status != CatalogViewState.CatalogStatus.Error)
+        {
+            <div class="catalog-result-line" aria-label="Result summary">
+                @if (_state.IsShowingCurated)
+                {
+                    <span class="catalog-recommended-tag"
+                          data-testid="curated-banner"
+                          title="Curated by FoundryStudio for fit on Apple Silicon — not a quality ranking.">
+                        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 8h.01" /></svg>
+                        Recommended
+                    </span>
+                }
+                <p class="catalog-count" data-testid="catalog-count" aria-live="polite">
+                    <strong>@_state.Visible.Count.ToString("N0")</strong> of @_state.AllModels.Count.ToString("N0") shown
+                </p>
+                <span class="visually-hidden" data-testid="loaded-indicator" aria-live="polite">@LoadedSummary</span>
+                <button id="catalog-refresh"
+                        data-testid="refresh-catalog"
+                        type="button"
+                        class="icon-button catalog-refresh"
+                        aria-label="Refresh catalog"
+                        title="Refresh catalog"
+                        @onclick="RefreshCatalogAsync"
+                        disabled="@IsBusy">
+                    <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M20 11a8 8 0 1 0-.5 4" /><path d="M20 5v6h-6" /></svg>
+                </button>
+            </div>
+
             @if (_state.PersonalizationActive && !_state.PersonalizationProfile.IsEmpty)
             {
                 <div class="personalized-banner" data-testid="discover-personalized-banner" role="status" aria-live="polite">
@@ -194,24 +209,7 @@
                     Personalized recommendations enabled — no local context found in ~/.copilot
                 </p>
             }
-            <span class="visually-hidden" data-testid="loaded-indicator" aria-live="polite">@LoadedSummary</span>
-            <div class="catalog-summary__end">
-                <p class="catalog-count" data-testid="catalog-count" aria-live="polite">
-                    @_state.Visible.Count.ToString("N0") model@(_state.Visible.Count == 1 ? string.Empty : "s") shown
-                    <span class="metadata-secondary">from @_state.AllModels.Count.ToString("N0") available</span>
-                </p>
-                <button id="catalog-refresh"
-                        data-testid="refresh-catalog"
-                        type="button"
-                        class="icon-button catalog-refresh"
-                        aria-label="Refresh catalog"
-                        title="Refresh catalog"
-                        @onclick="RefreshCatalogAsync"
-                        disabled="@IsBusy">
-                    <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M20 11a8 8 0 1 0-.5 4" /><path d="M20 5v6h-6" /></svg>
-                </button>
-            </div>
-        </section>
+        }
 
         @if (_state.Status == CatalogViewState.CatalogStatus.Empty)
         {
@@ -226,141 +224,80 @@
         }
         else
         {
-            <!-- Two-pane layout: compact list (left) + detail panel (right) -->
-            <div class="models-layout @(!DetailPanelVisible ? "models-layout--no-detail" : string.Empty)">
-                <!-- LEFT: compact model list -->
-                <div class="models-list" role="listbox" aria-label="Model list">
-                    <section class="catalog-group models-list__group" data-testid="group-cached" aria-labelledby="group-cached-title">
-                        <div class="catalog-group__header">
-                            <h2 id="group-cached-title" data-testid="group-label"><span>Installed / cached</span>Ready on this Mac</h2>
-                            <span data-testid="group-count" aria-live="polite">@_state.VisibleCached.Count.ToString("N0")</span>
-                        </div>
-                        @if (_state.VisibleCached.Count == 0)
-                        {
-                            <p class="status models-list__empty-group">No cached models match this view.</p>
-                        }
-                        else
-                        {
-                            @foreach (var model in _state.VisibleCached)
-                            {
-                                <button type="button"
-                                        class="model-row @(IsSelected(model) ? "model-row--selected" : string.Empty) @(_state.IsLoaded(model) ? "model-row--loaded" : string.Empty)"
-                                        role="option"
-                                        aria-selected="@IsSelected(model).ToString().ToLowerInvariant()"
-                                        data-alias="@model.Alias"
-                                        title="@RowHoverTitle(model)"
-                                        @onclick="() => SelectModelAsync(model)">
-                                    <span class="model-row__name">
-                                        <span class="model-row__displayname">@RowDisplayName(model)</span>
-                                        <span class="model-row__alias">@model.Alias</span>
-                                    </span>
-                                    <span class="model-row__meta">
-                                        @if (!string.IsNullOrWhiteSpace(model.ModelType))
-                                        {
-                                            <span class="format-badge model-row__format">@model.ModelType.Trim()</span>
-                                        }
-                                        @if (model.ContextLength is > 0)
-                                        {
-                                            <span class="model-row__context" title="Context length">@FormatContextK(model.ContextLength.Value)</span>
-                                        }
-                                        @* D4: always render size span for consistent right-edge alignment *@
-                                        <span class="model-row__size">@(model.SizeGb is > 0 ? $"{model.SizeGb!.Value.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)} GB" : string.Empty)</span>
-                                        <ModelStateBadge IsCached="_state.IsCached(model)"
-                                                         IsLoaded="_state.IsLoaded(model)" />
-                                    </span>
-                                </button>
-                            }
-                        }
-                    </section>
-
-                    <section class="catalog-group models-list__group" data-testid="group-available" aria-labelledby="group-available-title">
-                        <div class="catalog-group__header">
-                            <h2 id="group-available-title" data-testid="group-label"><span>Available to download</span>Not yet on this Mac</h2>
-                            <span data-testid="group-count" aria-live="polite">@_state.VisibleAvailable.Count.ToString("N0")</span>
-                        </div>
-                        @if (_state.VisibleAvailable.Count == 0)
-                        {
-                            <p class="status models-list__empty-group">No available models match this view.</p>
-                        }
-                        else
-                        {
-                            @foreach (var model in _state.VisibleAvailable)
-                            {
-                                <button type="button"
-                                        class="model-row @(IsSelected(model) ? "model-row--selected" : string.Empty)"
-                                        role="option"
-                                        aria-selected="@IsSelected(model).ToString().ToLowerInvariant()"
-                                        data-alias="@model.Alias"
-                                        title="@RowHoverTitle(model)"
-                                        @onclick="() => SelectModelAsync(model)">
-                                    <span class="model-row__name">
-                                        <span class="model-row__displayname">@RowDisplayName(model)</span>
-                                        <span class="model-row__alias">@model.Alias</span>
-                                    </span>
-                                    <span class="model-row__meta">
-                                        @if (!string.IsNullOrWhiteSpace(model.ModelType))
-                                        {
-                                            <span class="format-badge model-row__format">@model.ModelType.Trim()</span>
-                                        }
-                                        @if (model.ContextLength is > 0)
-                                        {
-                                            <span class="model-row__context" title="Context length">@FormatContextK(model.ContextLength.Value)</span>
-                                        }
-                                        @* D4: always render size span for consistent right-edge alignment *@
-                                        <span class="model-row__size">@(model.SizeGb is > 0 ? $"{model.SizeGb!.Value.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)} GB" : string.Empty)</span>
-                                    </span>
-                                </button>
-                            }
-                        }
-                    </section>
-
-                    <!-- Footer summary -->
-                    <footer class="models-footer" aria-label="Local model storage summary">
-                        <span class="models-footer__summary">
-                            You have <strong>@_state.VisibleCached.Count</strong> local model@(_state.VisibleCached.Count == 1 ? string.Empty : "s")@(CachedSizeLabel)
-                        </span>
-                        @if (!string.IsNullOrWhiteSpace(_modelCachePath))
-                        {
-                            <span class="models-footer__path" title="@_modelCachePath">@_modelCachePath</span>
-                        }
-                    </footer>
-                </div>
-
-                <!-- RIGHT: detail panel (collapsed by default; visible when a model is selected or pinned) -->
-                @if (DetailPanelVisible)
+            <!-- Single-column, action-forward list. The selected row expands inline
+                 into an action-first ModelCard, so the primary action (Download / Load)
+                 is always visible without a separate, always-on detail pane. Groups
+                 reorder so the populated group leads (acquire-first when nothing is
+                 cached; manage-first once you have local models). -->
+            <div class="models-list" role="list" aria-label="Models" data-testid="models-list">
+                @foreach (var group in OrderedGroups)
                 {
-                    <aside class="models-detail-panel" aria-label="Model details">
-                        <div class="models-detail-panel__toolbar">
-                            <button type="button"
-                                    class="icon-button @(_detailPinned ? "is-active" : string.Empty)"
-                                    title="@(_detailPinned ? "Unpin detail panel" : "Pin detail panel always open")"
-                                    aria-label="@(_detailPinned ? "Unpin detail panel" : "Pin detail panel always open")"
-                                    aria-pressed="@_detailPinned.ToString().ToLowerInvariant()"
-                                    @onclick="ToggleDetailPinAsync">
-                                <!-- Pin / thumbtack icon — reinforces "keep panel open" intent -->
-                                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>
-                            </button>
+                    <section class="catalog-group" data-testid="@group.TestId" aria-labelledby="@group.HeaderId">
+                        <div class="catalog-group__header">
+                            <h2 id="@group.HeaderId" data-testid="group-label"><span>@group.Eyebrow</span>@group.Title</h2>
+                            <span data-testid="group-count" aria-live="polite">@group.Models.Count.ToString("N0")</span>
                         </div>
-                        @if (SelectedModel is { } selected)
+                        @if (group.Models.Count == 0)
                         {
-                            <ModelCard Model="selected"
-                                       IsCached="_state.IsCached(selected)"
-                                       IsLoaded="_state.IsLoaded(selected)"
-                                       Operation="_state.GetOperation(selected)"
-                                       VariantSelection="_state.GetVariantSelection(selected)"
-                                       FreeDiskGb="_freeDiskGb"
-                                       OnMutationCompleted="RefreshCatalogAsync"
-                                       OnDeleteRequested="OpenDeleteDialogAsync" />
+                            <p class="status models-list__empty-group">@group.EmptyText</p>
                         }
                         else
                         {
-                            <div class="models-detail-panel__empty">
-                                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 6.5h14v11H5z" /><path d="M8 17.5V9h8" /><path d="M8 12.75h6.5" /></svg>
-                                <p>Select a model to see details and manage it.</p>
-                            </div>
+                            @foreach (var model in group.Models)
+                            {
+                                <div class="model-row-wrap @(IsSelected(model) ? "is-expanded" : string.Empty)" data-alias="@model.Alias">
+                                    <button type="button"
+                                            class="model-row @(IsSelected(model) ? "model-row--selected" : string.Empty) @(_state.IsLoaded(model) ? "model-row--loaded" : string.Empty)"
+                                            aria-expanded="@IsSelected(model).ToString().ToLowerInvariant()"
+                                            data-alias="@model.Alias"
+                                            title="@RowHoverTitle(model)"
+                                            @onclick="() => SelectModelAsync(model)">
+                                        <span class="model-row__name">
+                                            <span class="model-row__displayname">@RowDisplayName(model)</span>
+                                            <span class="model-row__alias">@model.Alias</span>
+                                        </span>
+                                        <span class="model-row__meta">
+                                            @if (model.ContextLength is > 0)
+                                            {
+                                                <span class="model-row__context" title="Context length">@FormatContextK(model.ContextLength.Value)</span>
+                                            }
+                                            <span class="model-row__size">@(model.SizeGb is > 0 ? $"{model.SizeGb!.Value.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)} GB" : string.Empty)</span>
+                                            @if (_state.IsCached(model))
+                                            {
+                                                <ModelStateBadge IsCached="true" IsLoaded="_state.IsLoaded(model)" />
+                                            }
+                                            <svg class="model-row__chevron" viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+                                        </span>
+                                    </button>
+                                    @if (IsSelected(model))
+                                    {
+                                        <div class="model-row__detail" data-testid="model-detail">
+                                            <ModelCard Model="model"
+                                                       IsCached="_state.IsCached(model)"
+                                                       IsLoaded="_state.IsLoaded(model)"
+                                                       Operation="_state.GetOperation(model)"
+                                                       VariantSelection="_state.GetVariantSelection(model)"
+                                                       FreeDiskGb="_freeDiskGb"
+                                                       OnMutationCompleted="RefreshCatalogAsync"
+                                                       OnDeleteRequested="OpenDeleteDialogAsync" />
+                                        </div>
+                                    }
+                                </div>
+                            }
                         }
-                    </aside>
+                    </section>
                 }
+
+                <!-- Footer summary -->
+                <footer class="models-footer" aria-label="Local model storage summary">
+                    <span class="models-footer__summary">
+                        You have <strong>@_state.VisibleCached.Count</strong> local model@(_state.VisibleCached.Count == 1 ? string.Empty : "s")@(CachedSizeLabel)
+                    </span>
+                    @if (!string.IsNullOrWhiteSpace(_modelCachePath))
+                    {
+                        <span class="models-footer__path" title="@_modelCachePath">@_modelCachePath</span>
+                    }
+                </footer>
             </div>
         }
     }
@@ -387,11 +324,7 @@
     private string? _selectedAlias;
     private string? _modelCachePath;
     private bool _filtersOpen;
-    private bool _detailPinned;
-    private bool _pinStateLoaded;
     private bool _showPersonalizationInfo;
-
-    private bool DetailPanelVisible => _detailPinned || SelectedModel != null;
 
     private bool IsBusy => _state.Status == CatalogViewState.CatalogStatus.Loading;
 
@@ -426,6 +359,35 @@
 
     private bool IsSelected(ModelInfo model) =>
         string.Equals(model.Alias, SelectedModel?.Alias, StringComparison.OrdinalIgnoreCase);
+
+    // Group view-model for the single-column list. The populated group leads:
+    // acquire-first when nothing is cached, manage-first once local models exist.
+    private sealed record CatalogGroupVm(
+        string TestId,
+        string HeaderId,
+        string Eyebrow,
+        string Title,
+        IReadOnlyList<ModelInfo> Models,
+        string EmptyText);
+
+    private IReadOnlyList<CatalogGroupVm> OrderedGroups
+    {
+        get
+        {
+            var cached = new CatalogGroupVm(
+                "group-cached", "group-cached-title", "Installed", "Ready on this Mac",
+                _state.VisibleCached,
+                "No models downloaded yet — pick one above to download it.");
+            var available = new CatalogGroupVm(
+                "group-available", "group-available-title", "Available", "Download to this Mac",
+                _state.VisibleAvailable,
+                "No available models match your search.");
+
+            return _state.VisibleCached.Count > 0
+                ? new[] { cached, available }
+                : new[] { available, cached };
+        }
+    }
 
     private string CachedSizeLabel
     {
@@ -474,42 +436,9 @@
         await RefreshCatalogAsync();
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender && !_pinStateLoaded)
-        {
-            _pinStateLoaded = true;
-            try
-            {
-                var pinned = await JS.InvokeAsync<string?>("eval", "window.localStorage.getItem('fs-detail-pinned')");
-                _detailPinned = pinned == "1";
-                StateHasChanged();
-            }
-            catch
-            {
-                // localStorage unavailable (e.g. test environment) — keep default false
-            }
-        }
-    }
-
     private void ToggleFilters()
     {
         _filtersOpen = !_filtersOpen;
-    }
-
-    private async Task ToggleDetailPinAsync()
-    {
-        _detailPinned = !_detailPinned;
-        try
-        {
-            await JS.InvokeVoidAsync("eval", $"window.localStorage.setItem('fs-detail-pinned', '{(_detailPinned ? "1" : "0")}')");
-        }
-        catch
-        {
-            // localStorage unavailable — state is still toggled in memory
-        }
-
-        await InvokeAsync(StateHasChanged);
     }
 
     private async Task RefreshCatalogAsync()
@@ -599,15 +528,33 @@
         return InvokeAsync(StateHasChanged);
     }
 
-    // ── NL-assist handlers ─────────────────────────────────────────────────────
+    // ── Search handlers (one field: literal filter + NL interpret) ──────────────
 
-    private Task OnNlInputChangedAsync(ChangeEventArgs args)
+    // Live literal filtering as the user types, so known-item search (alias/name/id)
+    // is instant. Pressing Enter or the submit arrow runs NL interpretation, which
+    // turns the phrase into editable filter chips.
+    private Task OnSearchInputAsync(ChangeEventArgs args)
     {
-        _state.NlInputText = args.Value?.ToString() ?? string.Empty;
+        var value = args.Value?.ToString() ?? string.Empty;
+        _state.NlInputText = value;
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            // Clearing the field clears any interpreted chips and their filters.
+            _state.NlResult = null;
+            _state.NlSortHint = NlSortHint.None;
+            _state.Filter = _state.Filter with { SearchText = null };
+        }
+        else
+        {
+            _state.Filter = _state.Filter with { SearchText = value };
+        }
+
+        _state.Recompute();
         return InvokeAsync(StateHasChanged);
     }
 
-    private Task OnNlKeyDownAsync(KeyboardEventArgs args)
+    private Task OnSearchKeyDownAsync(KeyboardEventArgs args)
     {
         if (args.Key == "Enter")
         {
@@ -699,14 +646,6 @@
         // Clear only the NL-contributed fields; leave power-filter drawer state
         _state.Filter = new CatalogFilter(
             CachedOnly: _state.Filter.CachedOnly);
-        _state.Recompute();
-        return InvokeAsync(StateHasChanged);
-    }
-
-    private Task OnSearchChangedAsync(ChangeEventArgs args)
-    {
-        var value = args.Value?.ToString();
-        _state.Filter = _state.Filter with { SearchText = value };
         _state.Recompute();
         return InvokeAsync(StateHasChanged);
     }
