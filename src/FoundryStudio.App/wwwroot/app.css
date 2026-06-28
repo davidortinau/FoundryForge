@@ -270,6 +270,13 @@ svg { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 1
 /* W1: extra bottom clearance so settings panel clears the ~48px serving dock */
 .chat-shell { padding-bottom: 56px; }
 
+/* Discover: make the catalog a query container so the master-detail layout
+   responds to its own content width (robust to the collapsible sidebar). */
+.catalog-shell {
+  container-type: inline-size;
+  container-name: catalog;
+}
+
 .page-title {
   display: grid;
   gap: var(--fs-space-1);
@@ -1108,6 +1115,24 @@ details[open] > .chat-metrics-summary::before { transform: rotate(90deg); }
   padding: var(--fs-space-4);
 }
 
+/* Responsive: when the catalog content is too narrow for two comfortable
+   columns, stack the detail panel below the list so neither gets squeezed. */
+@container catalog (max-width: 760px) {
+  .models-layout {
+    flex-direction: column;
+    max-height: 78vh;
+  }
+  .models-list {
+    border-right: none;
+    min-height: 200px;
+  }
+  .models-detail-panel {
+    width: 100%;
+    border-top: 1px solid var(--fs-border);
+    max-height: 45vh;
+  }
+}
+
 .models-detail-panel .model-card {
   border: none;
   border-radius: 0;
@@ -1361,12 +1386,23 @@ details[open] > .chat-metrics-summary::before { transform: rotate(90deg); }
 }
 
 .catalog-nl-submit {
-  /* D1: dock submit button inside the right edge of the input field */
+  /* D1: dock submit button inside the right edge of the input field.
+     Borderless + transparent so it reads as part of the pill field,
+     not a separate boxed button sitting on top of it. */
   position: absolute;
-  right: 4px;
+  right: 6px;
   top: 50%;
   transform: translateY(-50%);
   flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--fs-text-secondary);
+}
+
+.catalog-nl-submit:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--fs-accent) 16%, transparent);
+  border-color: transparent;
+  color: var(--fs-text);
 }
 
 .catalog-nl-submit:disabled {
