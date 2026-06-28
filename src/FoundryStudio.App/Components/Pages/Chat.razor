@@ -8,6 +8,7 @@
 @inject IFoundryCatalogService CatalogService
 @inject NavigationManager Nav
 @inject ConversationMemoryRetriever MemoryRetriever
+@inject CompareOrchestrator _compareOrchestrator
 
 <div class="chat-shell" data-testid="chat-page">
     <PageHeader TitleId="chat-title"
@@ -190,8 +191,24 @@
                         {
                             <span class="chat-active-model-chip" data-testid="chat-active-model" aria-live="polite">@ActiveModelLabel</span>
                         }
+
+                        <!-- Workbench mode segmented control -->
+                        <div class="workbench-mode-tabs" role="group" aria-label="Workbench mode">
+                            <button type="button"
+                                    class="workbench-mode-tab @(_workbenchMode == WorkbenchMode.Chat ? "is-active" : "")"
+                                    data-testid="workbench-mode-chat"
+                                    aria-pressed="@(_workbenchMode == WorkbenchMode.Chat)"
+                                    @onclick="() => _workbenchMode = WorkbenchMode.Chat">Chat</button>
+                            <button type="button"
+                                    class="workbench-mode-tab @(_workbenchMode == WorkbenchMode.Compare ? "is-active" : "")"
+                                    data-testid="workbench-mode-compare"
+                                    aria-pressed="@(_workbenchMode == WorkbenchMode.Compare)"
+                                    @onclick="() => _workbenchMode = WorkbenchMode.Compare">Compare</button>
+                        </div>
                     </div>
 
+                    @if (_workbenchMode == WorkbenchMode.Chat)
+                    {
                     <div class="chat-messages" data-testid="chat-messages" aria-label="Conversation messages">
                         @{
                             var visibleMessages = VisibleMessages;
@@ -263,9 +280,16 @@
                             }
                         </div>
                     </div>
+                    }
+                    else
+                    {
+                        <CompareView LoadedModels="_loadedModels" Orchestrator="_compareOrchestrator" />
+                    }
                 </section>
             }
 
+            @if (_workbenchMode == WorkbenchMode.Chat)
+            {
             <section class="chat-settings-grid" aria-label="Chat prompt and inference settings">
                 <div class="card chat-system-card">
                     <div class="field">
@@ -320,6 +344,7 @@
                     </div>
                 </div>
             </section>
+            }
         </main>
     </div>
 
@@ -362,6 +387,11 @@
     private HashSet<string> _memoryIncludedIds = new();
 
     private enum ConfirmAction { Clear, Delete }
+
+    /// <summary>Which workbench surface is active: the normal Chat, or the side-by-side Compare.</summary>
+    private enum WorkbenchMode { Chat, Compare }
+
+    private WorkbenchMode _workbenchMode = WorkbenchMode.Chat;
 
     private bool IsStreaming => _isStreaming;
 
@@ -886,5 +916,7 @@
     {
         _streamCts?.Cancel();
         _streamCts?.Dispose();
+        // Synchronously cancel any in-flight compare run (no async in Dispose).
+        _compareOrchestrator.Cancel();
     }
 }

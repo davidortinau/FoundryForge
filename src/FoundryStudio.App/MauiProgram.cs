@@ -6,6 +6,7 @@ using Microsoft.Maui.Platforms.MacOS.Hosting;
 using FoundryStudio.App.Services;
 using FoundryStudio.Core.Abstractions;
 using FoundryStudio.Core.Chat;
+using FoundryStudio.Core.Compare;
 using FoundryStudio.Core.Concurrency;
 using FoundryStudio.Core.PostV1;
 using FoundryStudio.Foundry;
@@ -94,6 +95,10 @@ public static class FoundryStudioServiceCollectionExtensions
             var defaultModelCacheDirectory = Path.Combine(appData, "FoundryLocal", "models");
             return new FileSettingsService(settingsPath, defaultModelCacheDirectory);
         });
+
+        // Phase 6 — Compare workbench: transient so each Chat page use gets a fresh orchestrator
+        // scoped to its lifecycle; the underlying IChatService singleton is shared safely.
+        services.AddTransient<CompareOrchestrator>();
 
         return services;
     }

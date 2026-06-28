@@ -1478,3 +1478,208 @@ details[open] > .chat-metrics-summary::before { transform: rotate(90deg); }
 .settings-personalization__toggle {
   margin-top: var(--fs-space-3);
 }
+
+/* ═══════════════════════════════════════════════════════════
+   Phase 6 — Compare Workbench
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Workbench mode segmented control (Chat | Compare) ── */
+.workbench-mode-tabs {
+  display: inline-flex;
+  margin-left: auto;
+  border: 1px solid var(--fs-border-strong);
+  border-radius: var(--fs-radius-md);
+  overflow: hidden;
+}
+.workbench-mode-tab {
+  border: none;
+  border-radius: 0;
+  padding: var(--fs-space-1) var(--fs-space-3);
+  background: var(--fs-surface-raised);
+  color: var(--fs-text-secondary);
+  font: var(--fs-type-label);
+  cursor: pointer;
+  min-height: 28px;
+  transition: background var(--fs-dur-fast) var(--fs-ease-heat), color var(--fs-dur-fast) var(--fs-ease-heat);
+}
+.workbench-mode-tab:hover:not(:disabled) { background: var(--fs-surface-inset); color: var(--fs-text); }
+.workbench-mode-tab.is-active {
+  background: var(--fs-accent-fill);
+  color: var(--fs-text-inverse);
+}
+.workbench-mode-tab:first-child { border-right: 1px solid var(--fs-border-strong); }
+
+/* ── Compare surface shell ── */
+.compare-surface { display: grid; gap: var(--fs-space-3); min-width: 0; }
+.compare-empty { flex-direction: column; text-align: center; }
+
+/* ── Toolbar: model picker + shared prompt ── */
+.compare-toolbar { display: grid; gap: var(--fs-space-3); }
+
+.compare-model-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fs-space-2);
+}
+.compare-model-picker .eyebrow { margin: 0; }
+
+.compare-model-check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fs-space-1);
+  padding: var(--fs-space-1) var(--fs-space-3);
+  border: 1px solid var(--fs-border-strong);
+  border-radius: var(--fs-radius-pill);
+  background: var(--fs-surface-raised);
+  font: var(--fs-type-label);
+  cursor: pointer;
+  user-select: none;
+  transition: border-color var(--fs-dur-fast) var(--fs-ease-heat), background var(--fs-dur-fast) var(--fs-ease-heat), color var(--fs-dur-fast) var(--fs-ease-heat);
+}
+.compare-model-check:hover:not(.is-disabled) {
+  border-color: var(--fs-border-strong);
+  background: var(--fs-surface-inset);
+}
+.compare-model-check.is-selected {
+  border-color: color-mix(in srgb, var(--fs-accent) 60%, var(--fs-border));
+  background: color-mix(in srgb, var(--fs-accent) 12%, var(--fs-surface));
+  color: var(--fs-accent-text);
+}
+.compare-model-check.is-disabled { opacity: 0.5; cursor: not-allowed; }
+/* Hide the native checkbox — the label itself acts as the toggle affordance */
+.compare-model-check input[type="checkbox"] {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.compare-prompt-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--fs-space-3);
+  align-items: end;
+}
+.compare-prompt-field { min-width: 0; }
+.compare-prompt {
+  width: 100%;
+  min-height: 72px;
+  border: 1px solid var(--fs-border-strong);
+  border-radius: var(--fs-radius-md);
+  padding: var(--fs-space-3);
+  background: var(--fs-surface-raised);
+  color: var(--fs-text);
+  font: var(--fs-type-body);
+  resize: vertical;
+}
+.compare-prompt:focus-visible {
+  outline: 3px solid var(--fs-accent-ring);
+  outline-offset: 2px;
+}
+.compare-prompt-actions { display: flex; flex-direction: column; justify-content: flex-end; }
+.compare-run-btn {
+  border-color: var(--fs-accent-fill);
+  background: var(--fs-accent-fill);
+  color: var(--fs-text-inverse);
+}
+
+/* ── Column grid ── */
+.compare-columns {
+  display: grid;
+  /* min 280px per column; when window is too narrow, columns overflow and the
+     wrapper scrolls horizontally — they never get crushed below min-width. */
+  grid-template-columns: repeat(var(--compare-col-count, 2), minmax(280px, 1fr));
+  gap: var(--fs-space-3);
+  overflow-x: auto;
+  min-width: 0;
+  padding-bottom: var(--fs-space-1); /* room for the scrollbar */
+}
+
+.compare-column {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-width: 280px;
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius-lg);
+  background: var(--fs-surface);
+  box-shadow: var(--fs-elev-card);
+  overflow: hidden;
+  min-height: 320px;
+}
+
+/* Fixed header — never reflows regardless of prose length below */
+.compare-column-header {
+  display: grid;
+  gap: var(--fs-space-1);
+  padding: var(--fs-space-3);
+  background: var(--fs-surface-raised);
+  border-bottom: 1px solid var(--fs-border);
+}
+.compare-column-header__name {
+  display: flex;
+  align-items: center;
+  gap: var(--fs-space-2);
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.compare-col-model-name {
+  font: var(--fs-type-label);
+  font-weight: 600;
+  color: var(--fs-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.compare-col-done-pill {
+  border: 1px solid var(--fs-positive);
+  background: var(--fs-positive-bg);
+  color: var(--fs-positive);
+}
+
+/* Live metrics row in the fixed header */
+.compare-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fs-space-1) var(--fs-space-3);
+  margin: 0;
+  font: var(--fs-type-mono);
+  color: var(--fs-text-tertiary);
+}
+.compare-metrics div { display: inline-flex; gap: var(--fs-space-1); }
+.compare-metrics dt::after { content: ":"; }
+.compare-metrics dd { margin: 0; color: var(--fs-text-secondary); }
+
+/* Scrollable response body */
+.compare-column-body {
+  overflow-y: auto;
+  padding: var(--fs-space-3);
+  min-height: 200px;
+  max-height: 54vh;
+  display: grid;
+  align-content: start;
+  gap: var(--fs-space-2);
+}
+.compare-col-text { overflow-wrap: anywhere; }
+.compare-col-empty { margin: 0; color: var(--fs-text-tertiary); }
+
+/* Per-column honest error state (mirrors MessageBubble decode-error pattern) */
+.compare-col-error {
+  display: grid;
+  gap: var(--fs-space-2);
+  padding: var(--fs-space-3);
+  border: 1px solid var(--fs-danger);
+  border-radius: var(--fs-radius-md);
+  background: color-mix(in srgb, var(--fs-danger) 8%, var(--fs-surface));
+}
+.compare-col-error__label { margin: 0; font: var(--fs-type-label); color: var(--fs-danger); font-weight: 600; }
+.compare-col-error__msg { margin: 0; color: var(--fs-text-secondary); }
+
+@media (max-width: 920px) {
+  .compare-prompt-row { grid-template-columns: 1fr; }
+  .compare-prompt-actions { flex-direction: row; justify-content: flex-end; }
+}
