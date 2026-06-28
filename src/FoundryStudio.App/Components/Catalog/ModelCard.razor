@@ -159,23 +159,22 @@
                         aria-describedby="@_diskFitId"
                         @onclick="DownloadAsync"
                         disabled="@Operation.IsWorking">
-                    Cast to local cache
+                    Download
                 </button>
             }
         }
         else
         {
             <div class="model-management__actions">
-                @if (IsCached)
-                {
-                    <button type="button"
-                            class="button"
-                            data-testid="card-use-in-tool"
-                            @onclick="UseInToolAsync"
-                            disabled="@Operation.IsWorking">
-                        Use in your tool
-                    </button>
-                }
+                <!-- Primary (copper fill): always "Use in Serve" — one-click bridge to the Serve screen -->
+                <button type="button"
+                        class="button"
+                        data-testid="card-use-in-tool"
+                        @onclick="UseInToolAsync"
+                        disabled="@Operation.IsWorking">
+                    Use in Serve
+                </button>
+                <!-- Secondary: load state determines Load vs Unload -->
                 @if (IsLoaded)
                 {
                     <button id="@_unloadId"
@@ -198,10 +197,10 @@
                         @(Operation.Phase == ModelOpPhase.Loading ? "Loading model…" : "Load in memory")
                     </button>
                 }
-
+                <!-- Quiet destructive: always available for cached models, never filled -->
                 <button id="@_deleteId"
                         type="button"
-                        class="button button-secondary"
+                        class="button button-text-danger"
                         data-testid="card-delete"
                         @onclick="RequestDeleteAsync"
                         disabled="@Operation.IsWorking">
@@ -310,8 +309,8 @@
         : "0%";
 
     private string ProgressLabel => Operation.ProgressPercent is double value
-        ? $"Casting {DisplayOrUnknown(Model.DisplayName)} — {Math.Clamp(value, 0, 100).ToString("0", CultureInfo.InvariantCulture)}%"
-        : $"Casting {DisplayOrUnknown(Model.DisplayName)} — waiting for progress…";
+        ? $"Downloading {DisplayOrUnknown(Model.DisplayName)} — {Math.Clamp(value, 0, 100).ToString("0", CultureInfo.InvariantCulture)}%"
+        : $"Downloading {DisplayOrUnknown(Model.DisplayName)} — waiting for progress…";
 
     private string? FormatBadgeText => string.IsNullOrWhiteSpace(Model.ModelType)
         ? null

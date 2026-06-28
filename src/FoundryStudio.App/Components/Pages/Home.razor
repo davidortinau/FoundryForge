@@ -7,9 +7,9 @@
 
 <div class="catalog-shell" data-testid="catalog-page">
     <PageHeader TitleId="catalog-title"
-                Eyebrow="Foundry Local catalog"
+                Eyebrow=""
                 Title="Browse models"
-                Subtitle="Install, load, and safely manage Foundry Local models." />
+                Subtitle="Install, load, and manage local models." />
 
     @if (_state.Status == CatalogViewState.CatalogStatus.Loading)
     {
@@ -118,7 +118,7 @@
             <div class="catalog-summary__end">
                 <p class="catalog-count" data-testid="catalog-count" aria-live="polite">
                     @_state.Visible.Count.ToString("N0") model@(_state.Visible.Count == 1 ? string.Empty : "s") shown
-                    <span class="metadata-muted">from @_state.AllModels.Count.ToString("N0") available</span>
+                    <span class="metadata-secondary">from @_state.AllModels.Count.ToString("N0") available</span>
                 </p>
                 <button id="catalog-refresh"
                         data-testid="refresh-catalog"
@@ -197,7 +197,7 @@
 
                     <section class="catalog-group models-list__group" data-testid="group-available" aria-labelledby="group-available-title">
                         <div class="catalog-group__header">
-                            <h2 id="group-available-title" data-testid="group-label"><span>Available to download</span>Cast to local cache</h2>
+                            <h2 id="group-available-title" data-testid="group-label"><span>Available to download</span>Not yet on this Mac</h2>
                             <span data-testid="group-count" aria-live="polite">@_state.VisibleAvailable.Count.ToString("N0")</span>
                         </div>
                         @if (_state.VisibleAvailable.Count == 0)
@@ -258,9 +258,11 @@
                             <button type="button"
                                     class="icon-button @(_detailPinned ? "is-active" : string.Empty)"
                                     title="@(_detailPinned ? "Unpin detail panel" : "Pin detail panel always open")"
+                                    aria-label="@(_detailPinned ? "Unpin detail panel" : "Pin detail panel always open")"
                                     aria-pressed="@_detailPinned.ToString().ToLowerInvariant()"
                                     @onclick="ToggleDetailPinAsync">
-                                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M12 2v10m0 0-3-3m3 3 3-3M4 20h16" /><line x1="12" y1="12" x2="12" y2="20" /></svg>
+                                <!-- Pin / thumbtack icon — reinforces "keep panel open" intent -->
+                                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>
                             </button>
                         </div>
                         @if (SelectedModel is { } selected)

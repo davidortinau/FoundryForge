@@ -896,7 +896,7 @@ textarea:focus-visible { outline: 3px solid var(--fs-accent-ring); outline-offse
 
 .model-row__alias {
   font: var(--fs-type-eyebrow);
-  color: var(--fs-text-tertiary);
+  color: var(--fs-text-secondary);
   letter-spacing: 0.03em;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1117,3 +1117,51 @@ textarea:focus-visible { outline: 3px solid var(--fs-accent-ring); outline-offse
   background: color-mix(in srgb, var(--fs-accent) 12%, var(--fs-surface));
   color: var(--fs-accent-text);
 }
+
+/* ── Quiet destructive button (never filled) ─────────────────────── */
+.button-text-danger {
+  border-color: transparent;
+  background: transparent;
+  color: var(--fs-danger);
+}
+.button-text-danger:hover:not(:disabled) {
+  background: var(--fs-danger-bg);
+  border-color: var(--fs-danger);
+  transform: none;
+}
+
+/* ── Secondary text class for important metadata ─────────────────── */
+.metadata-secondary { color: var(--fs-text-secondary); }
+
+/* ── Sticky action footer in detail panel ────────────────────────── */
+.models-detail-panel .model-management {
+  position: sticky;
+  bottom: 0;
+  background: var(--fs-surface-raised);
+  padding-bottom: var(--fs-space-3);
+  z-index: 1;
+  box-shadow: 0 -6px 14px color-mix(in srgb, var(--fs-canvas) 55%, transparent);
+}
+
+/* Full-width stacked actions in detail panel for clear hierarchy */
+.models-detail-panel .model-management__actions {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+.models-detail-panel .model-management__actions > .button,
+.models-detail-panel .model-management__actions > button {
+  width: 100%;
+  justify-content: center;
+}
+
+/* ── Fixed-width meta cluster in model rows ──────────────────────── */
+.model-row__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--fs-space-2);
+  flex-shrink: 0;
+}
+.model-row__format { min-width: 38px; text-align: center; }
+.model-row__context { min-width: 44px; text-align: center; }
+.model-row__size { min-width: 54px; text-align: right; }
