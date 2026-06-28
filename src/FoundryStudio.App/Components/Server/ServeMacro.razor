@@ -1,8 +1,11 @@
 @*
-  ServeMacro — "Use in your tool" primary-job macro. 
-  Runs Cast (download) → Temper (load) → Serve (start server) with visible per-stage progress.
-  Ends on a Peak-End success moment: "Endpoint live" + real Test-connection + copy-confirm.
-  A secondary "Temper only" path loads without turning the server on.
+  ServeMacro — action area for the Serve page.
+  Rendered inside the merged STATUS+ACTION card in Server.razor; no outer card wrapper.
+
+  When stopped (Idle): model picker + "Load model & start server" primary + "Start server only (advanced)" ghost.
+  When running (Idle): "Stop server" primary + picker + "Load another model" secondary.
+  In-progress: three plain-language stages (Downloading → Loading → Starting server).
+  On success: Peak-End moment (Test connection + "Load another model").
 *@
 @using FoundryStudio.Core.Server
 @inject ServeMacroService MacroService
@@ -10,35 +13,79 @@
 @inject ServingStateService ServingState
 @implements IDisposable
 
-<section class="card serve-macro-section"
-         data-testid="serve-macro"
-         aria-labelledby="serve-macro-title">
-    <p class="eyebrow">Primary job</p>
-    <h2 id="serve-macro-title">Use in your tool</h2>
+<div class="serve-macro-area" data-testid="serve-macro">
 
     @if (_stage == ServeStage.Idle)
     {
-        @* ── Model picker + actions ────────────────────────────────────────────────────────── *@
         @if (_loading)
         {
             <p class="server-note" role="status">Loading cached models…</p>
         }
+        else if (ServingState.IsRunning)
+        {
+            @* ── Running: Stop server + optional Load another ───────────────────────────── *@
+            <div class="serve-running-actions">
+                <button type="button"
+                        class="button button-secondary"
+                        data-testid="server-toggle"
+                        aria-label="Stop the local server"
+                        aria-pressed="true"
+                        disabled="@(!ServingState.IsSupported || ServingState.IsBusy)"
+                        @onclick="StopServerAsync">
+                    Stop server
+                </button>
+
+                @if (_cachedModels.Count > 0)
+                {
+                    <div class="serve-macro-picker serve-macro-picker--inline">
+                        <label class="serve-macro-picker__label" for="serve-macro-model">
+                            Choose a model
+                        </label>
+                        <div class="serve-macro-picker__row">
+                            <select id="serve-macro-model"
+                                    class="serve-macro-picker__select"
+                                    @bind="_selectedAlias"
+                                    aria-label="Select a cached model to load">
+                                @foreach (var model in _cachedModels)
+                                {
+                                    <option value="@model.Alias">@model.DisplayName</option>
+                                }
+                            </select>
+                            <button type="button"
+                                    class="button button-secondary"
+                                    disabled="@(_selectedAlias is null)"
+                                    @onclick="() => StartMacroAsync(temperOnly: true)">
+                                Load another model
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
         else if (_cachedModels.Count == 0)
         {
+            @* ── No cached models and server stopped ────────────────────────────────────── *@
             <p class="server-note server-note--info" role="note">
-                No models are cached. Go to Discover to cast (download) a model first.
+                No models are downloaded. Go to Discover to download a model first.
             </p>
+            <button type="button"
+                    class="button button-ghost serve-macro-advanced"
+                    disabled="@(!ServingState.IsSupported || ServingState.IsBusy)"
+                    @onclick="StartServerOnlyAsync">
+                Start server only (advanced)
+            </button>
         }
         else
         {
+            @* ── Stopped: model picker + start ──────────────────────────────────────────── *@
             <div class="serve-macro-picker">
                 <label class="serve-macro-picker__label" for="serve-macro-model">
-                    Choose a cached model
+                    Choose a model
                 </label>
                 <select id="serve-macro-model"
                         class="serve-macro-picker__select"
                         @bind="_selectedAlias"
-                        aria-label="Select a cached model to serve">
+                        aria-label="Select a cached model to load and serve">
                     @foreach (var model in _cachedModels)
                     {
                         <option value="@model.Alias">@model.DisplayName</option>
@@ -47,17 +94,15 @@
                 <div class="serve-macro-actions">
                     <button type="button"
                             class="button"
-                            disabled="@(_selectedAlias is null)"
+                            disabled="@(_selectedAlias is null || !ServingState.IsSupported)"
                             @onclick="() => StartMacroAsync(temperOnly: false)">
-                        Cast · Temper · Serve
+                        Load model &amp; start server
                     </button>
                     <button type="button"
-                            class="button button-secondary"
-                            data-testid="serve-temper-only"
-                            aria-label="Temper only — load into memory without starting the server"
-                            disabled="@(_selectedAlias is null)"
-                            @onclick="() => StartMacroAsync(temperOnly: true)">
-                        Temper only
+                            class="button button-ghost serve-macro-advanced"
+                            disabled="@(!ServingState.IsSupported || ServingState.IsBusy)"
+                            @onclick="StartServerOnlyAsync">
+                        Start server only (advanced)
                     </button>
                 </div>
             </div>
@@ -65,7 +110,7 @@
     }
     else if (_stage == ServeStage.Failed)
     {
-        @* ── Error state — names the failing stage ─────────────────────────────────────────── *@
+        @* ── Error state — names the failing stage ──────────────────────────────────────── *@
         <div class="serve-macro-error">
             <p class="operation-error" role="alert">
                 @(_failedAtStage is not null ? $"{_failedAtStage} failed: " : string.Empty)@_errorMessage
@@ -77,21 +122,21 @@
     }
     else if (_stage == ServeStage.Done)
     {
-        @* ── Peak-End success moment ────────────────────────────────────────────────────────── *@
+        @* ── Peak-End success moment ────────────────────────────────────────────────────── *@
         <div class="serve-macro-success" data-testid="serve-macro-success" role="status" aria-live="polite">
             <div class="serve-macro-success__headline">
                 <span class="server-pilot-light is-lit" aria-hidden="true"></span>
-                <h3>Endpoint live</h3>
+                <h3>Server running</h3>
             </div>
-            @if (BaseEndpoint is not null)
+            @if (_completedModelId is not null)
             {
-                <code class="serve-macro-success__url">@BaseEndpoint</code>
+                <p class="serve-macro-success__hint">
+                    Model id for API calls: <code>@_completedModelId</code>
+                </p>
+                <p class="serve-macro-success__subhint">
+                    The <code>:N</code> suffix is the loaded instance id — copy the id exactly.
+                </p>
             }
-            <p class="serve-macro-success__hint">
-                @(_completedModelId is not null
-                    ? $"Model id for API calls: {_completedModelId}"
-                    : "Scroll up to copy the endpoint and model id.")
-            </p>
             <div class="serve-macro-success__actions">
                 <button type="button"
                         class="button"
@@ -102,9 +147,17 @@
                 </button>
                 <button type="button"
                         class="button button-ghost"
-                        aria-label="Serve another model"
+                        aria-label="Load another model"
                         @onclick="ResetMacro">
-                    Serve another
+                    Load another model
+                </button>
+                <button type="button"
+                        class="button button-secondary serve-macro-success__stop"
+                        data-testid="server-toggle"
+                        aria-label="Stop the local server"
+                        disabled="@(!ServingState.IsSupported || ServingState.IsBusy)"
+                        @onclick="StopServerAsync">
+                    Stop server
                 </button>
             </div>
             @if (_testResult is not null)
@@ -118,38 +171,39 @@
     }
     else
     {
-        @* ── In-progress stages: Casting / Tempering / Serving ─────────────────────────────── *@
+        @* ── In-progress stages: Downloading / Loading / Starting server ─────────────────── *@
         <div class="serve-macro-stages" aria-live="polite" aria-label="Macro progress">
             <div class="serve-macro-stage @StageClass(ServeStage.Casting)"
                  data-testid="serve-macro-stage"
-                 data-stage="cast">
+                 data-stage="download">
                 <span class="serve-macro-stage__indicator" aria-hidden="true"></span>
                 <div class="serve-macro-stage__text">
-                    <strong>Cast</strong>
-                    <span>Download model to local cache</span>
+                    <strong>Downloading</strong>
+                    <span>Getting model from local cache</span>
                 </div>
             </div>
             <div class="serve-macro-stage @StageClass(ServeStage.Tempering)"
                  data-testid="serve-macro-stage"
-                 data-stage="temper">
+                 data-stage="load">
                 <span class="serve-macro-stage__indicator" aria-hidden="true"></span>
                 <div class="serve-macro-stage__text">
-                    <strong>Temper</strong>
-                    <span>Load model into memory</span>
+                    <strong>Loading</strong>
+                    <span>Loading model into memory</span>
                 </div>
             </div>
             <div class="serve-macro-stage @StageClass(ServeStage.Serving)"
                  data-testid="serve-macro-stage"
-                 data-stage="serve">
+                 data-stage="start">
                 <span class="serve-macro-stage__indicator" aria-hidden="true"></span>
                 <div class="serve-macro-stage__text">
-                    <strong>Serve</strong>
-                    <span>Start the local server</span>
+                    <strong>Starting server</strong>
+                    <span>Opening the local endpoint</span>
                 </div>
             </div>
         </div>
     }
-</section>
+
+</div>
 
 @code {
     private IReadOnlyList<Core.Models.ModelInfo> _cachedModels = Array.Empty<Core.Models.ModelInfo>();
@@ -180,12 +234,9 @@
     {
         return (_stage, stage) switch
         {
-            // Tempering → Casting is done
             (ServeStage.Tempering, ServeStage.Casting) => true,
-            // Serving → Casting and Tempering are done
             (ServeStage.Serving, ServeStage.Casting) => true,
             (ServeStage.Serving, ServeStage.Tempering) => true,
-            // Done → all three are done
             (ServeStage.Done, ServeStage.Casting) => true,
             (ServeStage.Done, ServeStage.Tempering) => true,
             (ServeStage.Done, ServeStage.Serving) => true,
@@ -201,8 +252,7 @@
         ServingState.OnChanged += HandleServingStateChanged;
         await LoadCachedModelsAsync();
 
-        // One-click bridge from Discover: if the user asked to "Use in your tool" there, auto-run the macro
-        // for that model now (read-and-clear so a manual revisit to Serve doesn't re-trigger it).
+        // One-click bridge from Discover: auto-run the macro for the pending model.
         var pending = ServingState.ConsumePendingServeAlias();
         if (pending is not null && _cachedModels.Any(m => m.Alias == pending))
         {
@@ -253,6 +303,18 @@
         _testResult = null;
         _completedModelId = null;
         await MacroService.RunAsync(_selectedAlias, variantId: null, temperOnly: temperOnly);
+    }
+
+    private async Task StopServerAsync()
+    {
+        if (!ServingState.IsSupported || ServingState.IsBusy) return;
+        await ServingState.StopAsync();
+    }
+
+    private async Task StartServerOnlyAsync()
+    {
+        if (!ServingState.IsSupported || ServingState.IsBusy) return;
+        await ServingState.StartAsync();
     }
 
     private async Task TestConnectionAsync()

@@ -1,48 +1,48 @@
 @*
   ModelStateBadge — canonical lifecycle-state pill for a model.
-  Renders "Cast" (cached), "Tempered" (loaded in memory), or "Available" (not cached).
-  Use this everywhere a model's state badge is shown so the forge vocabulary is consistent.
+  Renders "Loaded" (in memory), "Downloaded" (cached locally), or "Available" (not cached).
+  Use this everywhere a model's state badge is shown for consistent plain-language labelling.
 *@
 
 @if (IsLoaded)
 {
     <span class="cache-badge cache-badge--loaded"
           data-testid="@(LoadedTestId ?? "model-state-badge-loaded")"
-          aria-label="Tempered — loaded in memory"
-          title="Temper (load)">
+          aria-label="Loaded — in memory"
+          title="Loaded (tempered)">
         <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" /><path d="M12 8v4l2.5 2.5" /></svg>
-        Tempered
+        Loaded
     </span>
 }
 else if (IsCached)
 {
     <span class="cache-badge cache-badge--cached"
           data-testid="@(CachedTestId ?? "model-state-badge-cached")"
-          aria-label="Cast — cached locally"
-          title="Cast (cached)">
+          aria-label="Downloaded — cached locally"
+          title="Downloaded (cast to cache)">
         <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></svg>
-        Cast
+        Downloaded
     </span>
 }
 else
 {
     <span class="cache-badge cache-badge--not-cached"
           data-testid="@(CachedTestId ?? "model-state-badge-available")"
-          aria-label="Available — not yet cached"
-          title="Cast to local cache">
+          aria-label="Available — not yet downloaded"
+          title="Available to download">
         <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" /></svg>
         Available
     </span>
 }
 
 @code {
-    /// <summary>True when the model is loaded into memory (tempered).</summary>
+    /// <summary>True when the model is loaded into memory.</summary>
     [Parameter] public bool IsLoaded { get; set; }
 
-    /// <summary>True when the model is present in the local cache (cast).</summary>
+    /// <summary>True when the model is present in the local cache (downloaded).</summary>
     [Parameter] public bool IsCached { get; set; }
 
-    /// <summary>Override the data-testid for the loaded/tempered badge (e.g. "card-loaded-badge").</summary>
+    /// <summary>Override the data-testid for the loaded badge (e.g. "card-loaded-badge").</summary>
     [Parameter] public string? LoadedTestId { get; set; }
 
     /// <summary>Override the data-testid for the cached/available badge (e.g. "card-cached-badge").</summary>

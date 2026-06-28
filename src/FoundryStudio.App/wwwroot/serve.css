@@ -1,9 +1,223 @@
 /* ============================================================================
-   serve.css — Phase 2 Serve surface styles.
-   All Phase 2 serve-specific styles live here; do NOT put them in app.css.
+   serve.css — Serve surface styles (redesigned).
+   All serve-specific styles live here; do NOT put them in app.css.
    Uses --fs-* design tokens (read from tokens.css) — no hardcoded hex.
    Desktop density: tight spacing, hover interactions, code legibility.
    ============================================================================ */
+
+
+/* ── STATUS + ACTION merged card ──────────────────────────────────────────── */
+
+.server-main {
+  display: grid;
+  gap: var(--fs-space-4);
+}
+
+/* Status bar: pilot-light + status text + endpoint URL + copy button */
+
+.server-status-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--fs-space-3);
+  flex-wrap: wrap;
+}
+
+.server-status-text-group {
+  flex: 1 1 auto;
+  display: grid;
+  gap: 0;
+  min-width: 0;
+}
+
+.server-status-line {
+  margin: 0;
+  font: var(--fs-type-label);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--fs-text);
+}
+
+.server-endpoint-caption {
+  color: var(--fs-text-tertiary);
+  font: var(--fs-type-subtitle);
+}
+
+.server-endpoint-code {
+  flex: 0 1 auto;
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius-sm);
+  padding: 0.15rem var(--fs-space-3);
+  background: var(--fs-surface-inset);
+  color: var(--fs-text);
+  font: var(--fs-type-mono);
+  font-size: 13px;
+  user-select: all;
+  overflow-wrap: anywhere;
+  max-width: 280px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.server-endpoint-copy-btn {
+  flex: 0 0 auto;
+  font: var(--fs-type-label);
+  padding: var(--fs-space-1) var(--fs-space-3);
+  min-height: 28px;
+}
+
+/* Limits inline line */
+
+.server-limits-line {
+  margin: 0;
+  color: var(--fs-text-tertiary);
+  font: var(--fs-type-subtitle);
+  border-top: 1px solid var(--fs-border);
+  padding-top: var(--fs-space-3);
+}
+
+
+/* ── Connect your tool section ─────────────────────────────────────────────── */
+
+.server-connect-section {
+  display: grid;
+  gap: var(--fs-space-4);
+}
+
+.server-connect-title {
+  margin: 0;
+}
+
+
+/* ── Reference collapsible ─────────────────────────────────────────────────── */
+
+.server-reference {
+  display: grid;
+  gap: 0;
+}
+
+.server-reference[open] {
+  gap: var(--fs-space-4);
+}
+
+.server-reference__summary {
+  display: flex;
+  align-items: center;
+  gap: var(--fs-space-2);
+  cursor: pointer;
+  list-style: none;
+  font: var(--fs-type-label);
+  font-weight: 600;
+  color: var(--fs-text-secondary);
+  user-select: none;
+  padding: var(--fs-space-1) 0;
+}
+
+.server-reference__summary::-webkit-details-marker {
+  display: none;
+}
+
+.server-reference__summary::before {
+  content: "▶";
+  font-size: 10px;
+  color: var(--fs-text-tertiary);
+  transition: transform var(--fs-dur-fast) var(--fs-ease-heat);
+  display: inline-block;
+}
+
+details[open] .server-reference__summary::before {
+  transform: rotate(90deg);
+}
+
+.server-reference__body {
+  display: grid;
+  gap: var(--fs-space-3);
+}
+
+.server-reference__routes {
+  display: grid;
+  gap: var(--fs-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.server-reference__route {
+  display: flex;
+  align-items: center;
+  gap: var(--fs-space-3);
+  font: var(--fs-type-body);
+}
+
+.server-reference__route code {
+  font: var(--fs-type-mono);
+  font-size: 13px;
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius-sm);
+  padding: 0.1rem var(--fs-space-2);
+  background: var(--fs-surface-inset);
+  color: var(--fs-text);
+  white-space: nowrap;
+}
+
+.server-reference__route span {
+  color: var(--fs-text-secondary);
+  font: var(--fs-type-subtitle);
+}
+
+.server-reference__honesty {
+  margin: 0;
+}
+
+
+/* ── ServeMacro action area (no outer card — inside server-main) ───────────── */
+
+.serve-macro-area {
+  display: grid;
+  gap: var(--fs-space-4);
+}
+
+/* Running state: Stop server + Load another */
+
+.serve-running-actions {
+  display: grid;
+  gap: var(--fs-space-4);
+}
+
+.serve-macro-picker--inline .serve-macro-picker__row {
+  display: flex;
+  align-items: center;
+  gap: var(--fs-space-3);
+  flex-wrap: wrap;
+}
+
+.serve-macro-picker--inline .serve-macro-picker__select {
+  flex: 1 1 auto;
+}
+
+/* Advanced ghost link */
+
+.serve-macro-advanced {
+  color: var(--fs-text-tertiary);
+  font: var(--fs-type-subtitle);
+  padding: 0;
+  min-height: unset;
+  background: none;
+  border: none;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.serve-macro-advanced:hover {
+  color: var(--fs-text-secondary);
+}
+
+.serve-macro-advanced:disabled {
+  color: var(--fs-text-disabled);
+  cursor: not-allowed;
+  text-decoration: none;
+}
 
 
 /* ── Serve: reachable models list ─────────────────────────────────────────── */
@@ -11,6 +225,8 @@
 .serve-model-section {
   display: grid;
   gap: var(--fs-space-3);
+  border-top: 1px solid var(--fs-border);
+  padding-top: var(--fs-space-4);
 }
 
 .serve-model-section__header {
@@ -18,8 +234,12 @@
   gap: var(--fs-space-1);
 }
 
-.serve-model-section__header h2 {
+.serve-model-section__heading {
   margin: 0;
+  font: var(--fs-type-label);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fs-text);
 }
 
 .serve-model-section__hint {
@@ -98,21 +318,21 @@
 }
 
 
-/* ── Serve: consumer snippets ─────────────────────────────────────────────── */
+/* ── Serve: consumer snippets (inside server-connect-section card) ─────────── */
 
 .serve-snippets-section {
   display: grid;
   gap: var(--fs-space-4);
 }
 
-.serve-snippets-section h2 {
-  margin: 0;
-}
-
 .serve-snippets-hint {
   margin: 0;
   color: var(--fs-text-secondary);
   font: var(--fs-type-body);
+}
+
+.serve-snippets-compat-note {
+  margin: 0;
 }
 
 .serve-snippets-grid {
@@ -176,21 +396,7 @@
 }
 
 
-/* ── Serve macro ──────────────────────────────────────────────────────────── */
-
-.serve-macro-section {
-  display: grid;
-  gap: var(--fs-space-4);
-  background:
-    radial-gradient(circle at 100% 100%, color-mix(in srgb, var(--fs-accent) 7%, transparent), transparent 18rem),
-    var(--fs-surface);
-}
-
-.serve-macro-section h2 {
-  margin: 0;
-}
-
-/* Picker row */
+/* ── Serve macro stages ────────────────────────────────────────────────────── */
 
 .serve-macro-picker {
   display: grid;
@@ -350,21 +556,30 @@
   font-size: 18px;
 }
 
-.serve-macro-success__url {
-  display: block;
-  border: 1px solid color-mix(in srgb, var(--fs-accent) 40%, var(--fs-border));
-  border-radius: var(--fs-radius-sm);
-  padding: var(--fs-space-2) var(--fs-space-4);
-  background: var(--fs-surface-inset);
-  font: var(--fs-type-mono);
-  user-select: all;
-  overflow-wrap: anywhere;
-}
-
 .serve-macro-success__hint {
   margin: 0;
   color: var(--fs-text-secondary);
   font: var(--fs-type-body);
+}
+
+.serve-macro-success__hint code {
+  font: var(--fs-type-mono);
+  font-size: inherit;
+}
+
+.serve-macro-success__subhint {
+  margin: calc(-1 * var(--fs-space-1)) 0 0;
+  color: var(--fs-text-tertiary);
+  font: var(--fs-type-label);
+}
+
+.serve-macro-success__subhint code {
+  font: var(--fs-type-mono);
+  font-size: inherit;
+}
+
+.serve-macro-success__stop {
+  margin-left: auto;
 }
 
 .serve-macro-success__actions {
@@ -372,4 +587,151 @@
   align-items: center;
   gap: var(--fs-space-3);
   flex-wrap: wrap;
+}
+
+.serve-model-list {
+  display: grid;
+  gap: var(--fs-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.serve-model-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: var(--fs-space-3);
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius-md);
+  padding: var(--fs-space-3) var(--fs-space-4);
+  background: var(--fs-surface-raised);
+  transition: background var(--fs-dur-fast) var(--fs-ease-heat);
+}
+
+.serve-model-row:hover {
+  background: var(--fs-surface-elevated);
+}
+
+.serve-model-row.is-busy {
+  opacity: 0.65;
+}
+
+.serve-model-row__info {
+  display: flex;
+  align-items: center;
+  gap: var(--fs-space-3);
+  min-width: 0;
+}
+
+.serve-model-row__name {
+  flex: 0 0 auto;
+  font: var(--fs-type-body);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.serve-model-row__id-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--fs-space-2);
+}
+
+.serve-model-row__id-label {
+  color: var(--fs-text-tertiary);
+  font: var(--fs-type-label);
+  white-space: nowrap;
+}
+
+.serve-model-row__id {
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius-sm);
+  padding: 0.15rem var(--fs-space-2);
+  background: var(--fs-surface-inset);
+  color: var(--fs-text);
+  font: var(--fs-type-mono);
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.serve-model-row__actions {
+  flex: 0 0 auto;
+}
+
+
+/* ── Serve: consumer snippets ─────────────────────────────────────────────── */
+
+.serve-snippets-section {
+  display: grid;
+  gap: var(--fs-space-4);
+}
+
+.serve-snippets-section h2 {
+  margin: 0;
+}
+
+.serve-snippets-hint {
+  margin: 0;
+  color: var(--fs-text-secondary);
+  font: var(--fs-type-body);
+}
+
+.serve-snippets-grid {
+  display: grid;
+  gap: var(--fs-space-4);
+}
+
+.serve-snippet-block {
+  display: grid;
+  gap: var(--fs-space-2);
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius-md);
+  padding: var(--fs-space-4);
+  background: var(--fs-surface-raised);
+}
+
+.serve-snippet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fs-space-3);
+}
+
+.serve-snippet-label {
+  font: var(--fs-type-label);
+  color: var(--fs-text-secondary);
+}
+
+.serve-snippet-copy-btn {
+  flex: 0 0 auto;
+  font: var(--fs-type-label);
+  padding: var(--fs-space-1) var(--fs-space-3);
+  min-height: 28px;
+}
+
+.serve-snippet-pre {
+  margin: 0;
+  border-radius: var(--fs-radius-sm);
+  padding: var(--fs-space-3) var(--fs-space-4);
+  background: var(--fs-surface-inset);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.serve-snippet-pre code {
+  font: var(--fs-type-mono);
+  color: var(--fs-text);
+  white-space: pre;
+  tab-size: 2;
+}
+
+.serve-snippet-note {
+  margin: 0;
+  color: var(--fs-text-tertiary);
+  font: var(--fs-type-subtitle);
+}
+
+.serve-snippet-note code {
+  font: var(--fs-type-mono);
+  font-size: inherit;
 }

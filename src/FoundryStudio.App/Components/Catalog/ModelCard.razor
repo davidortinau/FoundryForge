@@ -195,7 +195,7 @@
                             data-testid="card-load"
                             @onclick="LoadAsync"
                             disabled="@Operation.IsWorking">
-                        @(Operation.Phase == ModelOpPhase.Loading ? "Loading model…" : "Temper in memory")
+                        @(Operation.Phase == ModelOpPhase.Loading ? "Loading model…" : "Load in memory")
                     </button>
                 }
 

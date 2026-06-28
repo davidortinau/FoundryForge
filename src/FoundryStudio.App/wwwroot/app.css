@@ -468,9 +468,9 @@ button:disabled { cursor: not-allowed; opacity: 0.65; transform: none; }
   font: var(--fs-type-label);
 }
 .cache-badge { border: 1px solid currentColor; }
-.cache-badge--cached { color: var(--fs-positive); background: var(--fs-positive-bg); }
+.cache-badge--cached { color: var(--fs-text-secondary); background: var(--fs-surface-inset); border-color: var(--fs-border); }
 .cache-badge--not-cached { color: var(--fs-text-tertiary); background: var(--fs-surface-inset); border-color: var(--fs-border); }
-.cache-badge--loaded { color: var(--fs-positive); background: color-mix(in srgb, var(--fs-positive) 24%, var(--fs-surface)); border-color: var(--fs-positive); }
+.cache-badge--loaded { color: var(--fs-accent-text); background: color-mix(in srgb, var(--fs-accent) 14%, var(--fs-surface)); border-color: color-mix(in srgb, var(--fs-accent) 45%, var(--fs-border)); }
 .copper-stamp { border: 1px solid color-mix(in srgb, var(--fs-accent) 44%, transparent); color: var(--fs-accent-text); background: color-mix(in srgb, var(--fs-accent) 10%, transparent); text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px; }
 .format-badge { border: 1px solid var(--fs-border); background: var(--fs-surface-inset); color: var(--fs-text-secondary); font: var(--fs-type-mono); }
 .capability-chip { border: 1px solid var(--fs-info); background: var(--fs-info-bg); color: var(--fs-info); }

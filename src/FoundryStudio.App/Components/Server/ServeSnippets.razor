@@ -1,7 +1,8 @@
 @*
-  ServeSnippets — copy-paste consumer snippets for real external-tool authors.
+  ServeSnippets — copy-paste consumer snippets for external-tool authors.
   Only renders when the server is running with a REAL bound endpoint — never fabricates a URL.
   Uses the first loaded model's id, or a clearly-labelled <model-id> placeholder if none is loaded yet.
+  Order: curl (always works) → Python OpenAI SDK → Continue (honest label — not GitHub Copilot).
 *@
 @using FoundryStudio.Core.Server
 @inject ServingStateService ServingState
@@ -10,38 +11,21 @@
 
 @if (ServingState.IsRunning && BaseEndpoint is not null)
 {
-    <section class="card serve-snippets-section"
-             aria-labelledby="serve-snippets-title">
-        <p class="eyebrow">Connect external tools</p>
-        <h2 id="serve-snippets-title">Copy-paste consumer snippets</h2>
+    <div class="serve-snippets-section">
         <p class="serve-snippets-hint">
             The base URL and model id below are the real live values.
             @if (ModelIdLabel == "<model-id>")
             {
-                <strong>No model is tempered yet</strong> <span>— temper one to get its exact id.</span>
+                <strong>No model is loaded yet</strong> <span>— load one to get its exact id.</span>
             }
         </p>
 
-        <div class="serve-snippets-grid">
+        <p class="serve-snippets-compat-note server-note server-note--info" role="note">
+            Works with any OpenAI-compatible client — curl, the OpenAI SDKs, or extensions like Continue/Cline.
+            GitHub Copilot's model picker does not accept an arbitrary local endpoint.
+        </p>
 
-            @* ── GitHub Copilot / Continue (VS Code) ──────────────────────────────────────── *@
-            <div class="serve-snippet-block" data-testid="serve-snippet-copilot">
-                <div class="serve-snippet-header">
-                    <span class="serve-snippet-label">Continue / VS Code local provider</span>
-                    <button type="button"
-                            class="button button-secondary serve-snippet-copy-btn"
-                            data-testid="serve-snippet-copy"
-                            aria-label="Copy Continue / VS Code snippet"
-                            @onclick='() => CopyAsync("copilot", CopilotSnippet)'>
-                        @_labels["copilot"]
-                    </button>
-                </div>
-                <pre class="serve-snippet-pre" aria-label="Continue config.json snippet"><code>@CopilotSnippet</code></pre>
-                <p class="serve-snippet-note">
-                    Add to <code>~/.continue/config.json</code>.
-                    For GitHub Copilot in VS Code, set <code>"openai-compat"</code> base URL in your extension settings.
-                </p>
-            </div>
+        <div class="serve-snippets-grid">
 
             @* ── curl ─────────────────────────────────────────────────────────────────────── *@
             <div class="serve-snippet-block" data-testid="serve-snippet-curl">
@@ -73,16 +57,35 @@
                 <pre class="serve-snippet-pre" aria-label="Python OpenAI SDK snippet"><code>@SdkSnippet</code></pre>
             </div>
 
+            @* ── Continue (continue.dev) VS Code extension ───────────────────────────────── *@
+            <div class="serve-snippet-block" data-testid="serve-snippet-copilot">
+                <div class="serve-snippet-header">
+                    <span class="serve-snippet-label">Continue — third-party VS Code extension (continue.dev)</span>
+                    <button type="button"
+                            class="button button-secondary serve-snippet-copy-btn"
+                            data-testid="serve-snippet-copy"
+                            aria-label="Copy Continue config.json snippet"
+                            @onclick='() => CopyAsync("continue", ContinueSnippet)'>
+                        @_labels["continue"]
+                    </button>
+                </div>
+                <pre class="serve-snippet-pre" aria-label="Continue config.json snippet"><code>@ContinueSnippet</code></pre>
+                <p class="serve-snippet-note">
+                    Add to <code>~/.continue/config.json</code>.
+                    Continue is an open-source AI assistant extension, not affiliated with GitHub Copilot.
+                </p>
+            </div>
+
         </div>
-    </section>
+    </div>
 }
 
 @code {
     private readonly Dictionary<string, string> _labels = new()
     {
-        ["copilot"] = "Copy",
         ["curl"] = "Copy",
         ["sdk"] = "Copy",
+        ["continue"] = "Copy",
     };
 
     // ── Derived values — always from real live state, never fabricated ─────────────────────────
@@ -92,22 +95,6 @@
         ServingState.LoadedModels.Count > 0
             ? ServingState.LoadedModels[0].Id
             : "<model-id>";
-
-    private string CopilotSnippet =>
-        $$"""
-        // ~/.continue/config.json
-        {
-          "models": [
-            {
-              "title": "Foundry Local",
-              "provider": "openai",
-              "apiBase": "{{BaseEndpoint}}/v1",
-              "model": "{{ModelIdLabel}}",
-              "apiKey": "foundry"
-            }
-          ]
-        }
-        """;
 
     private string CurlSnippet =>
         $$"""
@@ -138,6 +125,22 @@
         )
 
         print(response.choices[0].message.content)
+        """;
+
+    private string ContinueSnippet =>
+        $$"""
+        // ~/.continue/config.json
+        {
+          "models": [
+            {
+              "title": "Foundry Local",
+              "provider": "openai",
+              "apiBase": "{{BaseEndpoint}}/v1",
+              "model": "{{ModelIdLabel}}",
+              "apiKey": "foundry"
+            }
+          ]
+        }
         """;
 
     // ── Event wiring ──────────────────────────────────────────────────────────────────────────

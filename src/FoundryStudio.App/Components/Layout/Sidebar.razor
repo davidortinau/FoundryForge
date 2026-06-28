@@ -7,12 +7,6 @@
     <nav class="sidebar-nav" aria-label="Primary">
         <div class="sidebar-nav__group" aria-labelledby="nav-group-workshop">
             <p id="nav-group-workshop" class="sidebar-nav__eyebrow">Workshop</p>
-            <NavLink id="nav-discover" data-testid="nav-discover" class="sidebar-nav__row" href="/" Match="NavLinkMatch.All" aria-label="Discover models">
-                <span class="sidebar-nav__icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16.5 16.5 3.5 3.5"/></svg>
-                </span>
-                <span>Discover</span>
-            </NavLink>
             <NavLink id="nav-serve" data-testid="nav-serve" class="sidebar-nav__row" href="/server" aria-label="Serve — manage the local server">
                 <span class="sidebar-nav__icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24"><path d="M5 7h14v4H5z"/><path d="M5 13h14v4H5z"/><path d="M8 9h.01"/><path d="M8 15h.01"/></svg>
@@ -22,6 +16,12 @@
                 {
                     <span class="sidebar-nav__live-dot" aria-label="Server is running" title="Server is running"></span>
                 }
+            </NavLink>
+            <NavLink id="nav-discover" data-testid="nav-discover" class="sidebar-nav__row" href="/" Match="NavLinkMatch.All" aria-label="Discover models">
+                <span class="sidebar-nav__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16.5 16.5 3.5 3.5"/></svg>
+                </span>
+                <span>Discover</span>
             </NavLink>
             <NavLink id="nav-workbench" data-testid="nav-workbench" class="sidebar-nav__row" href="/chat" aria-label="Workbench — chat and compare">
                 <span class="sidebar-nav__icon" aria-hidden="true">

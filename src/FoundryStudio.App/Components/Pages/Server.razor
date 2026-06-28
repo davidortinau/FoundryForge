@@ -6,37 +6,51 @@
 @implements IDisposable
 
 <div class="server-shell" data-testid="server-page">
-    <PageHeader TitleId="server-title"
-                Eyebrow="External OpenAI server"
-                Title="Light the local server"
-                Subtitle="Expose Foundry Local's local OpenAI-compatible server for external tools. FoundryStudio chat stays in-process." />
 
-    <section class="server-forge card" aria-labelledby="server-forge-title">
-        <div class="server-forge__header">
-            <div class="server-forge__status">
-                <span class="server-pilot-light @(PilotLightLit ? "is-lit" : string.Empty)"
-                      data-testid="server-pilot-light"
-                      data-state="@StateName"
-                      aria-hidden="true"></span>
-                <div>
-                    <p class="eyebrow">Forge state</p>
-                    <h2 id="server-forge-title">@ForgeTitle</h2>
-                    <p class="server-status-line" data-testid="server-status" role="status" aria-live="polite">
-                        @StateName
-                    </p>
-                </div>
+    @* ── 1. Header ────────────────────────────────────────────────────────────────────────── *@
+    <PageHeader TitleId="server-title"
+                Eyebrow=""
+                Title="Local server"
+                Subtitle="Expose an OpenAI-compatible endpoint so other apps can use a local model. The app's own chat is unaffected." />
+
+    @* ── 2. STATUS + ACTION merged card ──────────────────────────────────────────────────── *@
+    <section class="card server-main"
+             aria-labelledby="server-main-title"
+             data-testid="server-main">
+
+        @* Status line: pilot-light + plain status text + endpoint when running *@
+        <div class="server-status-bar">
+            <span class="server-pilot-light @(PilotLightLit ? "is-lit" : string.Empty)"
+                  data-testid="server-pilot-light"
+                  data-state="@StateName"
+                  aria-hidden="true"></span>
+            <div class="server-status-text-group">
+                <p class="server-status-line"
+                   data-testid="server-status"
+                   role="status"
+                   aria-live="polite">@StatusText</p>
+                @if (ServingState.IsRunning && BaseEndpoint is not null)
+                {
+                    <small class="server-endpoint-caption">OpenAI-compatible endpoint</small>
+                }
             </div>
-            <button type="button"
-                    class="button @ToggleButtonClass"
-                    data-testid="server-toggle"
-                    aria-label="@ToggleAriaLabel"
-                    aria-pressed="@ServingState.IsRunning.ToString().ToLowerInvariant()"
-                    disabled="@(!ServingState.IsSupported || ServingState.IsBusy)"
-                    @onclick="ToggleServerAsync">
-                @ToggleText
-            </button>
+            @if (ServingState.IsRunning && BaseEndpoint is not null && CopyPayload is not null)
+            {
+                <code class="server-endpoint-code"
+                      data-testid="server-endpoint"
+                      aria-label="Bound server endpoint"
+                      title="@BaseEndpoint">@BaseEndpoint</code>
+                <button type="button"
+                        class="button button-secondary server-endpoint-copy-btn"
+                        data-testid="server-endpoint-copy"
+                        aria-label="Copy server endpoint to clipboard"
+                        @onclick="CopyEndpointAsync">
+                    @_copyButtonText
+                </button>
+            }
         </div>
 
+        @* Unsupported / error / empty-endpoint notes *@
         @if (!ServingState.IsSupported)
         {
             <p class="server-note server-note--info" data-testid="server-unsupported" role="note">
@@ -56,141 +70,66 @@
             </p>
         }
 
-        @if (ServingState.IsRunning && BaseEndpoint is not null && CopyPayload is not null)
-        {
-            <div class="server-endpoint-card" data-testid="server-endpoint" aria-label="Bound server endpoint">
-                <div>
-                    <p class="eyebrow">Bound URL</p>
-                    <code>@BaseEndpoint</code>
-                    @if (AllEndpoints.Count > 1)
-                    {
-                        <ul class="server-endpoint-card__all" aria-label="All bound URLs">
-                            @foreach (var endpoint in AllEndpoints)
-                            {
-                                <li><code>@endpoint</code></li>
-                            }
-                        </ul>
-                    }
-                </div>
-                <button type="button"
-                        class="button button-secondary"
-                        data-testid="server-endpoint-copy"
-                        aria-label="Copy exact bound server endpoint"
-                        @onclick="CopyEndpointAsync">
-                    @_copyButtonText
-                </button>
-            </div>
-        }
+        @* Action area: model picker, start/stop, macro stages, success moment *@
+        <ServeMacro />
+
+        @* Reachable models (inside the card for Gestalt proximity — only when running) *@
+        <ServeModelList />
+
+        @* Quiet limits line *@
+        <p class="server-limits-line">Localhost only · No auth · No LAN access</p>
+
     </section>
-    @* ── Phase 2: Tempered models reachable list ──────────────────────────────────────── *@
-    <ServeModelList />
 
-    @* ── Phase 2: "Use in your tool" primary-job macro ────────────────────────────────── *@
-    <ServeMacro />
+    @* ── 3. CONNECT YOUR TOOL (render only when running) ─────────────────────────────────── *@
+    @if (ServingState.IsRunning)
+    {
+        <section class="card server-connect-section" aria-labelledby="server-connect-title">
+            <h2 id="server-connect-title" class="server-connect-title">Connect your tool</h2>
+            <ServeSnippets />
+        </section>
+    }
 
-    @* ── Phase 2: Copy-paste consumer snippets ────────────────────────────────────────── *@
-    <ServeSnippets />
-
-    <section class="server-grid" aria-label="Server facts">
-        <section class="card server-routes" data-testid="server-routes" aria-labelledby="server-routes-title">
-            <p class="eyebrow" data-testid="server-routes-documented-label">Documented OpenAI-compatible surface</p>
-            <h2 id="server-routes-title">Routes external tools can call</h2>
-            <ul>
+    @* ── 4. REFERENCE — collapsible, collapsed by default ────────────────────────────────── *@
+    <details class="card server-reference" data-testid="server-routes">
+        <summary class="server-reference__summary">
+            <span>Available routes</span>
+        </summary>
+        <div class="server-reference__body">
+            <ul class="server-reference__routes" aria-label="Available API routes">
                 @foreach (var route in ServerEndpoints.DocumentedRoutes)
                 {
-                    <li>
-                        <code>@route.Path</code>
+                    <li class="server-reference__route">
+                        <code data-testid="server-routes-documented-label">@route.Path</code>
                         <span>@route.Description</span>
-                        @if (ServingState.IsRunning && BaseEndpoint is not null)
-                        {
-                            <small>@ServerEndpoints.RouteUrl(BaseEndpoint, route)</small>
-                        }
                     </li>
                 }
             </ul>
-        </section>
-
-        <section class="card server-limits" data-testid="server-limitations" aria-labelledby="server-limitations-title">
-            <p class="eyebrow">Plain limits</p>
-            <h2 id="server-limitations-title">What this server is not</h2>
-            <ul>
-                @foreach (var limitation in ServerLimitations.All)
-                {
-                    <li>@limitation</li>
-                }
-            </ul>
-        </section>
-    </section>
-
-    <section class="card server-scope" aria-labelledby="server-scope-title">
-        <div>
-            <p class="eyebrow">Scope</p>
-            <h2 id="server-scope-title">External tools only</h2>
-            <p data-testid="server-scope-note">
-                This server is for external tools only; in-app chat runs in-process and is unaffected.
+            <p class="server-note server-note--info server-reference__honesty" role="note"
+               data-testid="server-request-log-omitted">
+                Foundry Local exposes no per-request feed, so live activity isn't shown.
             </p>
         </div>
+    </details>
 
-        @if (RequestLog.Show)
-        {
-            <div data-testid="server-request-log" aria-label="Observed server requests">
-                @if (RequestLog.Entries.Count == 0)
-                {
-                    <p class="status">No observed requests yet.</p>
-                }
-                else
-                {
-                    <ul>
-                        @foreach (var entry in RequestLog.Entries)
-                        {
-                            <li>
-                                <time datetime="@entry.At.ToString("O", CultureInfo.InvariantCulture)">@entry.At.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</time>
-                                <span>@entry.Summary</span>
-                            </li>
-                        }
-                    </ul>
-                }
-            </div>
-        }
-        else
-        {
-            <p class="server-note server-note--info" data-testid="server-request-log-omitted" role="note">
-                @RequestLog.HonestNote
-            </p>
-        }
-    </section>
 </div>
 
 @code {
     private string _copyButtonText = "Copy endpoint";
 
-    private RequestLogView RequestLog { get; } = RequestActivityProjection.Project(null);
-
     private string StateName => ServingState.Status.State.ToString().ToLowerInvariant();
     private bool PilotLightLit => ServerStateMachine.PilotLightLit(ServingState.Status.State);
     private string? BaseEndpoint => ServingState.IsRunning ? ServerEndpoints.BaseUrl(ServingState.Urls) : null;
-    private IReadOnlyList<string> AllEndpoints => ServingState.IsRunning ? ServerEndpoints.AllBaseUrls(ServingState.Urls) : Array.Empty<string>();
     private string? CopyPayload => ServingState.IsRunning ? ServerEndpoints.CopyPayload(ServingState.Urls) : null;
     private bool ShowEndpointEmpty => ServingState.EmptyEndpointAfterStart && ServingState.Status.State == ServerState.Error;
 
-    private string ToggleButtonClass => ServingState.IsRunning ? "button-secondary" : string.Empty;
-    private string ToggleText => ServingState.Status.State switch
+    private string StatusText => ServingState.Status.State switch
     {
-        ServerState.Starting => "Lighting server…",
-        ServerState.Running => "Stop server",
-        ServerState.Stopping => "Stopping server…",
-        _ => "Light local server"
-    };
-
-    private string ToggleAriaLabel => ServingState.IsRunning ? "Stop the local server" : "Start the local server";
-
-    private string ForgeTitle => ServingState.Status.State switch
-    {
-        ServerState.Starting => "Igniting the server",
-        ServerState.Running => BaseEndpoint is null ? "Server running" : $"Forge lit at {BaseEndpoint}",
-        ServerState.Stopping => "Extinguishing the server",
-        ServerState.Error => "Server needs attention",
-        _ => "Server is stopped"
+        ServerState.Starting  => "Starting server…",
+        ServerState.Running   => "Running",
+        ServerState.Stopping  => "Stopping…",
+        ServerState.Error     => "Server error",
+        _                     => "Stopped",
     };
 
     protected override void OnInitialized()
@@ -203,27 +142,15 @@
         InvokeAsync(StateHasChanged);
     }
 
-    private async Task ToggleServerAsync()
-    {
-        if (!ServingState.IsSupported || ServingState.IsBusy) return;
-
-        _copyButtonText = "Copy endpoint";
-        if (ServingState.IsRunning)
-        {
-            await ServingState.StopAsync();
-        }
-        else
-        {
-            await ServingState.StartAsync();
-        }
-    }
-
     private async Task CopyEndpointAsync()
     {
         if (CopyPayload is null) return;
 
         await Js.InvokeVoidAsync("foundryStudioClipboard.copy", CopyPayload);
-        _copyButtonText = "Copied exact endpoint";
+        _copyButtonText = "Copied ✓";
+        await InvokeAsync(StateHasChanged);
+        await Task.Delay(1800);
+        _copyButtonText = "Copy endpoint";
         await InvokeAsync(StateHasChanged);
     }
 

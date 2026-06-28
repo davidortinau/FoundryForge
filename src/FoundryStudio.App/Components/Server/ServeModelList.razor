@@ -1,5 +1,6 @@
 @*
-  ServeModelList — shows the currently-tempered (loaded) models that are reachable at the endpoint.
+  ServeModelList — shows the currently loaded models reachable at the endpoint.
+  Rendered inside the merged STATUS+ACTION card in Server.razor; no outer card wrapper.
   Only visible while the server is running. Unload is non-destructive (cache is preserved).
 *@
 @inject ServingStateService ServingState
@@ -7,39 +8,32 @@
 
 @if (ServingState.IsRunning)
 {
-    <section class="card serve-model-section"
-             aria-labelledby="serve-model-section-title">
+    <div class="serve-model-section">
         <div class="serve-model-section__header">
-            <p class="eyebrow">Reachable models</p>
-            <h2 id="serve-model-section-title">Models at the endpoint right now</h2>
+            <h3 id="serve-model-section-title" class="serve-model-section__heading">Reachable now</h3>
             <p class="serve-model-section__hint">
-                These are the tempered (loaded) models a caller can address by <code>model</code> id.
+                Use the model id in your API calls. Unload removes it from memory; the download is preserved.
             </p>
         </div>
 
         @if (ServingState.LoadedModels.Count == 0)
         {
             <p class="server-note server-note--info" role="note">
-                Server is on, but no models are tempered yet — temper a model to make it reachable.
+                Server is on, but no models are loaded yet — load a model to make it reachable.
             </p>
         }
         else
         {
             <ul class="serve-model-list"
                 data-testid="serve-model-list"
-                aria-label="Tempered models reachable at the endpoint">
+                aria-label="Loaded models reachable at the endpoint"
+                aria-labelledby="serve-model-section-title">
                 @foreach (var model in ServingState.LoadedModels)
                 {
                     <li class="serve-model-row @(_unloadingAlias == model.Alias ? "is-busy" : string.Empty)"
                         data-testid="serve-model-row">
                         <div class="serve-model-row__info">
-                            <span class="cache-badge cache-badge--loaded" aria-label="Tempered">
-                                <svg aria-hidden="true" viewBox="0 0 24 24">
-                                    <circle cx="12" cy="12" r="7" />
-                                    <path d="M12 8v4l2.5 2.5" />
-                                </svg>
-                                Tempered
-                            </span>
+                            <ModelStateBadge IsLoaded="true" />
                             <span class="serve-model-row__name">@model.DisplayName</span>
                         </div>
                         <div class="serve-model-row__id-cell">
@@ -52,7 +46,7 @@
                             <button type="button"
                                     class="button button-ghost"
                                     data-testid="serve-model-unload"
-                                    aria-label="Unload @model.DisplayName from memory (cache is preserved)"
+                                    aria-label="Unload @model.DisplayName from memory (download is preserved)"
                                     disabled="@(_unloadingAlias is not null)"
                                     @onclick="() => UnloadAsync(model.Alias)">
                                 @(_unloadingAlias == model.Alias ? "Unloading…" : "Unload")
@@ -62,7 +56,7 @@
                 }
             </ul>
         }
-    </section>
+    </div>
 }
 
 @code {
@@ -83,7 +77,6 @@
         await InvokeAsync(StateHasChanged);
         await ServingState.UnloadModelAsync(alias);
         _unloadingAlias = null;
-        // ServingState.OnChanged fires from within UnloadModelAsync, re-rendering the list.
     }
 
     public void Dispose()
