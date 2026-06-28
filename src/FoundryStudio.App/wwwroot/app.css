@@ -1205,3 +1205,111 @@ details[open] > .chat-metrics-summary::before { transform: rotate(90deg); }
 .model-row__format { min-width: 38px; text-align: center; }
 .model-row__context { min-width: 44px; text-align: center; }
 .model-row__size { min-width: 54px; text-align: right; }
+
+/* ── NL-assisted Discover (Phase 3) ─────────────────────────────── */
+
+/* Row that holds the NL input + submit; sits above the search row  */
+.catalog-nl-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fs-space-2);
+  padding-bottom: var(--fs-space-3);
+  border-bottom: 1px solid var(--fs-border);
+  margin-bottom: var(--fs-space-3);
+}
+
+.catalog-nl-input-group {
+  display: flex;
+  align-items: center;
+  gap: var(--fs-space-2);
+}
+
+.catalog-nl-input {
+  flex: 1 1 0;
+  height: 32px;
+  padding: 0 var(--fs-space-3);
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius-pill);
+  background: var(--fs-surface-inset);
+  color: var(--fs-text);
+  font: var(--fs-type-body);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.catalog-nl-input::placeholder {
+  color: var(--fs-text-placeholder, var(--fs-text-secondary));
+  font-style: italic;
+}
+
+.catalog-nl-input:focus {
+  border-color: var(--fs-accent);
+  box-shadow: 0 0 0 2px var(--fs-accent-ring);
+}
+
+.catalog-nl-submit {
+  flex-shrink: 0;
+}
+
+.catalog-nl-submit:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Chip row: label + individual chips + clear all */
+.catalog-nl-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fs-space-2);
+}
+
+.catalog-nl-interpreted-label {
+  font: var(--fs-type-caption);
+  color: var(--fs-text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.catalog-nl-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fs-space-1);
+  height: 24px;
+  padding: 0 var(--fs-space-2);
+  border: 1px solid color-mix(in srgb, var(--fs-accent) 50%, var(--fs-border));
+  border-radius: var(--fs-radius-pill);
+  background: color-mix(in srgb, var(--fs-accent) 10%, var(--fs-surface));
+  color: var(--fs-accent-text);
+  font: var(--fs-type-caption);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.catalog-nl-chip:hover {
+  background: color-mix(in srgb, var(--fs-accent) 20%, var(--fs-surface));
+  border-color: var(--fs-accent);
+}
+
+.catalog-nl-chip svg {
+  width: 0.75em;
+  height: 0.75em;
+  stroke-width: 2.2;
+  opacity: 0.7;
+}
+
+.catalog-nl-clear {
+  background: none;
+  border: none;
+  padding: 0 var(--fs-space-1);
+  color: var(--fs-text-secondary);
+  font: var(--fs-type-caption);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.catalog-nl-clear:hover {
+  color: var(--fs-text);
+}

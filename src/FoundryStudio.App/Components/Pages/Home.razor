@@ -30,6 +30,55 @@
     {
         <!-- Toolbar: search (always visible) + collapsible filter drawer -->
         <section class="catalog-controls card" aria-label="Catalog search, filters, and view controls">
+            <!-- NL assist: describe what you need, interpreted as editable filter chips -->
+            <div class="catalog-nl-row" role="search" aria-label="Describe what you need">
+                <div class="catalog-nl-input-group">
+                    <label for="catalog-nl-input" class="visually-hidden">Describe what you need</label>
+                    <input id="catalog-nl-input"
+                           type="text"
+                           class="catalog-nl-input"
+                           data-testid="discover-nl-input"
+                           value="@_state.NlInputText"
+                           @oninput="OnNlInputChangedAsync"
+                           @onkeydown="OnNlKeyDownAsync"
+                           placeholder="Describe what you need…"
+                           autocomplete="off"
+                           spellcheck="false"
+                           aria-label="Describe what you need"
+                           aria-describedby="catalog-nl-hint" />
+                    <button type="button"
+                            class="catalog-nl-submit icon-button"
+                            data-testid="discover-nl-submit"
+                            title="Interpret request"
+                            aria-label="Interpret request"
+                            disabled="@(string.IsNullOrWhiteSpace(_state.NlInputText))"
+                            @onclick="ApplyNlQueryAsync">
+                        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+                    </button>
+                </div>
+                @if (_state.NlResult is { IsEmpty: false })
+                {
+                    <div class="catalog-nl-chips" data-testid="discover-nl-chips" role="group" aria-label="Interpreted filters">
+                        <span id="catalog-nl-hint" class="catalog-nl-interpreted-label">Interpreted as:</span>
+                        @foreach (var chip in _state.NlResult.Chips)
+                        {
+                            <button type="button"
+                                    class="catalog-nl-chip"
+                                    title="Remove @chip.Label"
+                                    aria-label="Remove filter: @chip.Label"
+                                    @onclick="() => RemoveNlChipAsync(chip)">
+                                @chip.Label
+                                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                            </button>
+                        }
+                        <button type="button"
+                                class="catalog-nl-clear"
+                                aria-label="Clear all inferred filters"
+                                @onclick="ClearNlAsync">Clear all</button>
+                    </div>
+                }
+            </div>
+
             <div class="catalog-controls__search-row">
                 <div class="field field-search">
                     <label for="catalog-search">Search models</label>
@@ -303,6 +352,7 @@
 
 @code {
     private readonly CatalogViewState _state = new();
+    private readonly NaturalLanguageQueryInterpreter _nlInterpreter = new();
     private ModelInfo? _deleteTarget;
     private bool _deleteBusy;
     private string? _deleteError;
@@ -466,6 +516,110 @@
     private Task ResetCatalogAsync()
     {
         _state.ResetToCuratedDefault();
+        return InvokeAsync(StateHasChanged);
+    }
+
+    // ── NL-assist handlers ─────────────────────────────────────────────────────
+
+    private Task OnNlInputChangedAsync(ChangeEventArgs args)
+    {
+        _state.NlInputText = args.Value?.ToString() ?? string.Empty;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task OnNlKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            return ApplyNlQueryAsync();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task ApplyNlQueryAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_state.NlInputText))
+        {
+            return Task.CompletedTask;
+        }
+
+        var result = _nlInterpreter.Interpret(
+            _state.NlInputText,
+            _state.Facets.Tasks,
+            _state.Facets.Providers);
+
+        if (result.IsEmpty)
+        {
+            // Nothing interpretable — put the whole input into SearchText so it still filters
+            _state.NlResult = null;
+            _state.NlSortHint = NlSortHint.None;
+            _state.Filter = _state.Filter with { SearchText = _state.NlInputText.Trim() };
+        }
+        else
+        {
+            _state.NlResult = result;
+            _state.NlSortHint = result.SortHint;
+            // Merge NL filter on top of existing filter (NL wins for fields it set).
+            _state.Filter = new CatalogFilter(
+                Device: result.Filter.Device ?? _state.Filter.Device,
+                Task: result.Filter.Task ?? _state.Filter.Task,
+                Provider: result.Filter.Provider ?? _state.Filter.Provider,
+                SearchText: result.Filter.SearchText,
+                CachedOnly: _state.Filter.CachedOnly);
+            _state.ViewMode = CatalogViewState.CatalogViewMode.Full;
+        }
+
+        _state.Recompute();
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task RemoveNlChipAsync(NlInferredChip chip)
+    {
+        if (_state.NlResult is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        // Clear the filter field corresponding to this chip kind
+        _state.Filter = chip.Kind switch
+        {
+            NlChipKind.Device => _state.Filter with { Device = null },
+            NlChipKind.Task => _state.Filter with { Task = null },
+            NlChipKind.Provider => _state.Filter with { Provider = null },
+            NlChipKind.SearchText => _state.Filter with { SearchText = null },
+            NlChipKind.SortHint => _state.Filter, // sort is separate; cleared below
+            NlChipKind.Capability => _state.Filter, // capability hints are display-only
+            _ => _state.Filter,
+        };
+
+        if (chip.Kind == NlChipKind.SortHint)
+        {
+            _state.NlSortHint = NlSortHint.None;
+        }
+
+        // Rebuild chips without the removed one
+        var remainingChips = _state.NlResult.Chips
+            .Where(c => c != chip)
+            .ToList();
+
+        _state.NlResult = remainingChips.Count > 0
+            ? _state.NlResult with { Chips = remainingChips }
+            : null;
+
+        _state.Recompute();
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task ClearNlAsync()
+    {
+        _state.NlInputText = string.Empty;
+        _state.NlResult = null;
+        _state.NlSortHint = NlSortHint.None;
+        // Clear only the NL-contributed fields; leave power-filter drawer state
+        _state.Filter = new CatalogFilter(
+            CachedOnly: _state.Filter.CachedOnly);
+        _state.Recompute();
         return InvokeAsync(StateHasChanged);
     }
 

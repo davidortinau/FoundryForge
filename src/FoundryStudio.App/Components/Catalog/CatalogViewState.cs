@@ -4,6 +4,8 @@ using Device = FoundryStudio.Core.Models.Device;
 
 namespace FoundryStudio.App.Components.Catalog;
 
+// NL-assist state is stored here so the page component stays focused on rendering.
+
 public sealed class CatalogViewState
 {
     public enum CatalogStatus
@@ -29,6 +31,16 @@ public sealed class CatalogViewState
     public CatalogFilter Filter { get; set; } = new();
 
     public CatalogViewMode ViewMode { get; set; } = CatalogViewMode.Curated;
+
+    // ── NL-assist state ────────────────────────────────────────────────────────
+    /// <summary>Current text in the NL input box (not yet interpreted).</summary>
+    public string NlInputText { get; set; } = string.Empty;
+
+    /// <summary>The last interpreted NL result; null if the box is empty or cleared.</summary>
+    public NlQueryResult? NlResult { get; set; }
+
+    /// <summary>Sort hint produced by the last NL interpretation; applied in Recompute.</summary>
+    public NlSortHint NlSortHint { get; set; } = NlSortHint.None;
 
     public IReadOnlyList<ModelInfo> Visible { get; private set; } = Array.Empty<ModelInfo>();
 
@@ -79,6 +91,9 @@ public sealed class CatalogViewState
     {
         Filter = new CatalogFilter();
         ViewMode = CatalogViewMode.Curated;
+        NlInputText = string.Empty;
+        NlResult = null;
+        NlSortHint = NlSortHint.None;
         Recompute();
     }
 
@@ -91,7 +106,16 @@ public sealed class CatalogViewState
                 ? (Filter with { CachedOnly = false }).Apply(AllModels).Where(model => CachedAliases.Contains(model.Alias)).ToList()
                 : Filter.Apply(AllModels));
 
-        Visible = filtered;
+        // Apply NL sort hint on top of filter results.
+        var sorted = NlSortHint switch
+        {
+            NlSortHint.SizeAscending => filtered.OrderBy(m => m.SizeGb ?? double.MaxValue).ToList(),
+            NlSortHint.SizeDescending => filtered.OrderByDescending(m => m.SizeGb ?? 0).ToList(),
+            NlSortHint.ContextDescending => filtered.OrderByDescending(m => m.ContextLength ?? 0).ToList(),
+            _ => filtered,
+        };
+
+        Visible = sorted;
 
         var groups = CatalogGrouping.Partition(Visible, CachedAliases);
         VisibleCached = groups.Cached;
