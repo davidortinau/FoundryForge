@@ -1392,11 +1392,20 @@ details[open] > .chat-metrics-summary::before { transform: rotate(90deg); }
   position: absolute;
   right: 6px;
   top: 50%;
-  transform: translateY(-50%);
   flex-shrink: 0;
   border: none;
   background: transparent;
   color: var(--fs-text-secondary);
+}
+
+/* Keep the button vertically centered in every state. The global
+   `button:disabled { transform: none }` and `button:hover` lift rules would
+   otherwise clobber the centering translate (the submit is disabled while the
+   field is empty), so re-assert it at higher specificity. */
+.catalog-nl-submit,
+.catalog-nl-submit:disabled,
+.catalog-nl-submit:hover:not(:disabled) {
+  transform: translateY(-50%);
 }
 
 .catalog-nl-submit:hover:not(:disabled) {
