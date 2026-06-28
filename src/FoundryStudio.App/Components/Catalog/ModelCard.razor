@@ -180,13 +180,13 @@
         else
         {
             <div class="model-management__actions">
-                <!-- Primary (copper fill): always "Use in Serve" — one-click bridge to the Serve screen -->
+                <!-- Primary (copper fill): bridge to the Serve screen for this model -->
                 <button type="button"
                         class="button"
                         data-testid="card-use-in-tool"
                         @onclick="UseInToolAsync"
                         disabled="@Operation.IsWorking">
-                    Use in Serve
+                    Serve this model
                 </button>
                 <!-- Secondary: load state determines Load vs Unload -->
                 @if (IsLoaded)

@@ -57,8 +57,8 @@
         {
             <!-- Reuse the honesty decode-failure pattern from MessageBubble -->
             <div class="compare-col-error" data-testid="compare-column-error" role="alert">
-                <p class="compare-col-error__label">Decode error</p>
-                <p class="compare-col-error__msg">This response couldn't be decoded (output stream error).</p>
+                <p class="compare-col-error__label">Unreadable response</p>
+                <p class="compare-col-error__msg">The model returned a garbled or empty response. This is usually temporary — try again.</p>
             </div>
         }
         else if (!string.IsNullOrEmpty(State.Text))

@@ -8,9 +8,9 @@
              role="alert">
         <div class="chat-message__meta">
             <span class="chat-message__role">Assistant</span>
-            <span class="pill chat-message__error-pill">Decode error</span>
+            <span class="pill chat-message__error-pill">Unreadable response</span>
         </div>
-        <p class="chat-response-error__text">This response couldn't be decoded (output stream error).</p>
+        <p class="chat-response-error__text">The model returned a garbled or empty response. This is usually temporary — try again.</p>
         <div class="chat-response-error__actions">
             <button type="button" class="button button-secondary" @onclick="() => OnRetry.InvokeAsync()">Retry</button>
             <button type="button" class="button button-secondary" @onclick="CopyRawAsync">Copy raw</button>
