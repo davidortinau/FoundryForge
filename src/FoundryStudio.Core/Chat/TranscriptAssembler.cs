@@ -10,14 +10,33 @@ namespace FoundryStudio.Core.Chat;
 public static class TranscriptAssembler
 {
     public static IReadOnlyList<ChatMessage> Assemble(ChatSession session)
+        => Assemble(session, memoryContext: null);
+
+    /// <summary>
+    /// Assembles the MEAI message list with an optional cross-session memory context prepended
+    /// as a clearly-delimited system note (Phase 5, FR-mem). The memory context is only injected
+    /// when <paramref name="memoryContext"/> is non-null and non-empty; nothing is added otherwise,
+    /// leaving existing chat behaviour completely unchanged. What is injected is exactly what the
+    /// user sees in the UI (honesty rule, Design §9).
+    /// </summary>
+    public static IReadOnlyList<ChatMessage> Assemble(ChatSession session, string? memoryContext)
     {
         ArgumentNullException.ThrowIfNull(session);
 
-        var messages = new List<ChatMessage>(session.Messages.Count + 1);
+        var messages = new List<ChatMessage>(session.Messages.Count + 2);
 
         if (!string.IsNullOrWhiteSpace(session.SystemPrompt))
         {
             messages.Add(new ChatMessage(ChatRole.System, session.SystemPrompt));
+        }
+
+        // Inject cross-session memory as a clearly-delimited system note so the model has context
+        // but the injection is explicit, opt-in, and identical to what the user sees in the UI.
+        if (!string.IsNullOrWhiteSpace(memoryContext))
+        {
+            messages.Add(new ChatMessage(
+                ChatRole.System,
+                $"Relevant notes from earlier conversations (provided by the user):\n\n{memoryContext}"));
         }
 
         foreach (var record in session.Messages)

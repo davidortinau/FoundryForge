@@ -1,0 +1,52 @@
+@using FoundryStudio.Core.Chat
+
+@if (Suggestions.Count > 0)
+{
+    <div class="chat-memory-panel" data-testid="chat-memory-suggestions" aria-label="Relevant from past chats">
+        <button type="button"
+                class="chat-memory-toggle"
+                aria-expanded="@_expanded"
+                aria-controls="chat-memory-list"
+                @onclick="ToggleExpanded">
+            <svg viewBox="0 0 16 16" aria-hidden="true" class="chat-memory-toggle__chevron @(_expanded ? "is-expanded" : "")">
+                <polyline points="4,6 8,10 12,6" />
+            </svg>
+            <span>Relevant from past chats</span>
+            <span class="chat-memory-count" aria-label="@Suggestions.Count snippet@(Suggestions.Count == 1 ? "" : "s")">@Suggestions.Count</span>
+        </button>
+
+        @if (_expanded)
+        {
+            <ul class="chat-memory-list" id="chat-memory-list" role="list">
+                @foreach (var snippet in Suggestions)
+                {
+                    var isIncluded = IncludedIds.Contains(snippet.SessionId);
+                    <li class="chat-memory-item @(isIncluded ? "is-included" : "")" data-testid="chat-memory-item">
+                        <label class="chat-memory-item__label">
+                            <input type="checkbox"
+                                   class="chat-memory-item__checkbox"
+                                   data-testid="chat-memory-include"
+                                   checked="@isIncluded"
+                                   @onchange="() => OnToggle.InvokeAsync(snippet.SessionId)" />
+                            <span class="chat-memory-item__body">
+                                <span class="chat-memory-item__source eyebrow">@snippet.SessionTitle · @snippet.SourceDate.LocalDateTime.ToString("MMM d", System.Globalization.CultureInfo.CurrentCulture)</span>
+                                <span class="chat-memory-item__snippet">@snippet.Snippet</span>
+                            </span>
+                        </label>
+                    </li>
+                }
+            </ul>
+            <p class="chat-memory-note">Only checked items are added to this message. What you include is exactly what the model receives.</p>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<MemorySnippet> Suggestions { get; set; } = Array.Empty<MemorySnippet>();
+    [Parameter, EditorRequired] public HashSet<string> IncludedIds { get; set; } = new();
+    [Parameter, EditorRequired] public EventCallback<string> OnToggle { get; set; }
+
+    private bool _expanded = true;
+
+    private void ToggleExpanded() => _expanded = !_expanded;
+}

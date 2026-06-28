@@ -7,6 +7,7 @@
 @inject IChatHistoryStore HistoryStore
 @inject IFoundryCatalogService CatalogService
 @inject NavigationManager Nav
+@inject ConversationMemoryRetriever MemoryRetriever
 
 <div class="chat-shell" data-testid="chat-page">
     <PageHeader TitleId="chat-title"
@@ -238,6 +239,9 @@
                     }
 
                     <div class="chat-composer-panel">
+                        <ChatMemorySuggestions Suggestions="@_memorySuggestions"
+                                               IncludedIds="@_memoryIncludedIds"
+                                               OnToggle="@ToggleMemoryItem" />
                         <div class="field chat-composer-field">
                             <label for="chat-composer-input">Message</label>
                             <textarea id="chat-composer-input"
@@ -352,6 +356,10 @@
     private string? _renamingSessionId;
     private string _renameValue = string.Empty;
     private string? _openOverflowId;
+
+    // Phase 5 — cross-session memory
+    private IReadOnlyList<MemorySnippet> _memorySuggestions = Array.Empty<MemorySnippet>();
+    private HashSet<string> _memoryIncludedIds = new();
 
     private enum ConfirmAction { Clear, Delete }
 
@@ -580,7 +588,36 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private void OnDraftChanged(ChangeEventArgs args) => _draft = args.Value?.ToString() ?? string.Empty;
+    private void OnDraftChanged(ChangeEventArgs args)
+    {
+        _draft = args.Value?.ToString() ?? string.Empty;
+        RefreshMemorySuggestions();
+    }
+
+    private void RefreshMemorySuggestions()
+    {
+        if (string.IsNullOrWhiteSpace(_draft) || _sessions.Count <= 1)
+        {
+            _memorySuggestions = Array.Empty<MemorySnippet>();
+            return;
+        }
+
+        _memorySuggestions = MemoryRetriever.Retrieve(
+            query: _draft,
+            sessions: _sessions,
+            excludeSessionId: CurrentSession?.Id,
+            topK: 3);
+
+        // Remove any included IDs that are no longer in the new suggestion set.
+        _memoryIncludedIds.IntersectWith(_memorySuggestions.Select(s => s.SessionId));
+    }
+
+    private void ToggleMemoryItem(string sessionId)
+    {
+        if (!_memoryIncludedIds.Add(sessionId))
+            _memoryIncludedIds.Remove(sessionId);
+        StateHasChanged();
+    }
 
     private async Task SendAsync()
     {
@@ -616,7 +653,20 @@
         StopReason stopReason = StopReason.Unknown;
         try
         {
-            var requestMessages = TranscriptAssembler.Assemble(CurrentSession);
+            // Phase 5: if the user explicitly included memory snippets, assemble them as a clearly-
+            // delimited context note prepended after the system prompt. Only included items are
+            // injected — what the user sees in the UI is exactly what the model receives (honesty rule).
+            string? memoryContext = null;
+            if (_memoryIncludedIds.Count > 0)
+            {
+                var included = _memorySuggestions
+                    .Where(s => _memoryIncludedIds.Contains(s.SessionId))
+                    .ToList();
+                if (included.Count > 0)
+                    memoryContext = BuildMemoryContextNote(included);
+            }
+
+            var requestMessages = TranscriptAssembler.Assemble(CurrentSession, memoryContext);
             var options = CurrentSession.Parameters.ToChatOptions(ActiveModel.Alias);
             await foreach (var update in ChatService.StreamAsync(requestMessages, options, _streamCts.Token).WithCancellation(_streamCts.Token))
             {
@@ -663,6 +713,9 @@
             _liveAssistantText = string.Empty;
             _liveMetrics = null;
             _hasFirstToken = false;
+            // Clear memory state after each send; fresh retrieval on next draft.
+            _memorySuggestions = Array.Empty<MemorySnippet>();
+            _memoryIncludedIds.Clear();
         }
 
         await InvokeAsync(StateHasChanged);
@@ -771,6 +824,22 @@
         if (nonSpace == 0) return true;
         var badChars = trimmed.Count(c => c == '?' || c == '\uFFFD');
         return (double)badChars / nonSpace > 0.6;
+    }
+
+    /// <summary>
+    /// Builds the memory context string injected into the model request (Phase 5). What is built
+    /// here is exactly what the user sees checked in the UI — the honesty constraint.
+    /// </summary>
+    private static string BuildMemoryContextNote(IEnumerable<MemorySnippet> snippets)
+    {
+        var sb = new System.Text.StringBuilder();
+        foreach (var s in snippets)
+        {
+            sb.AppendLine($"[From \"{s.SessionTitle}\"]");
+            sb.AppendLine(s.Snippet);
+            sb.AppendLine();
+        }
+        return sb.ToString().TrimEnd();
     }
 
     private static ChatSession AddMessage(ChatSession session, ChatMessageRecord message)

@@ -68,6 +68,9 @@ public static class FoundryStudioServiceCollectionExtensions
         // Post-v1 honest stubs keep the DI graph stable for M6 (IsSupported == false; operations throw).
         services.AddSingleton<IEmbeddingService, StubEmbeddingService>();
         services.AddSingleton<ITranscriptionService, StubTranscriptionService>();
+
+        // Phase 5 — cross-session memory retriever: deterministic, offline, no model required.
+        services.AddSingleton<ConversationMemoryRetriever>();
         // M5: the real exposed server over the single shared FoundryLocalManager (the only new FL-bound piece).
         services.AddSingleton<ILocalServerService, LocalServerService>();
 
