@@ -69,7 +69,7 @@ flows through the semantic tokens below — components never hardcode hex. Token
 | `--fs-accent-text` | `#8F3510` | `#FF9E4A` | Copper used as *text/link* (AA-safe on canvas/surface) |
 | `--fs-accent-ring` | `#B94A18` @ 45% | `#FF9E4A` @ 55% | Focus ring when action is app-primary |
 
-**Copper is used for:** primary buttons (Download/Cast, Load/Temper, Start Server), sidebar active
+**Copper is used for:** primary buttons (Download, Load, Start server), sidebar active
 indicator, *real* download/load/generation progress fills, first-run + loaded-confirmation brand
 moments, primary focus rings.
 
@@ -187,9 +187,9 @@ non-essential motion; state still updates instantly.
 - **Sidebar:** translucent grouped surface (`--fs-surface-sidebar`). Grouped sections with an
   eyebrow label; each row = leading icon + label. **Active row:** copper left-indicator (3px) +
   `--fs-accent-text` label + subtle `--fs-accent` @ ~12% row tint. Hover = neutral tint.
-  - v1 groups: **Models** (Catalog) · **Chat** (M4) · **Server** (M5) · **Settings**. Seed the
-    structure now; disabled/"coming soon" rows are acceptable placeholders, clearly marked, never
-    faking function.
+  - v1 groups: **Serve** (M5, primary job — first) · **Discover** (Catalog) · **Workbench** (Chat) ·
+    **Settings**. The rail leads with the primary job. Seed the structure now; disabled/"coming soon"
+    rows are acceptable placeholders, clearly marked, never faking function.
 - **Page header:** large leading glyph + `--fs-type-display` title + `--fs-type-subtitle`. (e.g.
   ⛏️-equivalent foundry glyph + "Browse models" + "Install, load, and safely manage Foundry Local
   models.")
@@ -206,7 +206,7 @@ All components consume tokens; none hardcode hex. Keep existing `data-testid`/`i
 
 ### Buttons
 - **Primary (copper):** `--fs-accent-fill` bg, `--fs-text-inverse` label, `--fs-radius-md`.
-  Reserved for the one primary action per view (Cast/Temper/Start Server).
+  Reserved for the one primary action per view (Download, Load, Start server). Use plain labels (§9).
 - **Secondary:** surface bg, `--fs-border-strong` border, `--fs-text` label.
 - **Ghost:** transparent, text-only, for low-emphasis (Skip, tertiary nav).
 - **Destructive:** `--fs-danger` — only inside the consent pattern (§11), never a bare list action.
@@ -251,29 +251,51 @@ All components consume tokens; none hardcode hex. Keep existing `data-testid`/`i
 
 ## 9. Content & voice
 
-Short, calm, specific. Warm, never hypey. The forge metaphor is *state language* — only used when
-the named state is literally happening.
+Short, calm, specific. Warm, never hypey.
 
-Reference microcopy (FoundryStudio voice):
+**The plain-language rule (controls vs. flavor).** Anything the user must read to *operate* the app —
+button labels, control labels, section headers, and the primary status word — uses plain, literal
+language (Download, Load, Start server, Running, Stopped, Loaded). The forge metaphor is **ambient
+flavor on real state**, never the operable label, and never a synonym you alternate with a plain one
+in the same view. Concretely:
 
-| Context | Copy |
-|---|---|
-| Welcome | "Build with local models on this Mac." |
-| First-run subtitle | "Download a model, load it into memory, then chat — all locally after the first download." |
-| Empty primary action | "Choose your first model" |
-| Download button | "Cast to local cache" |
-| Download progress | "Casting Phi-3.5 Mini — 1.2 GB of 2.4 GB downloaded" |
-| Load button | "Temper in memory" |
-| Loaded toast | "Phi-3.5 Mini is loaded and ready for local chat." |
-| Chat placeholder | "Ask this local model…" |
-| Server button | "Light local server" |
-| Server-on state | "Forge lit at `http://127.0.0.1:5273`" |
-| Server limitation | "Localhost only. Foundry Local does not provide auth or LAN binding here." |
-| Capability honesty | "This model does not advertise vision support." |
+- ✅ Button: "Load model & start server". Status badge: "Running". A model chip: "Loaded".
+- ✅ Forge flavor as *decoration* on true state: the copper pilot-light ember (motion, not a word);
+  an optional secondary microcopy line; the product narrative in docs/marketing.
+- ❌ A control or header a user must decode to act: "Cast · Temper · Serve", "Forge State",
+  "Tempered" as the only label, "Light local server" competing with a "running" badge, "Primary Job"
+  (internal JTBD jargon).
+- If a forge word appears in operable UI at all, gloss it inline ("Load (temper)") — but prefer plain.
+
+This supersedes the earlier "state language only" phrasing: forge vocabulary maps to real state **and**
+stays out of the controls. Never mix two vocabularies for one state in one view (no "Forge lit" title
+above a "running" badge — pick "Running").
+
+Reference microcopy (FoundryStudio voice) — plain is primary; forge is optional decoration:
+
+| Context | Primary (plain — use this) | Optional forge flavor (decoration only) |
+|---|---|---|
+| Welcome | "Build with local models on this Mac." | — |
+| First-run subtitle | "Download a model, load it into memory, then chat — local after the first download." | — |
+| Empty primary action | "Choose your first model" | — |
+| Download button | "Download" / "Download to cache" | "cast" (narrative only) |
+| Download progress | "Downloading Phi-3.5 Mini — 1.2 of 2.4 GB" | — |
+| Load button | "Load in memory" | "temper" (tooltip / narrative) |
+| Loaded chip / toast | "Loaded" · "Phi-3.5 Mini is loaded and ready." | — |
+| Chat placeholder | "Ask this local model…" | — |
+| Start-server action | "Load model & start server" | — |
+| Server-on status | "Running — `http://127.0.0.1:5273`" | copper pilot-light ember (motion only) |
+| Server-off status | "Stopped" | — |
+| Reachable model | "Loaded · `qwen2.5-…:4`" | — |
+| Server limits | "Localhost only · No auth · No LAN access" | — |
+| Capability honesty | "This model does not advertise vision support." | — |
 
 **Honesty rules:** never say "compatible," "safe," "will fit," or "guaranteed JSON" unless the app
-can prove it. Disk-fit is advisory and per-variant (§11/M3). Surface unsupported Foundry Local
-capabilities as plainly-stated limits, not dead UI.
+can prove it. **Never imply an integration the target tool does not actually support** — do not claim
+a tool can point at the local endpoint unless we can show a real, working config for it (e.g. GitHub
+Copilot's BYOK does not consume an arbitrary localhost OpenAI endpoint; do not suggest it does).
+Disk-fit is advisory and per-variant (§11/M3). Surface unsupported Foundry Local capabilities as
+plainly-stated limits, not dead UI.
 
 ---
 
@@ -288,8 +310,9 @@ Three designed "delight" moments — each inseparable from a real event and from
    naming the actual step ("Loading model…", or real sub-steps if exposed). Slow, weighted,
    industrial. Treats loading as a serious machine state, not magic.
 3. **Forge Lit** — turning on the *server* ignites a copper pilot-light dot (soft ember pulse →
-   steady) in a compact panel that *immediately* shows the exact bound URL, routes, scope, and
-   limitations. The delight is the transparency.
+   steady) in a compact panel whose **status text reads plainly "Running"** (the ember is the only
+   forge element — motion, not vocabulary). The panel *immediately* shows the exact bound URL and the
+   loaded model(s) reachable at it. The delight is the transparency, not the metaphor.
 
 Motion principles: (1) motion maps to real state; (2) heat eases slowly (`--fs-ease-heat`);
 (3) one ember at a time — only one primary copper animation per view; (4) settle quickly into
