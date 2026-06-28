@@ -9,6 +9,7 @@
 @inject NavigationManager Nav
 @inject ConversationMemoryRetriever MemoryRetriever
 @inject CompareOrchestrator _compareOrchestrator
+@inject IJSRuntime JS
 
 <div class="chat-shell" data-testid="chat-page">
     <PageHeader TitleId="chat-title"
@@ -16,7 +17,7 @@
                 Title="Chat with a loaded model"
                 Subtitle="Stream replies in-process from Foundry Local. Every token and metric shown comes from the real stream." />
 
-    <div class="chat-layout">
+    <div class="chat-layout @(ShowSettingsColumn ? "chat-layout--settings-open" : string.Empty)">
         <!-- LEFT: Thread list -->
         <aside class="chat-sidebar card" aria-label="Chat conversations and controls">
             <div class="chat-sidebar__actions">
@@ -205,6 +206,19 @@
                                     aria-pressed="@(_workbenchMode == WorkbenchMode.Compare)"
                                     @onclick="() => _workbenchMode = WorkbenchMode.Compare">Compare</button>
                         </div>
+
+                        @if (_workbenchMode == WorkbenchMode.Chat)
+                        {
+                            <button type="button"
+                                    class="icon-button chat-settings-toggle @(_settingsOpen ? "is-active" : string.Empty)"
+                                    data-testid="chat-settings-toggle"
+                                    aria-pressed="@_settingsOpen.ToString().ToLowerInvariant()"
+                                    title="@(_settingsOpen ? "Hide settings panel" : "Show settings panel")"
+                                    aria-label="@(_settingsOpen ? "Hide settings panel" : "Show settings panel")"
+                                    @onclick="() => _settingsOpen = !_settingsOpen">
+                                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M3 5h13M3 12h13M3 19h13" /><circle cx="19.5" cy="5" r="1.6" /><circle cx="19.5" cy="12" r="1.6" /><circle cx="19.5" cy="19" r="1.6" /></svg>
+                            </button>
+                        }
                     </div>
 
                     @if (_workbenchMode == WorkbenchMode.Chat)
@@ -287,61 +301,64 @@
                     }
                 </section>
             }
-
-            @if (_workbenchMode == WorkbenchMode.Chat && ActiveModel is not null)
-            {
-            <section class="chat-settings-grid" aria-label="Chat prompt and inference settings">
-                <div class="card chat-system-card">
-                    <div class="field">
-                        <label for="chat-system-prompt-input">System prompt</label>
-                        <textarea id="chat-system-prompt-input"
-                                  data-testid="chat-system-prompt"
-                                  rows="5"
-                                  value="@(CurrentSession?.SystemPrompt ?? string.Empty)"
-                                  @onchange="OnSystemPromptChangedAsync"
-                                  disabled="@(CurrentSession is null || IsStreaming)"
-                                  placeholder="Optional instructions for this conversation"></textarea>
-                    </div>
-                </div>
-
-                <div class="card chat-params-card" aria-label="Supported inference parameters">
-                    <p class="eyebrow">Inference parameters</p>
-                    <div class="chat-params-grid">
-                        <div class="field">
-                            <label for="param-temperature-input">Temperature</label>
-                            <input id="param-temperature-input" data-testid="param-temperature" type="number" min="0" max="2" step="0.1" value="@FormatDouble(CurrentParameters.Temperature)" @onchange="OnTemperatureChangedAsync" disabled="@(CurrentSession is null || IsStreaming)" />
-                        </div>
-                        <div class="field">
-                            <label for="param-max-tokens-input">Max tokens</label>
-                            <input id="param-max-tokens-input" data-testid="param-max-tokens" type="number" min="1" step="1" value="@FormatInt(CurrentParameters.MaxOutputTokens)" @onchange="OnMaxTokensChangedAsync" disabled="@(CurrentSession is null || IsStreaming)" />
-                        </div>
-                        <div class="field">
-                            <label for="param-top-p-input">Top-p</label>
-                            <input id="param-top-p-input" data-testid="param-top-p" type="number" min="0" max="1" step="0.05" value="@FormatDouble(CurrentParameters.TopP)" @onchange="OnTopPChangedAsync" disabled="@(CurrentSession is null || IsStreaming)" />
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card chat-context-card">
-                    <p class="eyebrow">Context window</p>
-                    <div class="chat-context" data-testid="chat-context" aria-label="Estimated context window usage">
-                        @if (ContextEstimate.IsUnknown)
-                        {
-                            <p data-testid="chat-context-unknown">About @ContextEstimate.UsedTokensEstimate.ToString("N0", CultureInfo.CurrentCulture) tokens used; context limit unknown for this model.</p>
-                        }
-                        else
-                        {
-                            <p>About @ContextEstimate.UsedTokensEstimate.ToString("N0", CultureInfo.CurrentCulture) of @ContextEstimate.ContextLength!.Value.ToString("N0", CultureInfo.CurrentCulture) tokens used (@FormatPercent(ContextEstimate.Fraction)).</p>
-                        }
-                        @if (ContextEstimate.IsWarn)
-                        {
-                            <p class="chat-context__warn" data-testid="chat-context-warn" role="status">Near the estimated limit — older turns may fall out of context.</p>
-                        }
-                    </div>
-                </div>
-            </section>
-            }
         </main>
+
+        @if (ShowSettingsColumn)
+        {
+            <aside class="chat-settings" data-testid="chat-settings-panel" aria-label="Chat prompt and inference settings">
+                <div class="chat-settings__scroll">
+                    <section class="chat-panel">
+                        <p class="chat-panel__title eyebrow">System prompt</p>
+                        <div class="field">
+                            <label class="visually-hidden" for="chat-system-prompt-input">System prompt</label>
+                            <textarea id="chat-system-prompt-input"
+                                      data-testid="chat-system-prompt"
+                                      rows="6"
+                                      value="@(CurrentSession?.SystemPrompt ?? string.Empty)"
+                                      @onchange="OnSystemPromptChangedAsync"
+                                      disabled="@(CurrentSession is null || IsStreaming)"
+                                      placeholder="Optional instructions for this conversation"></textarea>
+                        </div>
+                    </section>
+
+                    <section class="chat-panel" aria-label="Supported inference parameters">
+                        <p class="chat-panel__title eyebrow">Inference parameters</p>
+                        <div class="chat-params-grid">
+                            <div class="field">
+                                <label for="param-temperature-input">Temperature</label>
+                                <input id="param-temperature-input" data-testid="param-temperature" type="number" min="0" max="2" step="0.1" value="@FormatDouble(CurrentParameters.Temperature)" @onchange="OnTemperatureChangedAsync" disabled="@(CurrentSession is null || IsStreaming)" />
+                            </div>
+                            <div class="field">
+                                <label for="param-max-tokens-input">Max tokens</label>
+                                <input id="param-max-tokens-input" data-testid="param-max-tokens" type="number" min="1" step="1" value="@FormatInt(CurrentParameters.MaxOutputTokens)" @onchange="OnMaxTokensChangedAsync" disabled="@(CurrentSession is null || IsStreaming)" />
+                            </div>
+                            <div class="field">
+                                <label for="param-top-p-input">Top-p</label>
+                                <input id="param-top-p-input" data-testid="param-top-p" type="number" min="0" max="1" step="0.05" value="@FormatDouble(CurrentParameters.TopP)" @onchange="OnTopPChangedAsync" disabled="@(CurrentSession is null || IsStreaming)" />
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="chat-panel">
+                        <p class="chat-panel__title eyebrow">Context window</p>
+                        <div class="chat-context" data-testid="chat-context" aria-label="Estimated context window usage">
+                            @if (ContextEstimate.IsUnknown)
+                            {
+                                <p data-testid="chat-context-unknown">About @ContextEstimate.UsedTokensEstimate.ToString("N0", CultureInfo.CurrentCulture) tokens used; context limit unknown for this model.</p>
+                            }
+                            else
+                            {
+                                <p>About @ContextEstimate.UsedTokensEstimate.ToString("N0", CultureInfo.CurrentCulture) of @ContextEstimate.ContextLength!.Value.ToString("N0", CultureInfo.CurrentCulture) tokens used (@FormatPercent(ContextEstimate.Fraction)).</p>
+                            }
+                            @if (ContextEstimate.IsWarn)
+                            {
+                                <p class="chat-context__warn" data-testid="chat-context-warn" role="status">Near the estimated limit — older turns may fall out of context.</p>
+                            }
+                        </div>
+                    </section>
+                </div>
+            </aside>
+        }
     </div>
 
     <ConfirmDialog IsOpen="@(_confirmAction is not null)"
@@ -388,6 +405,10 @@
     private enum WorkbenchMode { Chat, Compare }
 
     private WorkbenchMode _workbenchMode = WorkbenchMode.Chat;
+
+    private bool _settingsOpen = true;
+
+    private bool ShowSettingsColumn => _settingsOpen && _workbenchMode == WorkbenchMode.Chat && ActiveModel is not null;
 
     private bool IsStreaming => _isStreaming;
 
@@ -457,6 +478,38 @@
         await RefreshSessionsAsync();
         if (CurrentSession is null)
             await NewChatAsync();
+    }
+
+    private bool _forceScrollNext = true;
+
+    // Keep the transcript pinned to the newest message so incoming tokens stay visible. A normal render
+    // soft-scrolls only when the user is already near the bottom (so reading older turns isn't interrupted);
+    // sending a message or switching sessions forces a scroll to the end.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_workbenchMode != WorkbenchMode.Chat || ActiveModel is null)
+        {
+            return;
+        }
+
+        var force = _forceScrollNext || firstRender;
+        _forceScrollNext = false;
+        await ScrollMessagesToBottomAsync(force);
+    }
+
+    private async Task ScrollMessagesToBottomAsync(bool force)
+    {
+        try
+        {
+            var js = force
+                ? "(function(){var e=document.querySelector('[data-testid=\"chat-messages\"]');if(e)e.scrollTop=e.scrollHeight;})()"
+                : "(function(){var e=document.querySelector('[data-testid=\"chat-messages\"]');if(e&&e.scrollHeight-e.scrollTop-e.clientHeight<140)e.scrollTop=e.scrollHeight;})()";
+            await JS.InvokeVoidAsync("eval", js);
+        }
+        catch
+        {
+            // JS unavailable (e.g. test host) — scrolling is a non-critical enhancement.
+        }
     }
 
     private async Task RefreshLoadedModelAsync()
@@ -601,6 +654,7 @@
         CurrentSession = await HistoryStore.GetAsync(id) ?? CurrentSession;
         _draft = string.Empty;
         _streamError = null;
+        _forceScrollNext = true;
         await InvokeAsync(StateHasChanged);
     }
 
@@ -674,6 +728,7 @@
         if (CurrentSession.Title == "New chat")
             CurrentSession = CurrentSession with { Title = DeriveTitle(userText), UpdatedAt = sentAt };
         CurrentSession = CurrentSession with { ModelAlias = ActiveModel.Alias, UpdatedAt = sentAt };
+        _forceScrollNext = true; // pin to the new user message + the reply that follows
         await InvokeAsync(StateHasChanged);
 
         StopReason stopReason = StopReason.Unknown;
