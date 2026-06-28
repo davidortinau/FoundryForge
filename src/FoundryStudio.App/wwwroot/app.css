@@ -514,6 +514,7 @@ button:disabled { cursor: not-allowed; opacity: 0.65; transform: none; }
 .settings-modal {
   position: relative;
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: var(--fs-space-4);
   width: min(580px, 100%);
   max-height: min(82vh, 720px);
