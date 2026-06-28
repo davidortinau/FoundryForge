@@ -1,6 +1,7 @@
 @page "/"
 @inject IFoundryCatalogService CatalogService
 @inject ISettingsService SettingsService
+@inject LocalContextReader ContextReader
 @inject NavigationManager Navigation
 @inject StartupNavigationService StartupNav
 @inject IJSRuntime JS
@@ -162,6 +163,36 @@
             @if (_state.IsShowingCurated)
             {
                 <p class="curated-banner" data-testid="curated-banner">Recommended — curated by FoundryStudio, not a quality ranking</p>
+            }
+            @if (_state.PersonalizationActive && !_state.PersonalizationProfile.IsEmpty)
+            {
+                <div class="personalized-banner" data-testid="discover-personalized-banner" role="status" aria-live="polite">
+                    <span class="personalized-banner__label">
+                        Personalized for: <strong>@_state.PersonalizationProfile.SummaryLabel()</strong>
+                    </span>
+                    <span class="personalized-banner__actions">
+                        <button type="button"
+                                class="personalized-banner__link"
+                                title="Models matching your local .copilot context appear first. No data is uploaded."
+                                @onclick="ShowPersonalizationInfoAsync">
+                            how this works
+                        </button>
+                        <span aria-hidden="true">·</span>
+                        <button type="button"
+                                class="personalized-banner__link"
+                                @onclick="TurnOffPersonalizationAsync">
+                            turn off
+                        </button>
+                    </span>
+                </div>
+            }
+            else if (_state.PersonalizationActive && _state.PersonalizationProfile.IsEmpty)
+            {
+                <p class="personalized-banner personalized-banner--empty"
+                   data-testid="discover-personalized-banner"
+                   role="status">
+                    Personalized recommendations enabled — no local context found in ~/.copilot
+                </p>
             }
             <span class="visually-hidden" data-testid="loaded-indicator" aria-live="polite">@LoadedSummary</span>
             <div class="catalog-summary__end">
@@ -362,6 +393,7 @@
     private bool _filtersOpen;
     private bool _detailPinned;
     private bool _pinStateLoaded;
+    private bool _showPersonalizationInfo;
 
     private bool DetailPanelVisible => _detailPinned || SelectedModel != null;
 
@@ -503,6 +535,18 @@
             var settings = await settingsTask;
             _freeDiskGb = CatalogDiskSpace.GetFreeDiskGb(settings.ModelCacheDirectory);
             _modelCachePath = settings.ModelCacheDirectory;
+
+            // Personalization: read on-device context only when the user has opted in.
+            _state.PersonalizationActive = settings.PersonalizedRecommendations;
+            if (settings.PersonalizedRecommendations)
+            {
+                await ApplyPersonalizationAsync();
+            }
+            else
+            {
+                _state.PersonalizationProfile = FoundryStudio.Core.Personalization.ContextProfile.Empty;
+            }
+
             _state.Recompute();
         }
         catch (Exception ex)
@@ -511,6 +555,46 @@
         }
 
         await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ApplyPersonalizationAsync()
+    {
+        try
+        {
+            var contextData = await ContextReader.ReadAsync();
+            _state.PersonalizationProfile = FoundryStudio.Core.Personalization.LocalContextProfiler.Derive(
+                contextData.InstructionsContent,
+                contextData.Skills);
+        }
+        catch
+        {
+            // On-device read failed — treat as empty; never crash the catalog.
+            _state.PersonalizationProfile = FoundryStudio.Core.Personalization.ContextProfile.Empty;
+        }
+    }
+
+    private async Task TurnOffPersonalizationAsync()
+    {
+        try
+        {
+            var settings = await SettingsService.GetAsync();
+            await SettingsService.UpdateAsync(settings with { PersonalizedRecommendations = false });
+        }
+        catch
+        {
+            // Best-effort; proceed anyway.
+        }
+
+        _state.PersonalizationActive = false;
+        _state.PersonalizationProfile = FoundryStudio.Core.Personalization.ContextProfile.Empty;
+        _state.Recompute();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Task ShowPersonalizationInfoAsync()
+    {
+        _showPersonalizationInfo = !_showPersonalizationInfo;
+        return InvokeAsync(StateHasChanged);
     }
 
     private Task ResetCatalogAsync()

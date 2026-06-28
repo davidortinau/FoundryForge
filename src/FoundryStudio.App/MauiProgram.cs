@@ -79,6 +79,10 @@ public static class FoundryStudioServiceCollectionExtensions
         // Phase 0 — one-time startup landing redirect tracker.
         services.AddSingleton<StartupNavigationService>();
 
+        // Personalization (P4): on-device ~/.copilot context reader. Opt-in; default OFF.
+        // READ-ONLY: never uploads, never writes, never sends data anywhere.
+        services.AddSingleton<LocalContextReader>();
+
         // Settings: human-readable JSON in app data; consent-gated, never wiped without confirmation.
         services.AddSingleton<ISettingsService>(_ =>
         {

@@ -4,7 +4,8 @@ public sealed record AppSettings(
     string ModelCacheDirectory,
     string? DefaultModel,
     AppTheme Theme,
-    int SchemaVersion);
+    int SchemaVersion,
+    bool PersonalizedRecommendations = false);
 
 public enum AppTheme
 {

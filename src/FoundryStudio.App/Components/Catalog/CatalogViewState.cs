@@ -1,5 +1,6 @@
 using FoundryStudio.Core.Catalog;
 using FoundryStudio.Core.Models;
+using FoundryStudio.Core.Personalization;
 using Device = FoundryStudio.Core.Models.Device;
 
 namespace FoundryStudio.App.Components.Catalog;
@@ -41,6 +42,21 @@ public sealed class CatalogViewState
 
     /// <summary>Sort hint produced by the last NL interpretation; applied in Recompute.</summary>
     public NlSortHint NlSortHint { get; set; } = NlSortHint.None;
+
+    // ── Personalization state ──────────────────────────────────────────────────
+    /// <summary>
+    /// The active context profile. <see cref="ContextProfile.Empty"/> when personalization
+    /// is disabled or context could not be read. Set externally by the page component after
+    /// reading on-device context with the user's consent.
+    /// </summary>
+    public ContextProfile PersonalizationProfile { get; set; } = ContextProfile.Empty;
+
+    /// <summary>
+    /// True when the personalized boost ordering should be applied in <see cref="Recompute"/>.
+    /// Mirrors the <c>PersonalizedRecommendations</c> setting; the page component sets this
+    /// after loading settings so the state object stays pure.
+    /// </summary>
+    public bool PersonalizationActive { get; set; } = false;
 
     public IReadOnlyList<ModelInfo> Visible { get; private set; } = Array.Empty<ModelInfo>();
 
@@ -115,7 +131,13 @@ public sealed class CatalogViewState
             _ => filtered,
         };
 
-        Visible = sorted;
+        // Apply personalization boost when enabled and a profile is available.
+        // Re-sort only — every model still appears; matching models surface first.
+        IReadOnlyList<ModelInfo> finalSorted = (PersonalizationActive && !PersonalizationProfile.IsEmpty)
+            ? ModelRanker.Rank(PersonalizationProfile, sorted)
+            : sorted;
+
+        Visible = finalSorted;
 
         var groups = CatalogGrouping.Partition(Visible, CachedAliases);
         VisibleCached = groups.Cached;

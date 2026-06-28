@@ -70,11 +70,13 @@ public static class SettingsDocument
         string.IsNullOrWhiteSpace(dto.ModelCacheDirectory) ? defaults.ModelCacheDirectory : dto.ModelCacheDirectory!,
         dto.DefaultModel, // null is a valid "no default model selected"
         dto.Theme ?? defaults.Theme,
-        dto.SchemaVersion ?? defaults.SchemaVersion);
+        dto.SchemaVersion ?? defaults.SchemaVersion,
+        dto.PersonalizedRecommendations ?? defaults.PersonalizedRecommendations);
 
     private sealed record SettingsDto(
         string? ModelCacheDirectory,
         string? DefaultModel,
         AppTheme? Theme,
-        int? SchemaVersion);
+        int? SchemaVersion,
+        bool? PersonalizedRecommendations = null);
 }

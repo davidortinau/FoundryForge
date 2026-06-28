@@ -1313,3 +1313,68 @@ details[open] > .chat-metrics-summary::before { transform: rotate(90deg); }
 .catalog-nl-clear:hover {
   color: var(--fs-text);
 }
+
+/* ── Personalization banner (Discover page) ─────────────────────────────────── */
+
+.personalized-banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--fs-space-2);
+  padding: var(--fs-space-2) var(--fs-space-3);
+  background: var(--fs-info-bg, color-mix(in srgb, var(--fs-info) 14%, var(--fs-surface)));
+  border: 1px solid color-mix(in srgb, var(--fs-info) 30%, transparent);
+  border-radius: var(--fs-radius-sm);
+  font: var(--fs-type-label);
+  color: var(--fs-text-secondary);
+}
+
+.personalized-banner--empty {
+  color: var(--fs-text-tertiary);
+  font-style: italic;
+}
+
+.personalized-banner__label {
+  flex: 1 1 auto;
+  color: var(--fs-text);
+}
+
+.personalized-banner__label strong {
+  color: var(--fs-text);
+  font-weight: 600;
+}
+
+.personalized-banner__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--fs-space-1);
+  flex-shrink: 0;
+  color: var(--fs-text-secondary);
+}
+
+.personalized-banner__link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--fs-accent-text);
+  font: var(--fs-type-label);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.personalized-banner__link:hover {
+  color: var(--fs-text);
+}
+
+.personalized-banner__link:focus-visible {
+  outline: 2px solid var(--fs-accent-ring);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ── Personalization settings section ────────────────────────────────────────── */
+
+.settings-personalization__toggle {
+  margin-top: var(--fs-space-3);
+}

@@ -97,6 +97,25 @@
                         }
                     </div>
                 </section>
+
+                <section class="card settings-panel settings-modal__section" aria-labelledby="settings-personalization-title" data-testid="settings-personalization">
+                    <h3 id="settings-personalization-title" class="settings-section-title">Personalized recommendations</h3>
+                    <p class="metadata-muted">
+                        When enabled, FoundryStudio reads your local <code>~/.copilot/copilot-instructions.md</code>
+                        and skill names on <em>this Mac</em> to surface relevant models first in Discover.
+                        On-device only — nothing is uploaded, nothing is sent anywhere. Off by default.
+                    </p>
+                    <div class="field field-checkbox settings-personalization__toggle">
+                        <input id="settings-personalization"
+                               data-testid="settings-personalization-toggle"
+                               type="checkbox"
+                               checked="@_personalizedRecommendations"
+                               @onchange="OnPersonalizationChangedAsync" />
+                        <label for="settings-personalization">
+                            Read local Copilot context to personalize Discover ordering
+                        </label>
+                    </div>
+                </section>
             </div>
 
             <ConfirmDialog IsOpen="@_showConfirm"
@@ -131,6 +150,7 @@
     private bool _themeLoaded;
     private bool _wasOpen;
     private string _theme = "system";
+    private bool _personalizedRecommendations = false;
 
     [Parameter] public bool IsOpen { get; set; }
 
@@ -201,6 +221,7 @@
         {
             _currentSettings = await SettingsService.GetAsync();
             _pendingDirectory = _currentSettings.ModelCacheDirectory;
+            _personalizedRecommendations = _currentSettings.PersonalizedRecommendations;
         }
         catch (Exception ex)
         {
@@ -329,6 +350,30 @@
         {
             await CloseAsync();
         }
+    }
+
+    private async Task OnPersonalizationChangedAsync(ChangeEventArgs args)
+    {
+        if (_currentSettings is null)
+        {
+            return;
+        }
+
+        var enabled = args.Value is true;
+        _personalizedRecommendations = enabled;
+
+        try
+        {
+            var updated = _currentSettings with { PersonalizedRecommendations = enabled };
+            await SettingsService.UpdateAsync(updated);
+            _currentSettings = updated;
+        }
+        catch (Exception ex)
+        {
+            _error = $"Personalization setting could not be saved: {ex.Message}";
+        }
+
+        await InvokeAsync(StateHasChanged);
     }
 
     private static bool CanWriteToDirectory(string directory)
