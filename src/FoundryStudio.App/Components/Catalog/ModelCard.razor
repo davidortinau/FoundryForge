@@ -80,7 +80,21 @@
         </div>
         <div class="model-facts__wide">
             <dt>Variants</dt>
-            <dd data-testid="card-variants">@FormatVariants(Model.Variants)</dd>
+            <dd data-testid="card-variants">
+                @if (Model.Variants is null || Model.Variants.Count == 0)
+                {
+                    <span class="metadata-muted">no variants reported</span>
+                }
+                else
+                {
+                    <ul class="card-variants-list" aria-label="@Model.Variants.Count variant@(Model.Variants.Count == 1 ? "" : "s") reported">
+                        @foreach (var variant in Model.Variants)
+                        {
+                            <li>@FormatVariant(variant)</li>
+                        }
+                    </ul>
+                }
+            </dd>
         </div>
     </dl>
 
@@ -482,17 +496,6 @@
 
     private static string FormatNumber(int? value) =>
         value is null or <= 0 ? "unknown" : value.Value.ToString("N0", CultureInfo.CurrentCulture);
-
-    private static string FormatVariants(IReadOnlyList<ModelVariant>? variants)
-    {
-        if (variants is null || variants.Count == 0)
-        {
-            return "no variants reported";
-        }
-
-        var summaries = variants.Select(FormatVariant);
-        return $"{variants.Count} reported: {string.Join("; ", summaries)}";
-    }
 
     private static string FormatVariant(ModelVariant variant)
     {

@@ -263,10 +263,8 @@
                                         {
                                             <span class="model-row__context" title="Context length">@FormatContextK(model.ContextLength.Value)</span>
                                         }
-                                        @if (model.SizeGb is > 0)
-                                        {
-                                            <span class="model-row__size">@model.SizeGb!.Value.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) GB</span>
-                                        }
+                                        @* D4: always render size span for consistent right-edge alignment *@
+                                        <span class="model-row__size">@(model.SizeGb is > 0 ? $"{model.SizeGb!.Value.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)} GB" : string.Empty)</span>
                                         <ModelStateBadge IsCached="_state.IsCached(model)"
                                                          IsLoaded="_state.IsLoaded(model)" />
                                     </span>
@@ -308,10 +306,8 @@
                                         {
                                             <span class="model-row__context" title="Context length">@FormatContextK(model.ContextLength.Value)</span>
                                         }
-                                        @if (model.SizeGb is > 0)
-                                        {
-                                            <span class="model-row__size">@model.SizeGb!.Value.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) GB</span>
-                                        }
+                                        @* D4: always render size span for consistent right-edge alignment *@
+                                        <span class="model-row__size">@(model.SizeGb is > 0 ? $"{model.SizeGb!.Value.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)} GB" : string.Empty)</span>
                                     </span>
                                 </button>
                             }

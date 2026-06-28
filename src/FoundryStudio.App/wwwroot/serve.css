@@ -10,7 +10,8 @@
 
 .server-main {
   display: grid;
-  gap: var(--fs-space-4);
+  /* S1: tighter gap so status row isn't top-heavy */
+  gap: var(--fs-space-3);
 }
 
 /* Status bar: pilot-light + status text + endpoint URL + copy button */
@@ -411,7 +412,8 @@ details[open] .server-reference__summary::before {
 
 .serve-macro-picker__select {
   width: 100%;
-  max-width: 420px;
+  /* S2: full content-width — was 420px which left a ragged gap at the right edge */
+  max-width: 100%;
   border: 1px solid var(--fs-border-strong);
   border-radius: var(--fs-radius-md);
   padding: var(--fs-space-2) var(--fs-space-3);
@@ -430,7 +432,8 @@ details[open] .server-reference__summary::before {
   display: flex;
   align-items: center;
   gap: var(--fs-space-3);
-  flex-wrap: wrap;
+  /* S3: keep both buttons on the same row for consistent vertical centering */
+  flex-wrap: nowrap;
 }
 
 /* In-progress stages */

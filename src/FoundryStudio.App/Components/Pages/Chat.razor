@@ -21,7 +21,7 @@
         <aside class="chat-sidebar card" aria-label="Chat conversations and controls">
             <div class="chat-sidebar__actions">
                 <button type="button"
-                        class="button @(ActiveModel is not null ? "button-secondary" : "")"
+                        class="button button-secondary"
                         data-testid="chat-new"
                         @onclick="NewChatAsync"
                         disabled="@IsStreaming">New chat</button>
@@ -288,7 +288,7 @@
                 </section>
             }
 
-            @if (_workbenchMode == WorkbenchMode.Chat)
+            @if (_workbenchMode == WorkbenchMode.Chat && ActiveModel is not null)
             {
             <section class="chat-settings-grid" aria-label="Chat prompt and inference settings">
                 <div class="card chat-system-card">
