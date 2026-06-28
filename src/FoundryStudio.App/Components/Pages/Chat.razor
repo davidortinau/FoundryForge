@@ -708,6 +708,18 @@
                     _liveAssistantText += update.Text;
                     _liveMetrics = accumulator.Complete(MapStopReason(update.FinishReason) ?? StopReason.Unknown);
                     await InvokeAsync(StateHasChanged);
+
+                    // Auto-stop a runaway garbled stream. Some model/runtime combinations degenerate into an
+                    // endless run of replacement/'?' characters; without this the user must stop it by hand.
+                    // Once there's enough output to judge and it's overwhelmingly unreadable, cancel so the
+                    // model actually stops generating; the partial text renders as the honest "unreadable"
+                    // state (MessageBubble.IsGarbled).
+                    if (IsRunawayGarble(_liveAssistantText))
+                    {
+                        stopReason = StopReason.Error;
+                        _streamCts.Cancel();
+                        break;
+                    }
                 }
             }
         }
@@ -756,6 +768,17 @@
         if (string.IsNullOrWhiteSpace(prompt) || ActiveModel is null) return;
         _draft = prompt;
         await SendAsync();
+    }
+
+    // Detect a runaway garbled stream: enough output to judge, and overwhelmingly '?'/replacement chars.
+    // Mirrors MessageBubble.IsGarbled but gates on a minimum length so a brief early run never false-trips.
+    private static bool IsRunawayGarble(string content)
+    {
+        if (string.IsNullOrEmpty(content)) return false;
+        var nonSpace = content.Count(c => c != ' ' && c != '\t' && c != '\n' && c != '\r');
+        if (nonSpace < 48) return false;
+        var bad = content.Count(c => c == '?' || c == '\uFFFD');
+        return (double)bad / nonSpace > 0.6;
     }
 
     private Task StopStreamingAsync()
