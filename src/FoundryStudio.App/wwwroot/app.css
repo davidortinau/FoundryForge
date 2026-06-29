@@ -715,8 +715,31 @@ button:disabled { cursor: not-allowed; opacity: 0.65; transform: none; }
   100% { transform: scale(1); }
 }
 
-.chat-layout { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(200px, 240px) minmax(0, 1fr) auto; gap: var(--fs-space-4); align-items: stretch; }
-.chat-layout--settings-open { grid-template-columns: minmax(200px, 240px) minmax(0, 1fr) auto minmax(300px, 340px); }
+/* Toggleable side panels (VS Code / Copilot convention). Visibility is class-driven (toggle state) with a
+   container-query floor so the center conversation never gets crushed at narrow widths. The container-query
+   lives on the WRAPPER (a container query cannot restyle its own container element's grid). */
+.chat-layout-wrap { flex: 1 1 auto; min-height: 0; display: flex; container-type: inline-size; container-name: chatlayout; }
+.chat-layout { flex: 1 1 auto; min-height: 0; display: grid; gap: var(--fs-space-4); align-items: stretch; grid-template-columns: minmax(0, 1fr); }
+.chat-layout > .chat-sidebar { display: none; }
+.chat-layout > .chat-settings { display: none; }
+.chat-layout.has-left > .chat-sidebar { display: flex; }
+.chat-layout.has-right > .chat-settings { display: flex; }
+.chat-layout.has-left { grid-template-columns: minmax(220px, 260px) minmax(0, 1fr); }
+.chat-layout.has-right { grid-template-columns: minmax(0, 1fr) minmax(280px, 320px); }
+.chat-layout.has-left.has-right { grid-template-columns: minmax(220px, 260px) minmax(0, 1fr) minmax(280px, 320px); }
+
+/* Auto-yield: when the workspace is too narrow, drop the parameters panel first, then history, so the
+   conversation always keeps a usable width. The toggle icons reflect intent; panels return when there's room. */
+@container chatlayout (max-width: 860px) {
+  .chat-layout.has-right > .chat-settings { display: none; }
+  .chat-layout.has-left.has-right { grid-template-columns: minmax(220px, 260px) minmax(0, 1fr); }
+  .chat-layout.has-right:not(.has-left) { grid-template-columns: minmax(0, 1fr); }
+}
+@container chatlayout (max-width: 560px) {
+  .chat-layout.has-left > .chat-sidebar { display: none; }
+  .chat-layout.has-left { grid-template-columns: minmax(0, 1fr); }
+  .chat-layout.has-left.has-right { grid-template-columns: minmax(0, 1fr); }
+}
 .chat-sidebar { display: flex; flex-direction: column; gap: var(--fs-space-3); min-height: 0; overflow: hidden; }
 .chat-sidebar__actions { display: flex; gap: var(--fs-space-2); flex-wrap: wrap; flex: 0 0 auto; }
 .chat-sidebar__actions--danger { border-top: 1px solid var(--fs-border); padding-top: var(--fs-space-4); }
@@ -808,27 +831,22 @@ details[open] > .chat-metrics-summary::before { transform: rotate(90deg); }
 .chat-panel { display: grid; gap: var(--fs-space-2); }
 .chat-panel__title { margin: 0; }
 
-/* Settings seam handle (IDE-style inspector rail): owns the collapse/expand of the right panel. */
-.chat-settings-rail { display: flex; align-items: center; justify-content: center; width: 22px; padding: 0; border: 1px solid var(--fs-border); border-radius: var(--fs-radius-pill); background: var(--fs-surface-raised); color: var(--fs-text-tertiary); cursor: pointer; transition: background var(--fs-dur-fast), color var(--fs-dur-fast), border-color var(--fs-dur-fast); }
-.chat-settings-rail:hover { background: var(--fs-surface-inset); color: var(--fs-text); border-color: var(--fs-border-strong); }
-.chat-settings-rail.is-open { color: var(--fs-accent); border-color: color-mix(in srgb, var(--fs-accent) 40%, var(--fs-border)); }
-.chat-settings-rail svg { width: 16px; height: 16px; }
-.chat-settings-rail:focus-visible { outline: 3px solid var(--fs-accent-ring); outline-offset: 2px; }
+/* Workbench topbar: page title (left) + panel-toggle icons (right). */
+.chat-topbar { flex: 0 0 auto; display: flex; align-items: flex-start; justify-content: space-between; gap: var(--fs-space-4); }
+.chat-topbar > .page-title { min-width: 0; }
+.chat-panel-toggles { display: flex; gap: var(--fs-space-1); flex: 0 0 auto; padding-top: var(--fs-space-1); }
+.chat-panel-toggle { color: var(--fs-text-tertiary); }
+.chat-panel-toggle:hover { color: var(--fs-text); }
+.chat-panel-toggle.is-active { color: var(--fs-accent); border-color: color-mix(in srgb, var(--fs-accent) 40%, var(--fs-border)); background: color-mix(in srgb, var(--fs-accent) 8%, var(--fs-surface)); }
+.chat-panel-toggle svg { width: 18px; height: 18px; }
 .chat-params-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--fs-space-3); }
 .chat-context { display: grid; gap: var(--fs-space-2); color: var(--fs-text-secondary); }
 .chat-context p { margin: 0; }
 .chat-context__warn { border: 1px solid var(--fs-warning); border-radius: var(--fs-radius-md); padding: var(--fs-space-3); background: var(--fs-warning-bg); color: var(--fs-warning); font: var(--fs-type-label); }
 
 @media (max-width: 920px) {
-  .chat-shell { height: auto; overflow: auto; }
-  .chat-layout,
-  .chat-layout--settings-open,
   .chat-composer-panel { grid-template-columns: 1fr; }
-  .chat-layout { min-height: 0; }
-  .chat-main { overflow: visible; }
-  .chat-messages { max-height: 58vh; }
   .chat-message { max-width: 100%; }
-  .chat-settings-rail { display: none; }
 }
 
 /* Phase 5 — cross-session memory panel */

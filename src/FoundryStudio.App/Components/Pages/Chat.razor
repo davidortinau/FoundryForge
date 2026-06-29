@@ -12,12 +12,40 @@
 @inject IJSRuntime JS
 
 <div class="chat-shell" data-testid="chat-page">
-    <PageHeader TitleId="chat-title"
-                Eyebrow="Local chat"
-                Title="Chat with a loaded model"
-                Subtitle="Stream replies in-process from Foundry Local. Every token and metric shown comes from the real stream." />
+    <div class="chat-topbar">
+        <PageHeader TitleId="chat-title"
+                    Eyebrow="Local chat"
+                    Title="Chat with a loaded model"
+                    Subtitle="Stream replies in-process from Foundry Local. Every token and metric shown comes from the real stream." />
 
-    <div class="chat-layout @(ShowSettingsColumn ? "chat-layout--settings-open" : string.Empty)">
+        <!-- Panel toggles (VS Code / Copilot convention): icons that show/hide the side columns. -->
+        <div class="chat-panel-toggles" role="group" aria-label="Panel layout">
+            <button type="button"
+                    class="icon-button chat-panel-toggle @(_historyOpen ? "is-active" : string.Empty)"
+                    data-testid="chat-toggle-history"
+                    aria-pressed="@_historyOpen.ToString().ToLowerInvariant()"
+                    title="@(_historyOpen ? "Hide conversations" : "Show conversations")"
+                    aria-label="@(_historyOpen ? "Hide conversations panel" : "Show conversations panel")"
+                    @onclick="() => _historyOpen = !_historyOpen">
+                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2" /><path d="M9 5v14" /><rect x="3.5" y="5" width="5.5" height="14" rx="2" fill="currentColor" stroke="none" /></svg>
+            </button>
+            @if (CanShowSettings)
+            {
+                <button type="button"
+                        class="icon-button chat-panel-toggle @(_settingsOpen ? "is-active" : string.Empty)"
+                        data-testid="chat-settings-toggle"
+                        aria-pressed="@_settingsOpen.ToString().ToLowerInvariant()"
+                        title="@(_settingsOpen ? "Hide parameters" : "Show parameters")"
+                        aria-label="@(_settingsOpen ? "Hide parameters panel" : "Show parameters panel")"
+                        @onclick="() => _settingsOpen = !_settingsOpen">
+                    <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2" /><path d="M15 5v14" /><rect x="15" y="5" width="5.5" height="14" rx="2" fill="currentColor" stroke="none" /></svg>
+                </button>
+            }
+        </div>
+    </div>
+
+    <div class="chat-layout-wrap">
+    <div class="chat-layout @(_historyOpen ? "has-left" : string.Empty) @((_settingsOpen && CanShowSettings) ? "has-right" : string.Empty)">
         <!-- LEFT: Thread list -->
         <aside class="chat-sidebar card" aria-label="Chat conversations and controls">
             <div class="chat-sidebar__actions">
@@ -293,21 +321,7 @@
             }
         </main>
 
-        @if (_workbenchMode == WorkbenchMode.Chat && ActiveModel is not null)
-        {
-            <button type="button"
-                    class="chat-settings-rail @(_settingsOpen ? "is-open" : string.Empty)"
-                    data-testid="chat-settings-toggle"
-                    aria-pressed="@_settingsOpen.ToString().ToLowerInvariant()"
-                    aria-controls="chat-settings-panel"
-                    title="@(_settingsOpen ? "Hide parameters" : "Show parameters")"
-                    aria-label="@(_settingsOpen ? "Hide parameters panel" : "Show parameters panel")"
-                    @onclick="() => _settingsOpen = !_settingsOpen">
-                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="@(_settingsOpen ? "M9 6l6 6-6 6" : "M15 6l-6 6 6 6")" /></svg>
-            </button>
-        }
-
-        @if (ShowSettingsColumn)
+        @if (CanShowSettings)
         {
             <aside class="chat-settings" id="chat-settings-panel" data-testid="chat-settings-panel" aria-label="Chat prompt and inference settings">
                 <div class="chat-settings__scroll">
@@ -364,6 +378,7 @@
             </aside>
         }
     </div>
+    </div>
 
     <ConfirmDialog IsOpen="@(_confirmAction is not null)"
                    Eyebrow="Chat history"
@@ -411,8 +426,11 @@
     private WorkbenchMode _workbenchMode = WorkbenchMode.Chat;
 
     private bool _settingsOpen = true;
+    private bool _historyOpen = true;
 
-    private bool ShowSettingsColumn => _settingsOpen && _workbenchMode == WorkbenchMode.Chat && ActiveModel is not null;
+    // Settings panel is available only when chatting with a loaded model. Visibility is then driven by the
+    // _settingsOpen toggle + the layout's container query (auto-yields when the window is too narrow).
+    private bool CanShowSettings => _workbenchMode == WorkbenchMode.Chat && ActiveModel is not null;
 
     private bool IsStreaming => _isStreaming;
 
