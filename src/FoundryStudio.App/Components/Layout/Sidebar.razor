@@ -1,5 +1,7 @@
 @inject NavigationManager Navigation
 @inject ServingStateService ServingState
+@inject IFoundryCatalogService CatalogService
+@inject ISettingsService SettingsService
 @implements IDisposable
 
 <aside class="sidebar" aria-label="FoundryStudio navigation">
@@ -31,22 +33,95 @@
             </NavLink>
         </div>
     </nav>
+
+    <div class="sidebar-foot">
+        <div class="sidebar-storage" data-testid="sidebar-storage" title="@_cachePath">
+            <span class="sidebar-storage__summary">
+                <strong>@_cachedCount</strong> local model@(_cachedCount == 1 ? string.Empty : "s")@_cachedSizeSuffix
+            </span>
+            @if (!string.IsNullOrWhiteSpace(_cachePath))
+            {
+                <span class="sidebar-storage__path">@_cachePath</span>
+            }
+        </div>
+        <button type="button"
+                class="sidebar-settings"
+                data-testid="sidebar-settings"
+                aria-label="Open settings"
+                title="Settings"
+                @onclick="OpenSettingsAsync">
+            <span class="sidebar-nav__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </span>
+            <span>Settings</span>
+        </button>
+    </div>
 </aside>
 
 @code {
-    protected override void OnInitialized()
+    [Parameter] public EventCallback OnOpenSettings { get; set; }
+
+    private int _cachedCount;
+    private string _cachedSizeSuffix = string.Empty;
+    private string? _cachePath;
+
+    protected override async Task OnInitializedAsync()
     {
         ServingState.OnChanged += OnServingStateChanged;
+        Navigation.LocationChanged += OnLocationChanged;
+        await RefreshStorageAsync();
     }
 
-    private void OnServingStateChanged()
+    private void OnServingStateChanged() => InvokeAsync(RefreshStorageAsync);
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+        => InvokeAsync(RefreshStorageAsync);
+
+    // Ambient local-storage summary for the rail foot. Refreshed on init, on navigation, and on serving-state
+    // changes; never blocks and never throws out (best-effort, honest zero on failure).
+    private async Task RefreshStorageAsync()
     {
-        InvokeAsync(StateHasChanged);
+        try
+        {
+            var cached = await CatalogService.ListCachedAsync();
+            _cachedCount = cached.Count;
+
+            var known = cached.Where(m => m.SizeGb is > 0).Select(m => m.SizeGb!.Value).ToList();
+            if (known.Count == 0)
+            {
+                _cachedSizeSuffix = _cachedCount > 0 ? ", size unknown" : string.Empty;
+            }
+            else
+            {
+                var total = known.Sum();
+                var plus = known.Count < _cachedCount ? "+" : string.Empty;
+                _cachedSizeSuffix = $", {total.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)}{plus} GB";
+            }
+        }
+        catch
+        {
+            _cachedCount = 0;
+            _cachedSizeSuffix = string.Empty;
+        }
+
+        try
+        {
+            var settings = await SettingsService.GetAsync();
+            _cachePath = settings.ModelCacheDirectory;
+        }
+        catch
+        {
+            // Best-effort — leave whatever we had.
+        }
+
+        StateHasChanged();
     }
+
+    private Task OpenSettingsAsync() => OnOpenSettings.InvokeAsync();
 
     public void Dispose()
     {
         ServingState.OnChanged -= OnServingStateChanged;
+        Navigation.LocationChanged -= OnLocationChanged;
     }
 }
-

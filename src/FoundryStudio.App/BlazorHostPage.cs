@@ -51,13 +51,10 @@ public sealed class BlazorHostPage : ContentPage
     private void BuildNativeToolbar()
     {
         var toggle = ToolbarButton("Toggle Sidebar", "sidebar.left", "[data-testid=\"sidebar-toggle\"]");
-        var settings = ToolbarButton("Settings", "gearshape", "[data-testid=\"open-settings\"]");
 
         var layout = new List<MacOSToolbarLayoutItem>
         {
             MacOSToolbarLayoutItem.Item(toggle),
-            MacOSToolbarLayoutItem.FlexibleSpace,
-            MacOSToolbarLayoutItem.Item(settings),
         };
 
         // ORDER IS LOAD-BEARING (Sherpa lines 908-923): set the content layout FIRST, then mutate ToolbarItems
@@ -67,7 +64,6 @@ public sealed class BlazorHostPage : ContentPage
 
         ToolbarItems.Clear();
         ToolbarItems.Add(toggle);
-        ToolbarItems.Add(settings);
     }
 
     private ToolbarItem ToolbarButton(string text, string? sfSymbol, string selector)

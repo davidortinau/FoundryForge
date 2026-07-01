@@ -207,7 +207,7 @@
     {
         get
         {
-            var device = Model.Device?.ToString() ?? "unknown";
+            var device = Model.Device is { } d ? d.ToString().ToUpperInvariant() : "unknown";
             return string.IsNullOrWhiteSpace(Model.ExecutionProvider) ? device : $"{device} · {Model.ExecutionProvider}";
         }
     }
@@ -382,12 +382,43 @@
         return tokens.ToString(CultureInfo.InvariantCulture);
     }
 
-    private static string FormatVariant(ModelVariant variant)
+    // Reduce a variant to the part that actually varies: the execution-target suffix (e.g. "generic-gpu:2"),
+    // dropping the repeated model-name prefix, plus device + size. Matches the mock's compact variant rows.
+    private string FormatVariant(ModelVariant variant)
     {
-        var parts = new List<string> { string.IsNullOrWhiteSpace(variant.VariantId) ? "unknown" : variant.VariantId };
-        if (variant.Device is { } device) parts.Add(device.ToString());
+        var shortId = ShortVariantId(variant.VariantId);
+        var parts = new List<string> { string.IsNullOrWhiteSpace(shortId) ? "variant" : shortId };
+        if (variant.Device is { } device) parts.Add(device.ToString().ToUpperInvariant());
         if (variant.SizeGb is > 0) parts.Add($"{variant.SizeGb!.Value.ToString("0.0", CultureInfo.InvariantCulture)} GB");
         return string.Join(" · ", parts);
+    }
+
+    private string ShortVariantId(string? variantId)
+    {
+        if (string.IsNullOrWhiteSpace(variantId))
+        {
+            return string.Empty;
+        }
+
+        // Prefer the execution-target tail (…-generic-gpu:2 → "generic-gpu:2").
+        var idx = variantId.IndexOf("generic", StringComparison.OrdinalIgnoreCase);
+        if (idx >= 0)
+        {
+            return variantId[idx..];
+        }
+
+        // Otherwise strip the model's own name prefix if the variant id repeats it.
+        foreach (var prefix in new[] { Model.Id, Model.Alias, Model.DisplayName })
+        {
+            if (!string.IsNullOrWhiteSpace(prefix)
+                && variantId.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                && variantId.Length > prefix.Length)
+            {
+                return variantId[prefix.Length..].TrimStart('-', ':', ' ');
+            }
+        }
+
+        return variantId;
     }
 
     private static string SanitizeForId(string value)

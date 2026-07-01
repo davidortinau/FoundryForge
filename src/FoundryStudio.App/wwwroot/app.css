@@ -49,6 +49,8 @@ svg { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 1
   background: var(--fs-sidebar-bg);
   border-right: 1px solid var(--fs-sidebar-border);
   scrollbar-width: none;
+  display: flex;
+  flex-direction: column;
   transition: flex-basis var(--fs-dur-base) var(--fs-ease-heat), width var(--fs-dur-base) var(--fs-ease-heat), min-width var(--fs-dur-base) var(--fs-ease-heat), opacity var(--fs-dur-fast) var(--fs-ease-heat);
 }
 .sidebar:hover { scrollbar-width: thin; scrollbar-color: var(--fs-sidebar-scroll) transparent; }
@@ -160,6 +162,52 @@ svg { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 1
   white-space: nowrap;
 }
 .sidebar-nav__row.is-disabled { cursor: not-allowed; opacity: 0.62; }
+
+/* Rail foot — ambient storage summary + settings, pinned to the bottom of the rail. */
+.sidebar-foot {
+  margin-top: auto;
+  padding-top: var(--fs-space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-top: 1px solid var(--fs-sidebar-border);
+}
+.sidebar-storage {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: var(--fs-space-2) var(--fs-space-4);
+  color: var(--fs-sidebar-text-muted);
+  font: var(--fs-type-subtitle);
+}
+.sidebar-storage__summary { color: var(--fs-sidebar-text); }
+.sidebar-storage__summary strong { color: var(--fs-sidebar-text-strong); }
+.sidebar-storage__path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: var(--fs-type-eyebrow);
+  color: var(--fs-sidebar-text-muted);
+}
+.sidebar-settings {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  align-items: center;
+  gap: var(--fs-space-2);
+  min-height: 32px;
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  padding: var(--fs-space-2) var(--fs-space-4);
+  background: transparent;
+  color: var(--fs-sidebar-text);
+  font: var(--fs-type-label);
+  text-align: left;
+  cursor: pointer;
+}
+.sidebar-settings:hover { background: var(--fs-sidebar-hover-bg); color: var(--fs-sidebar-text-strong); transform: none; }
+.sidebar-settings .sidebar-nav__icon { opacity: 0.85; }
+.sidebar-settings:hover .sidebar-nav__icon { opacity: 1; }
 
 /* Live-dot indicator for nav items (e.g. Serve when server is running) */
 .sidebar-nav__live-dot {
@@ -294,6 +342,9 @@ svg { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 1
   padding-top: 0;
   padding-bottom: 0;
 }
+/* Discover fills the content area edge-to-edge (its own gutters); the detail sidebar reaches the bottom. */
+.app-content:has(> .catalog-shell) { padding: 0; overflow: hidden; scrollbar-gutter: auto; }
+
 .catalog-main {
   flex: 1 1 auto;
   min-width: 0;
@@ -301,7 +352,7 @@ svg { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 1
   display: flex;
   flex-direction: column;
   gap: var(--fs-space-4);
-  padding: var(--fs-space-4) 0 var(--fs-space-5);
+  padding: var(--fs-space-5) var(--fs-space-5) 0;
   container-type: inline-size;
   container-name: catalogmain;
 }
@@ -1897,8 +1948,8 @@ details[open] > .chat-metrics-summary::before { transform: rotate(90deg); }
   height: 30px;
   padding: 0;
   border: none;
-  background: transparent;
-  color: var(--fs-text-secondary);
+  background: var(--fs-accent-fill);
+  color: var(--fs-text-inverse);
   border-radius: var(--fs-radius-sm);
   cursor: pointer;
 }
@@ -1918,8 +1969,8 @@ details[open] > .chat-metrics-summary::before { transform: rotate(90deg); }
   stroke-linejoin: round;
 }
 .catalog-search-field__submit:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--fs-accent) 16%, transparent);
-  color: var(--fs-text);
+  background: color-mix(in srgb, var(--fs-accent-fill) 88%, black);
+  color: var(--fs-text-inverse);
 }
 .catalog-search-field__submit:disabled { opacity: 0.4; cursor: default; }
 
@@ -2012,14 +2063,40 @@ details[open] > .chat-metrics-summary::before { transform: rotate(90deg); }
   font: var(--fs-type-label);
 }
 .catalog-count-chip strong { color: var(--fs-text); }
+
+/* Segmented curated/all scope toggle — makes the active catalog scope obvious without extra chrome. */
+.catalog-mode {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  gap: 2px;
+  border-radius: var(--fs-radius-pill);
+  background: var(--fs-surface-raised);
+  border: 1px solid var(--fs-border);
+}
+.catalog-mode__opt {
+  min-height: 24px;
+  padding: 2px var(--fs-space-3);
+  border: none;
+  border-radius: var(--fs-radius-pill);
+  background: transparent;
+  color: var(--fs-text-secondary);
+  font: var(--fs-type-label);
+  cursor: pointer;
+}
+.catalog-mode__opt:hover:not(.is-active) { color: var(--fs-text); background: transparent; transform: none; }
+.catalog-mode__opt.is-active {
+  background: var(--fs-accent-fill);
+  color: var(--fs-text-inverse);
+}
 .catalog-sort-label { color: var(--fs-text-tertiary); font: var(--fs-type-subtitle); cursor: help; }
 .catalog-legend { display: flex; align-items: center; gap: var(--fs-space-3); margin-left: auto; }
 .catalog-legend__item { display: inline-flex; align-items: center; gap: 4px; color: var(--fs-text-tertiary); font: var(--fs-type-eyebrow); }
 .catalog-legend__item svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .catalog-result-line .catalog-refresh { flex: 0 0 auto; }
 
-/* Scroll region holding the grid + footer. */
-.models-grid-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: var(--fs-space-1); }
+/* Scroll region holding the grid; extends to the bottom of the window. */
+.models-grid-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 var(--fs-space-1) var(--fs-space-5) 0; }
 
 /* 3-across card grid → 2 → 1 as the main column narrows (container query on .catalog-main). */
 .models-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--fs-space-4); align-content: start; }

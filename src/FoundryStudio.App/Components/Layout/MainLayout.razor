@@ -20,7 +20,7 @@
             @onclick="OpenSettings">
         Open settings
     </button>
-    <Sidebar />
+    <Sidebar OnOpenSettings="_openSettingsCallback" />
     <div class="app-main-area">
         <main class="app-content" id="main-content">
             <CascadingValue Name="SidebarCollapsed" Value="_isSidebarCollapsed">
