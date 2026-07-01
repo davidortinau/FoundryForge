@@ -40,6 +40,15 @@
   --fs-danger-bg: color-mix(in srgb, var(--fs-danger) 13%, var(--fs-surface));
   --fs-info-bg: color-mix(in srgb, var(--fs-info) 13%, var(--fs-surface));
 
+  /* Model capability accents (Discover cards + detail pills). At-a-glance, distinct hues that
+     stay within the warm system; used ONLY for the small capability icons/pills, never controls. */
+  --fs-cap-vision: #B26F16;
+  --fs-cap-tools: #3F7C89;
+  --fs-cap-reasoning: #4C7343;
+  --fs-cap-vision-bg: color-mix(in srgb, var(--fs-cap-vision) 13%, var(--fs-surface));
+  --fs-cap-tools-bg: color-mix(in srgb, var(--fs-cap-tools) 13%, var(--fs-surface));
+  --fs-cap-reasoning-bg: color-mix(in srgb, var(--fs-cap-reasoning) 13%, var(--fs-surface));
+
   --fs-font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", sans-serif;
   --fs-font-mono: "SF Mono", ui-monospace, "Cascadia Code", monospace;
   --fs-type-display: 700 22px/1.15 var(--fs-font-family);
@@ -158,6 +167,14 @@
   --fs-warning-bg: color-mix(in srgb, var(--fs-warning) 20%, var(--fs-surface));
   --fs-danger-bg: color-mix(in srgb, var(--fs-danger) 19%, var(--fs-surface));
   --fs-info-bg: color-mix(in srgb, var(--fs-info) 19%, var(--fs-surface));
+
+  /* Model capability accents — brighter for dark-surface AA. */
+  --fs-cap-vision: #E0A64B;
+  --fs-cap-tools: #6FB6C4;
+  --fs-cap-reasoning: #86C177;
+  --fs-cap-vision-bg: color-mix(in srgb, var(--fs-cap-vision) 18%, var(--fs-surface));
+  --fs-cap-tools-bg: color-mix(in srgb, var(--fs-cap-tools) 18%, var(--fs-surface));
+  --fs-cap-reasoning-bg: color-mix(in srgb, var(--fs-cap-reasoning) 18%, var(--fs-surface));
 
   --fs-elev-card: 0 1px 2px color-mix(in srgb, black 28%, transparent), 0 0 0 1px color-mix(in srgb, white 2%, transparent);
   --fs-elev-overlay: 0 18px 50px color-mix(in srgb, black 46%, transparent);

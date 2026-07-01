@@ -1,0 +1,57 @@
+@using FoundryStudio.Core.Models
+
+@* Shared model-capability marks for Discover. Mode="Icons" renders the small 14px line icons for the
+   card; Mode="Pills" renders filled label pills for the detail sidebar. Only capabilities the model
+   actually declares are rendered — unknown is omitted, never asserted absent (honesty rule). *@
+
+@if (_marks.Count > 0)
+{
+    <div class="cap-marks cap-marks--@Mode.ToString().ToLowerInvariant()" role="list" aria-label="Model capabilities">
+        @foreach (var mark in _marks)
+        {
+            <span class="cap-mark cap-mark--@mark.Key" role="listitem" title="@mark.Label" aria-label="@mark.Label">
+                @((MarkupString)mark.Svg)
+                @if (Mode == MarkMode.Pills)
+                {
+                    <span class="cap-mark__label">@mark.Label</span>
+                }
+            </span>
+        }
+    </div>
+}
+
+@code {
+    public enum MarkMode { Icons, Pills }
+
+    [Parameter, EditorRequired] public ModelCapabilities Capabilities { get; set; }
+
+    [Parameter] public MarkMode Mode { get; set; } = MarkMode.Icons;
+
+    private sealed record Mark(string Key, string Label, string Svg);
+
+    private const string VisionSvg = "<svg viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z\" /><circle cx=\"12\" cy=\"12\" r=\"2.5\" /></svg>";
+    private const string ToolsSvg = "<svg viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-3-3z\" /></svg>";
+    private const string ReasoningSvg = "<svg viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\" /><path d=\"M12 3a9 9 0 0 1 0 18z\" fill=\"currentColor\" stroke=\"none\" /></svg>";
+
+    private List<Mark> _marks = new();
+
+    protected override void OnParametersSet()
+    {
+        _marks = new List<Mark>();
+        if (Capabilities.Vision)
+        {
+            _marks.Add(new Mark("vision", "Vision", VisionSvg));
+        }
+
+        // Respect ToolCallingKnown: only claim tool use when the model actually declares it.
+        if (Capabilities.ToolCallingKnown && Capabilities.ToolCalling)
+        {
+            _marks.Add(new Mark("tools", "Tool use", ToolsSvg));
+        }
+
+        if (Capabilities.Reasoning)
+        {
+            _marks.Add(new Mark("reasoning", "Reasoning", ReasoningSvg));
+        }
+    }
+}

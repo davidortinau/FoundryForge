@@ -1,0 +1,205 @@
+@using System.Globalization
+@inject IFoundryCatalogService CatalogService
+
+@* Compact, non-expanding Discover grid card. The whole card selects (populates the detail sidebar).
+   Available models get a quick-download of the DEFAULT variant right here (inline progress); full
+   variant control lives in the sidebar. Installed models get a "Manage" affordance that just selects. *@
+
+<div class="model-grid-card @(IsSelected ? "is-selected" : string.Empty) @(IsLoaded ? "is-loaded" : string.Empty)"
+     data-testid="model-grid-card"
+     data-alias="@Model.Alias"
+     role="button"
+     tabindex="0"
+     aria-pressed="@IsSelected.ToString().ToLowerInvariant()"
+     aria-label="@RowAria"
+     @onclick="Select"
+     @onclick:stopPropagation="true"
+     @onkeydown="OnKeyDown">
+
+    <div class="model-grid-card__top">
+        @if (IsCached)
+        {
+            <span class="status-pill status-pill--installed" data-testid="grid-status">
+                <span class="status-pill__dot" aria-hidden="true"></span>@(IsLoaded ? "Loaded" : "Installed")
+            </span>
+        }
+        else
+        {
+            <span class="status-pill status-pill--available" data-testid="grid-status">
+                <span class="status-pill__dot" aria-hidden="true"></span>Available
+            </span>
+        }
+        <CapabilityMarks Capabilities="Model.Capabilities" Mode="CapabilityMarks.MarkMode.Icons" />
+    </div>
+
+    <div class="model-grid-card__name">
+        <span class="model-grid-card__display" data-testid="grid-name">@DisplayName</span>
+        <span class="model-grid-card__family">@Model.Alias</span>
+    </div>
+
+    <div class="model-grid-card__meta">
+        <span><span class="model-grid-card__meta-label">Size</span>@SizeLabel</span>
+        <span><span class="model-grid-card__meta-label">Context</span>@ContextLabel</span>
+    </div>
+
+    <div class="model-grid-card__action" @onclick:stopPropagation="true">
+        @if (IsCached)
+        {
+            <button type="button"
+                    class="button button-secondary model-grid-card__button"
+                    data-testid="grid-manage"
+                    @onclick="Select">
+                Manage
+            </button>
+        }
+        else if (Operation.Phase is ModelOpPhase.Downloading or ModelOpPhase.Cancelling)
+        {
+            <div class="download-progress @(Operation.ProgressPercent is null ? "download-progress--indeterminate" : string.Empty)"
+                 data-testid="grid-download-progress"
+                 role="progressbar"
+                 aria-label="Download progress for @DisplayName"
+                 aria-valuemin="0"
+                 aria-valuemax="100"
+                 aria-valuenow="@ProgressAriaValue">
+                <div class="download-progress__bar" style="width: @ProgressWidth"></div>
+                <span>@ProgressLabel</span>
+            </div>
+            <button type="button"
+                    class="button button-secondary model-grid-card__button"
+                    data-testid="grid-download-cancel"
+                    @onclick="CancelDownloadAsync"
+                    disabled="@(Operation.Phase == ModelOpPhase.Cancelling)">
+                @(Operation.Phase == ModelOpPhase.Cancelling ? "Cancelling…" : "Cancel")
+            </button>
+        }
+        else
+        {
+            <button type="button"
+                    class="button model-grid-card__button model-grid-card__button--download"
+                    data-testid="grid-download"
+                    @onclick="DownloadAsync"
+                    disabled="@Operation.IsWorking">
+                Download
+            </button>
+        }
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Operation.ErrorMessage))
+    {
+        <p class="model-grid-card__error" data-testid="grid-error" role="alert">@Operation.ErrorMessage</p>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ModelInfo Model { get; set; } = default!;
+    [Parameter] public bool IsCached { get; set; }
+    [Parameter] public bool IsLoaded { get; set; }
+    [Parameter] public bool IsSelected { get; set; }
+    [Parameter, EditorRequired] public ModelOperationState Operation { get; set; } = default!;
+    [Parameter, EditorRequired] public VariantSelectionState VariantSelection { get; set; } = default!;
+    [Parameter] public EventCallback<ModelInfo> OnSelect { get; set; }
+    [Parameter] public EventCallback OnMutationCompleted { get; set; }
+
+    private string DisplayName => string.IsNullOrWhiteSpace(Model.DisplayName) ? Model.Alias : Model.DisplayName;
+
+    private string SizeLabel => Model.SizeGb is > 0
+        ? $"{Model.SizeGb!.Value.ToString("0.0", CultureInfo.InvariantCulture)} GB"
+        : "unknown";
+
+    private string ContextLabel => Model.ContextLength is > 0
+        ? FormatContext(Model.ContextLength.Value)
+        : "unknown";
+
+    private string RowAria => $"{DisplayName}, {(IsCached ? "installed" : "available")}, {SizeLabel}";
+
+    private string? ProgressAriaValue => Operation.ProgressPercent is double v
+        ? Math.Round(v).ToString(CultureInfo.InvariantCulture)
+        : null;
+
+    private string ProgressWidth => Operation.ProgressPercent is double v
+        ? $"{Math.Clamp(v, 0, 100).ToString("0.##", CultureInfo.InvariantCulture)}%"
+        : "0%";
+
+    private string ProgressLabel => Operation.ProgressPercent is double v
+        ? $"Downloading — {Math.Clamp(v, 0, 100).ToString("0", CultureInfo.InvariantCulture)}%"
+        : "Downloading…";
+
+    private Task Select() => OnSelect.InvokeAsync(Model);
+
+    private Task OnKeyDown(KeyboardEventArgs e)
+        => (e.Key == "Enter" || e.Key == " ") ? OnSelect.InvokeAsync(Model) : Task.CompletedTask;
+
+    // Quick-download the default (effective) variant. Shares the per-alias ModelOperationState with the
+    // sidebar, so progress is reflected in both places.
+    private async Task DownloadAsync()
+    {
+        Operation.Reset();
+        Operation.Phase = ModelOpPhase.Downloading;
+        Operation.Cts = new CancellationTokenSource();
+        await InvokeAsync(StateHasChanged);
+
+        var progress = new Progress<double>(value =>
+        {
+            Operation.ProgressPercent = NormalizeProgress(value);
+            _ = InvokeAsync(StateHasChanged);
+        });
+
+        try
+        {
+            await CatalogService.DownloadAsync(Model.Alias, progress, VariantSelection.EffectiveVariantId, Operation.Cts.Token);
+            if (Operation.AutoLoadAfterDownload && !Operation.Cts.IsCancellationRequested)
+            {
+                Operation.Phase = ModelOpPhase.Loading;
+                await InvokeAsync(StateHasChanged);
+                await CatalogService.LoadAsync(Model.Alias, VariantSelection.EffectiveVariantId, Operation.Cts.Token);
+            }
+
+            Operation.Reset();
+            await OnMutationCompleted.InvokeAsync();
+        }
+        catch (OperationCanceledException)
+        {
+            Operation.Reset();
+            await OnMutationCompleted.InvokeAsync();
+        }
+        catch (ModelBusyException ex)
+        {
+            Operation.Fail(ex.Message, busy: true);
+        }
+        catch (Exception ex)
+        {
+            Operation.Fail($"Download failed: {ex.Message}");
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Task CancelDownloadAsync()
+    {
+        Operation.Phase = ModelOpPhase.Cancelling;
+        Operation.Cts?.Cancel();
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private static double NormalizeProgress(double value)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return 0;
+        }
+
+        var percent = value <= 1 ? value * 100 : value;
+        return Math.Clamp(percent, 0, 100);
+    }
+
+    private static string FormatContext(int tokens)
+    {
+        if (tokens >= 1000)
+        {
+            var k = tokens / 1000.0;
+            return $"{k.ToString(k >= 100 ? "0" : "0.#", CultureInfo.InvariantCulture)}K";
+        }
+
+        return tokens.ToString(CultureInfo.InvariantCulture);
+    }
+}

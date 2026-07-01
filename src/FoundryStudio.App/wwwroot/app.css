@@ -282,12 +282,30 @@ svg { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 1
 }
 .chat-shell > .page-title { flex: 0 0 auto; }
 
-/* Discover: make the catalog a query container so the master-detail layout
-   responds to its own content width (robust to the collapsible sidebar). */
+/* Discover: two-column landscape — flex main (grid scrolls) + docked 400px detail sidebar. */
 .catalog-shell {
-  container-type: inline-size;
-  container-name: catalog;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  padding-top: 0;
+  padding-bottom: 0;
 }
+.catalog-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fs-space-4);
+  padding: var(--fs-space-4) 0 var(--fs-space-5);
+  container-type: inline-size;
+  container-name: catalogmain;
+}
+.catalog-main > .page-title { flex: 0 0 auto; }
 
 .page-title {
   display: grid;
@@ -1968,3 +1986,141 @@ details[open] > .chat-metrics-summary::before { transform: rotate(90deg); }
    flex column and push facts after management via order. */
 .model-card { display: flex; flex-direction: column; }
 .model-card > .model-facts { order: 1; }
+
+/* ════════════════════════════════════════════════════════════════════════
+   Discover redesign — two-column card grid + detail sidebar (2026-07-01).
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* Controls + meta stay fixed; the grid scrolls. */
+.catalog-main > .catalog-controls { flex: 0 0 auto; }
+
+.catalog-result-line {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--fs-space-3);
+}
+.catalog-count-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 2px var(--fs-space-3);
+  border-radius: var(--fs-radius-pill);
+  background: var(--fs-surface-raised);
+  border: 1px solid var(--fs-border);
+  color: var(--fs-text-secondary);
+  font: var(--fs-type-label);
+}
+.catalog-count-chip strong { color: var(--fs-text); }
+.catalog-sort-label { color: var(--fs-text-tertiary); font: var(--fs-type-subtitle); cursor: help; }
+.catalog-legend { display: flex; align-items: center; gap: var(--fs-space-3); margin-left: auto; }
+.catalog-legend__item { display: inline-flex; align-items: center; gap: 4px; color: var(--fs-text-tertiary); font: var(--fs-type-eyebrow); }
+.catalog-legend__item svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.catalog-result-line .catalog-refresh { flex: 0 0 auto; }
+
+/* Scroll region holding the grid + footer. */
+.models-grid-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: var(--fs-space-1); }
+
+/* 3-across card grid → 2 → 1 as the main column narrows (container query on .catalog-main). */
+.models-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--fs-space-4); align-content: start; }
+@container catalogmain (max-width: 1000px) { .models-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container catalogmain (max-width: 640px)  { .models-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* Model grid card — compact, non-expanding. */
+.model-grid-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fs-space-3);
+  padding: var(--fs-space-4);
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius-xl);
+  background: var(--fs-surface);
+  box-shadow: var(--fs-elev-card);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color var(--fs-dur-fast) var(--fs-ease-heat), box-shadow var(--fs-dur-fast) var(--fs-ease-heat), transform var(--fs-dur-fast) var(--fs-ease-heat);
+}
+.model-grid-card:hover { border-color: var(--fs-border-strong); }
+.model-grid-card:focus-visible { outline: 3px solid var(--fs-accent-ring); outline-offset: 2px; }
+.model-grid-card.is-selected {
+  border: 1.5px solid var(--fs-accent);
+  box-shadow: 0 8px 20px -12px color-mix(in srgb, var(--fs-accent) 55%, transparent);
+}
+.model-grid-card.is-loaded .status-pill--installed { color: var(--fs-positive); }
+
+.model-grid-card__top { display: flex; align-items: center; justify-content: space-between; gap: var(--fs-space-2); }
+.model-grid-card__name { display: grid; gap: 2px; min-width: 0; }
+.model-grid-card__display { font: 600 14.5px/1.25 var(--fs-font-family); color: var(--fs-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.model-grid-card__family { font: var(--fs-type-eyebrow); color: var(--fs-text-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.model-grid-card__meta { display: flex; gap: var(--fs-space-4); color: var(--fs-text-secondary); font: var(--fs-type-body); }
+.model-grid-card__meta-label { color: var(--fs-text-tertiary); margin-right: 6px; }
+.model-grid-card__action { display: grid; gap: var(--fs-space-2); margin-top: auto; }
+.model-grid-card__button { width: 100%; justify-content: center; }
+.model-grid-card__button--download { border-color: var(--fs-accent-fill); background: var(--fs-accent-fill); color: var(--fs-text-inverse); }
+.model-grid-card__error { margin: 0; color: var(--fs-danger); font: var(--fs-type-label); }
+
+/* Status pill (card). */
+.status-pill { display: inline-flex; align-items: center; gap: 5px; font: var(--fs-type-eyebrow); letter-spacing: 0.02em; }
+.status-pill__dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: 0 0 auto; }
+.status-pill--installed { color: var(--fs-positive); }
+.status-pill--available { color: var(--fs-text-tertiary); }
+
+/* Capability marks — icons (card) + pills (sidebar). */
+.cap-marks { display: flex; align-items: center; }
+.cap-marks--icons { gap: var(--fs-space-2); }
+.cap-marks--pills { gap: var(--fs-space-2); flex-wrap: wrap; }
+.cap-mark svg { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.cap-marks--icons .cap-mark { display: inline-flex; }
+.cap-marks--icons .cap-mark svg { width: 15px; height: 15px; }
+.cap-marks--pills .cap-mark { display: inline-flex; align-items: center; gap: 5px; padding: 3px var(--fs-space-2); border-radius: var(--fs-radius-pill); font: var(--fs-type-label); }
+.cap-marks--pills .cap-mark svg { width: 14px; height: 14px; }
+.cap-mark--vision { color: var(--fs-cap-vision); }
+.cap-mark--tools { color: var(--fs-cap-tools); }
+.cap-mark--reasoning { color: var(--fs-cap-reasoning); }
+.cap-marks--pills .cap-mark--vision { background: var(--fs-cap-vision-bg); }
+.cap-marks--pills .cap-mark--tools { background: var(--fs-cap-tools-bg); }
+.cap-marks--pills .cap-mark--reasoning { background: var(--fs-cap-reasoning-bg); }
+
+/* Detail sidebar. */
+.model-detail {
+  flex: 0 0 400px;
+  width: 400px;
+  min-height: 0;
+  display: flex;
+  border-left: 1px solid var(--fs-border);
+  background: var(--fs-surface-raised);
+  overflow: hidden;
+}
+.model-detail__scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: grid; align-content: start; gap: var(--fs-space-4); padding: var(--fs-space-5); }
+.model-detail__eyebrow { margin: 0; color: var(--fs-text-tertiary); }
+.model-detail__title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--fs-space-2); }
+.model-detail__name { margin: 0; font: 700 19px/1.2 var(--fs-font-family); color: var(--fs-text); overflow-wrap: anywhere; }
+.model-detail__copy { flex: 0 0 auto; }
+.model-detail__subtitle { display: flex; align-items: center; gap: var(--fs-space-2); flex-wrap: wrap; margin-top: calc(-1 * var(--fs-space-2)); }
+.model-detail__family { color: var(--fs-text-tertiary); font: var(--fs-type-mono); }
+.format-chip { padding: 1px var(--fs-space-2); border: 1px solid var(--fs-border); border-radius: var(--fs-radius-sm); background: var(--fs-surface-inset); color: var(--fs-text-secondary); font: var(--fs-type-eyebrow); letter-spacing: 0.04em; }
+
+.model-detail__spec-strip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--fs-space-3); margin: 0; padding: var(--fs-space-3) 0; border-top: 1px solid var(--fs-border); border-bottom: 1px solid var(--fs-border); }
+.model-detail__spec-strip dt { color: var(--fs-text-tertiary); font: var(--fs-type-eyebrow); }
+.model-detail__spec-strip dd { margin: 2px 0 0; color: var(--fs-text); font: var(--fs-type-label); }
+
+.model-detail__section { display: grid; gap: var(--fs-space-2); }
+.model-detail__section-title { margin: 0; color: var(--fs-text-tertiary); }
+.model-detail__about { margin: 0; color: var(--fs-text-secondary); font: var(--fs-type-body); }
+
+.model-detail__flow { display: grid; gap: var(--fs-space-3); padding: var(--fs-space-4); border: 1px solid var(--fs-border); border-radius: var(--fs-radius-lg); background: var(--fs-surface); }
+.model-detail__primary { width: 100%; justify-content: center; border-color: var(--fs-accent-fill); background: var(--fs-accent-fill); color: var(--fs-text-inverse); }
+.model-detail__actions { display: grid; gap: var(--fs-space-2); }
+
+.model-detail__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--fs-space-3); margin: 0; }
+.model-detail__grid dt { color: var(--fs-text-tertiary); font: var(--fs-type-eyebrow); }
+.model-detail__grid dd { margin: 2px 0 0; color: var(--fs-text); font: var(--fs-type-body); overflow-wrap: anywhere; }
+
+.model-detail__variants { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--fs-space-1); }
+.model-detail__variants li { color: var(--fs-text-secondary); font: var(--fs-type-mono); }
+
+/* When the window is too narrow for grid + 400px detail, the detail docks below the grid. */
+@media (max-width: 900px) {
+  .catalog-shell { flex-direction: column; overflow-y: auto; }
+  .model-detail { flex: 0 0 auto; width: 100%; border-left: none; border-top: 1px solid var(--fs-border); }
+}

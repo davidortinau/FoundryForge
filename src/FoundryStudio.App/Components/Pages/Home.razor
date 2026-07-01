@@ -6,6 +6,7 @@
 @inject StartupNavigationService StartupNav
 
 <div class="catalog-shell" data-testid="catalog-page">
+    <div class="catalog-main">
     <PageHeader TitleId="catalog-title"
                 Eyebrow=""
                 Title="Browse models"
@@ -154,19 +155,22 @@
              && _state.Status != CatalogViewState.CatalogStatus.Error)
         {
             <div class="catalog-result-line" aria-label="Result summary">
-                @if (_state.IsShowingCurated)
-                {
-                    <span class="catalog-recommended-tag"
-                          data-testid="curated-banner"
-                          title="Curated by FoundryStudio for fit on Apple Silicon — not a quality ranking.">
-                        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 8h.01" /></svg>
-                        Recommended
-                    </span>
-                }
-                <p class="catalog-count" data-testid="catalog-count" aria-live="polite">
-                    <strong>@_state.Visible.Count.ToString("N0")</strong> of @_state.AllModels.Count.ToString("N0") shown
-                </p>
+                <span class="catalog-count-chip" data-testid="catalog-count">
+                    <strong>@_state.Visible.Count.ToString("N0")</strong> of @_state.AllModels.Count.ToString("N0")
+                </span>
+                <span class="catalog-sort-label"
+                      data-testid="@(_state.IsShowingCurated ? "curated-banner" : null)"
+                      title="@(_state.IsShowingCurated ? "Curated by FoundryStudio for fit on Apple Silicon — not a quality ranking." : "Installed models are listed first.")">
+                    @(_state.IsShowingCurated ? "Sorted by fit · installed first" : "Installed first")
+                </span>
                 <span class="visually-hidden" data-testid="loaded-indicator" aria-live="polite">@LoadedSummary</span>
+
+                <div class="catalog-legend" aria-label="Capability legend">
+                    <span class="catalog-legend__item cap-mark--vision"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z" /><circle cx="12" cy="12" r="2.5" /></svg>Vision</span>
+                    <span class="catalog-legend__item cap-mark--tools"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-3-3z" /></svg>Tools</span>
+                    <span class="catalog-legend__item cap-mark--reasoning"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none" /></svg>Reasoning</span>
+                </div>
+
                 <button id="catalog-refresh"
                         data-testid="refresh-catalog"
                         type="button"
@@ -224,71 +228,23 @@
         }
         else
         {
-            <!-- Single-column, action-forward list. The selected row expands inline
-                 into an action-first ModelCard, so the primary action (Download / Load)
-                 is always visible without a separate, always-on detail pane. Groups
-                 reorder so the populated group leads (acquire-first when nothing is
-                 cached; manage-first once you have local models). -->
-            <div class="models-list" role="list" aria-label="Models" data-testid="models-list">
-                @foreach (var group in OrderedGroups)
-                {
-                    <section class="catalog-group" data-testid="@group.TestId" aria-labelledby="@group.HeaderId">
-                        <div class="catalog-group__header">
-                            <h2 id="@group.HeaderId" data-testid="group-label"><span>@group.Eyebrow</span>@group.Title</h2>
-                            <span data-testid="group-count" aria-live="polite">@group.Models.Count.ToString("N0")</span>
-                        </div>
-                        @if (group.Models.Count == 0)
-                        {
-                            <p class="status models-list__empty-group">@group.EmptyText</p>
-                        }
-                        else
-                        {
-                            @foreach (var model in group.Models)
-                            {
-                                <div class="model-row-wrap @(IsSelected(model) ? "is-expanded" : string.Empty)" data-alias="@model.Alias">
-                                    <button type="button"
-                                            class="model-row @(IsSelected(model) ? "model-row--selected" : string.Empty) @(_state.IsLoaded(model) ? "model-row--loaded" : string.Empty)"
-                                            aria-expanded="@IsSelected(model).ToString().ToLowerInvariant()"
-                                            data-alias="@model.Alias"
-                                            title="@RowHoverTitle(model)"
-                                            @onclick="() => SelectModelAsync(model)">
-                                        <span class="model-row__name">
-                                            <span class="model-row__displayname">@RowDisplayName(model)</span>
-                                            <span class="model-row__alias">@model.Alias</span>
-                                        </span>
-                                        <span class="model-row__meta">
-                                            @if (model.ContextLength is > 0)
-                                            {
-                                                <span class="model-row__context" title="Context length">@FormatContextK(model.ContextLength.Value)</span>
-                                            }
-                                            <span class="model-row__size">@(model.SizeGb is > 0 ? $"{model.SizeGb!.Value.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)} GB" : string.Empty)</span>
-                                            @if (_state.IsCached(model))
-                                            {
-                                                <ModelStateBadge IsCached="true" IsLoaded="_state.IsLoaded(model)" />
-                                            }
-                                            <svg class="model-row__chevron" viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
-                                        </span>
-                                    </button>
-                                    @if (IsSelected(model))
-                                    {
-                                        <div class="model-row__detail" data-testid="model-detail">
-                                            <ModelCard Model="model"
-                                                       IsCached="_state.IsCached(model)"
-                                                       IsLoaded="_state.IsLoaded(model)"
-                                                       Operation="_state.GetOperation(model)"
-                                                       VariantSelection="_state.GetVariantSelection(model)"
-                                                       FreeDiskGb="_freeDiskGb"
-                                                       OnMutationCompleted="RefreshCatalogAsync"
-                                                       OnDeleteRequested="OpenDeleteDialogAsync" />
-                                        </div>
-                                    }
-                                </div>
-                            }
-                        }
-                    </section>
-                }
+            <!-- Merged, installed-first card grid. Cards never expand; selecting one populates the
+                 detail sidebar. Clicking empty grid space clears the selection (hides the sidebar). -->
+            <div class="models-grid-scroll" @onclick="ClearSelection">
+                <div class="models-grid" role="list" aria-label="Models" data-testid="models-list">
+                    @foreach (var model in MergedModels)
+                    {
+                        <ModelGridCard Model="model"
+                                       IsCached="_state.IsCached(model)"
+                                       IsLoaded="_state.IsLoaded(model)"
+                                       IsSelected="IsSelected(model)"
+                                       Operation="_state.GetOperation(model)"
+                                       VariantSelection="_state.GetVariantSelection(model)"
+                                       OnSelect="SelectModelAsync"
+                                       OnMutationCompleted="RefreshCatalogAsync" />
+                    }
+                </div>
 
-                <!-- Footer summary -->
                 <footer class="models-footer" aria-label="Local model storage summary">
                     <span class="models-footer__summary">
                         You have <strong>@_state.VisibleCached.Count</strong> local model@(_state.VisibleCached.Count == 1 ? string.Empty : "s")@(CachedSizeLabel)
@@ -300,6 +256,21 @@
                 </footer>
             </div>
         }
+    }
+    </div>
+
+    @if (_state.Status != CatalogViewState.CatalogStatus.Loading
+         && _state.Status != CatalogViewState.CatalogStatus.Error
+         && SelectedModel is { } selected)
+    {
+        <DetailSidebar Model="selected"
+                       IsCached="_state.IsCached(selected)"
+                       IsLoaded="_state.IsLoaded(selected)"
+                       Operation="_state.GetOperation(selected)"
+                       VariantSelection="_state.GetVariantSelection(selected)"
+                       FreeDiskGb="_freeDiskGb"
+                       OnMutationCompleted="RefreshCatalogAsync"
+                       OnDeleteRequested="OpenDeleteDialogAsync" />
     }
 
     <ConfirmDialog IsOpen="@(_deleteTarget is not null)"
@@ -352,40 +323,26 @@
         ? string.Empty
         : $"Delete cached model '{_deleteTarget.Alias}'? This frees {FormatSize(_deleteTarget.SizeGb)} and cannot be undone.";
 
+    // No auto-selection: null until the user clicks a card (so the detail sidebar is hidden by default).
     private ModelInfo? SelectedModel =>
         _selectedAlias is not null
             ? _state.Visible.FirstOrDefault(m => string.Equals(m.Alias, _selectedAlias, StringComparison.OrdinalIgnoreCase))
-            : _state.Visible.Count > 0 ? _state.Visible[0] : null;
+            : null;
 
     private bool IsSelected(ModelInfo model) =>
-        string.Equals(model.Alias, SelectedModel?.Alias, StringComparison.OrdinalIgnoreCase);
+        _selectedAlias is not null
+        && string.Equals(model.Alias, _selectedAlias, StringComparison.OrdinalIgnoreCase);
 
-    // Group view-model for the single-column list. The populated group leads:
-    // acquire-first when nothing is cached, manage-first once local models exist.
-    private sealed record CatalogGroupVm(
-        string TestId,
-        string HeaderId,
-        string Eyebrow,
-        string Title,
-        IReadOnlyList<ModelInfo> Models,
-        string EmptyText);
-
-    private IReadOnlyList<CatalogGroupVm> OrderedGroups
+    // Merged, installed-first ordering for the card grid (VisibleCached then VisibleAvailable are already
+    // partitioned from Visible; concatenating keeps installed models first within the single grid).
+    private IReadOnlyList<ModelInfo> MergedModels
     {
         get
         {
-            var cached = new CatalogGroupVm(
-                "group-cached", "group-cached-title", "Installed", "Ready on this Mac",
-                _state.VisibleCached,
-                "No models downloaded yet — pick one above to download it.");
-            var available = new CatalogGroupVm(
-                "group-available", "group-available-title", "Available", "Download to this Mac",
-                _state.VisibleAvailable,
-                "No available models match your search.");
-
-            return _state.VisibleCached.Count > 0
-                ? new[] { cached, available }
-                : new[] { available, cached };
+            var merged = new List<ModelInfo>(_state.VisibleCached.Count + _state.VisibleAvailable.Count);
+            merged.AddRange(_state.VisibleCached);
+            merged.AddRange(_state.VisibleAvailable);
+            return merged;
         }
     }
 
@@ -698,7 +655,21 @@
 
     private Task SelectModelAsync(ModelInfo model)
     {
-        _selectedAlias = model.Alias;
+        // Toggle off if the same card is clicked again; otherwise select it.
+        _selectedAlias = string.Equals(_selectedAlias, model.Alias, StringComparison.OrdinalIgnoreCase)
+            ? null
+            : model.Alias;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task ClearSelection()
+    {
+        if (_selectedAlias is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        _selectedAlias = null;
         return InvokeAsync(StateHasChanged);
     }
 

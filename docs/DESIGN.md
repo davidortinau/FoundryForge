@@ -124,6 +124,23 @@ For status banners/pills, derive a soft tinted background from the semantic colo
 the surface (light) / ~18–22% (dark). Tokens: `--fs-positive-bg`, `--fs-warning-bg`,
 `--fs-danger-bg`, `--fs-info-bg`. Text uses the full-strength semantic color and must hit AA.
 
+### 3.4a Capability accents (Discover)
+
+At-a-glance model capability marks (Vision / Tool use / Reasoning) use three dedicated hues so they
+read as *capabilities*, not status or brand. They are used ONLY for the small capability icons on
+Discover cards and the filled capability pills in the detail sidebar — **never** on operable
+controls, and never to imply a capability we can't prove (a capability is shown only when the model
+actually declares it; unknown ⇒ omitted, never asserted absent). Tokens (light / dark):
+
+| Role | Token | Light | Dark |
+|---|---|---|---|
+| Vision | `--fs-cap-vision` | `#B26F16` | `#E0A64B` |
+| Tool use | `--fs-cap-tools` | `#3F7C89` | `#6FB6C4` |
+| Reasoning | `--fs-cap-reasoning` | `#4C7343` | `#86C177` |
+
+Pill/tint backgrounds: `--fs-cap-vision-bg`, `--fs-cap-tools-bg`, `--fs-cap-reasoning-bg`
+(derived at ~13% light / ~18% dark over the surface).
+
 ### 3.5 Contrast rules
 
 - Body text on its surface targets AA (≥4.5:1); large/page titles ≥3:1, prefer AA.
