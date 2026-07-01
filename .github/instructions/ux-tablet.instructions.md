@@ -1,6 +1,6 @@
 ---
 description: Medium-specific UX reasoning for tablet application UI (the hybrid medium).
-applyTo: "**/*.{xaml,axaml,cs,razor,swift,kt,xml,tsx,jsx,vue}"
+applyTo: "**/*.{xaml,axaml,cs,razor,swift,kt,xml,tsx,jsx,vue,css,scss}"
 ---
 
 # Tablet UX (medium layer)

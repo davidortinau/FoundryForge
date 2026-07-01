@@ -18,6 +18,17 @@ A desktop client for Microsoft Foundry Local: a native macOS (AppKit) .NET MAUI 
 - An **end-to-end check on a real Apple Silicon Mac** (download -> load -> streamed reply; server -> external `curl`) precedes any "done." Build success is a prerequisite, not verification. End milestone-closing notes with a `Verified:` line.
 - Run `/review` before any push. Reviewer independence: the agent that wrote the code cannot approve it.
 
+## UI Definition of Done (design gate)
+Any change that alters a rendered surface is **not** done until this checklist passes. This is a hard gate — the same weight as the pre-push `/review` gate — added because too many avoidable UI defects (asymmetric margins, dead controls, regions not reaching the viewport, mock mismatches) reached review instead of being caught here. "Build succeeds and it looks plausible in one screenshot" is **not** verification.
+1. **Mock parity (if a mock/reference exists).** Run the **`maui-visual-review`** skill (screenshot vs the provided mock) and resolve every discrepancy — margins, alignment, spacing, right/left symmetry, and "reduce to the varying info." A mock in the task description is a spec, not a suggestion.
+2. **Principle + honesty sweep.** Run the **`design-review`** agent proactively. Zero **dead affordances** — every control that looks interactive does something; never render UI for a capability Foundry Local doesn't have (Constitution honesty rule).
+3. **Exercise every new control.** Click/type/toggle each new interactive element and confirm it has an effect. Confirm every "close/dismiss" affordance fires from **every** empty region a user would try (not just one sub-area).
+4. **Bounds check.** Every scroll region and side panel reaches the bound it implies (full height to the window edge / dock, no dead gutter, no short-stop that reads as "that's all").
+5. **Resize test.** Drag narrow → wide; confirm adaptive collapse/expand and that nothing overlaps or strands (this is the desktop "resize resilience" principle — actually test it, don't assume it).
+6. **Both themes.** Verify in Workshop Daylight **and** Night Forge (frontmost screenshots, KI-001), then restore theme to System.
+
+End UI-change closing notes with a `Verified:` line naming which of these ran.
+
 ## Scope boundaries (stay focused)
 - **macOS / Apple Silicon only in v1.** No iOS/Android/Mac Catalyst code paths or RIDs.
 - **v1 = lighthouse core: M0 -> M4 + the M5 server toggle.** RAG, voice, presets, MCP host, i18n are **post-v1**. Resist scope creep.

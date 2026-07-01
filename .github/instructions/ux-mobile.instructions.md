@@ -1,6 +1,6 @@
 ---
 description: Medium-specific UX reasoning for mobile (phone) application UI.
-applyTo: "**/*.{xaml,axaml,cs,razor,swift,kt,xml,tsx,jsx,vue}"
+applyTo: "**/*.{xaml,axaml,cs,razor,swift,kt,xml,tsx,jsx,vue,css,scss}"
 ---
 
 # Mobile UX (medium layer)
