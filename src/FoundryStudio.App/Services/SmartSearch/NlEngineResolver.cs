@@ -49,17 +49,13 @@ public sealed class NlEngineResolver
     public async Task<INlQueryInterpreter> ResolveAsync(CancellationToken cancellationToken = default)
     {
         var settings = await _settings.GetAsync(cancellationToken).ConfigureAwait(false);
-        var engine = settings.NlSearchEngine;
-
-        if (engine == NlSearchEngine.Auto)
-        {
-            engine = await ResolveAutoAsync(cancellationToken).ConfigureAwait(false);
-        }
+        var availability = await SnapshotAsync(cancellationToken).ConfigureAwait(false);
+        var engine = NlEngineSelection.ResolveEffective(settings.NlSearchEngine, availability);
 
         return engine switch
         {
-            NlSearchEngine.AppleFoundationModels when AppleAvailable() => BuildApple(),
-            NlSearchEngine.CopilotCli when CopilotAvailable() => BuildCopilot(),
+            NlSearchEngine.AppleFoundationModels => BuildApple(),
+            NlSearchEngine.CopilotCli => BuildCopilot(),
             NlSearchEngine.LocalModel => await BuildLocalOrFallbackAsync(cancellationToken).ConfigureAwait(false),
             _ => _deterministic,
         };
@@ -68,17 +64,14 @@ public sealed class NlEngineResolver
     /// <summary>The engine Auto currently resolves to (for the "Using: X" readout in Settings).</summary>
     public async Task<NlSearchEngine> ResolveAutoAsync(CancellationToken cancellationToken = default)
     {
-        if (AppleAvailable())
-        {
-            return NlSearchEngine.AppleFoundationModels;
-        }
+        var availability = await SnapshotAsync(cancellationToken).ConfigureAwait(false);
+        return NlEngineSelection.ResolveAuto(availability);
+    }
 
-        if (await SmallCachedAliasAsync(cancellationToken).ConfigureAwait(false) is not null)
-        {
-            return NlSearchEngine.LocalModel;
-        }
-
-        return NlSearchEngine.Keyword;
+    private async Task<NlEngineAvailabilitySnapshot> SnapshotAsync(CancellationToken cancellationToken)
+    {
+        var localCached = await SmallCachedAliasAsync(cancellationToken).ConfigureAwait(false) is not null;
+        return new NlEngineAvailabilitySnapshot(AppleAvailable(), localCached, CopilotAvailable());
     }
 
     /// <summary>Availability of every engine, for the Settings radio list.</summary>
