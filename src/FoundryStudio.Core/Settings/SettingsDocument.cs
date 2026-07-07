@@ -71,12 +71,14 @@ public static class SettingsDocument
         dto.DefaultModel, // null is a valid "no default model selected"
         dto.Theme ?? defaults.Theme,
         dto.SchemaVersion ?? defaults.SchemaVersion,
-        dto.PersonalizedRecommendations ?? defaults.PersonalizedRecommendations);
+        dto.PersonalizedRecommendations ?? defaults.PersonalizedRecommendations,
+        dto.NlSearchEngine ?? defaults.NlSearchEngine);
 
     private sealed record SettingsDto(
         string? ModelCacheDirectory,
         string? DefaultModel,
         AppTheme? Theme,
         int? SchemaVersion,
-        bool? PersonalizedRecommendations = null);
+        bool? PersonalizedRecommendations = null,
+        NlSearchEngine? NlSearchEngine = null);
 }

@@ -63,6 +63,9 @@ public static class FoundryStudioServiceCollectionExtensions
         // In-process chat: thin IChatClient adapter (no loopback) behind IChatService (M4 middleware seam).
         services.AddSingleton<FoundryChatClient>();
         services.AddSingleton<IChatService, ChatService>();
+        // Smart Search: resolves the active NL query engine (Apple Intelligence / local model / Copilot CLI /
+        // keyword) from the user's setting + runtime availability.
+        services.AddSingleton<FoundryStudio.App.Services.SmartSearch.NlEngineResolver>();
         services.AddSingleton<IChatHistoryStore>(_ =>
             new FileChatHistoryStore(Path.Combine(FileSystem.AppDataDirectory, "chats")));
 

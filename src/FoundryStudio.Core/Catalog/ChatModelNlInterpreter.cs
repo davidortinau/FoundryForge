@@ -65,7 +65,7 @@ public sealed class ChatModelNlInterpreter : INlQueryInterpreter
             // The caller cancelled (e.g. a newer submit) — propagate, don't mask as a fallback.
             throw;
         }
-        catch
+        catch (Exception)
         {
             // Timeout, model unavailable, transport error — degrade to the instant engine.
             return await _fallback.InterpretAsync(query, facets, cancellationToken).ConfigureAwait(false);

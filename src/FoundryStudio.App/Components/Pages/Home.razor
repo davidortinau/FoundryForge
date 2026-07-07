@@ -4,6 +4,7 @@
 @inject LocalContextReader ContextReader
 @inject NavigationManager Navigation
 @inject StartupNavigationService StartupNav
+@inject FoundryStudio.App.Services.SmartSearch.NlEngineResolver NlEngines
 
 <div class="catalog-shell" data-testid="catalog-page">
     <div class="catalog-main" @onclick="ClearSelection">
@@ -543,25 +544,69 @@
         return Task.CompletedTask;
     }
 
-    private Task ApplyNlQueryAsync()
+    private CancellationTokenSource? _nlCts;
+
+    private async Task ApplyNlQueryAsync()
     {
         if (string.IsNullOrWhiteSpace(_state.NlInputText))
         {
-            return Task.CompletedTask;
+            return;
         }
 
-        var result = _nlInterpreter.Interpret(
-            _state.NlInputText,
-            _state.Facets.Tasks,
-            _state.Facets.Providers,
-            _state.Facets.SearchTokens);
+        var query = _state.NlInputText;
 
+        // 1. Instant: deterministic result gives immediate chips + results (and is the safe fallback).
+        var instant = _nlInterpreter.Interpret(query, _state.Facets.Tasks, _state.Facets.Providers, _state.Facets.SearchTokens);
+        ApplyNlResult(instant, query);
+        await InvokeAsync(StateHasChanged);
+
+        // 2. Async: refine with the resolved AI engine (Apple Intelligence / local model / Copilot / keyword).
+        //    Cancel any in-flight interpretation from a previous submit.
+        _nlCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _nlCts = cts;
+
+        try
+        {
+            var engine = await NlEngines.ResolveAsync(cts.Token);
+            if (engine is DeterministicNlInterpreter)
+            {
+                return; // Auto/Keyword — the instant result already is the deterministic answer.
+            }
+
+            var refined = await engine.InterpretAsync(query, _state.Facets, cts.Token);
+
+            // Only apply if this is still the current query and request (the user hasn't typed/submitted again).
+            if (!cts.Token.IsCancellationRequested && string.Equals(query, _state.NlInputText, StringComparison.Ordinal))
+            {
+                ApplyNlResult(refined, query);
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Superseded by a newer submit — keep whatever the newer request produced.
+        }
+        finally
+        {
+            if (ReferenceEquals(_nlCts, cts))
+            {
+                _nlCts = null;
+            }
+
+            cts.Dispose();
+        }
+    }
+
+    // Apply a NlQueryResult to the view state (shared by the instant and AI-refined passes).
+    private void ApplyNlResult(NlQueryResult result, string query)
+    {
         if (result.IsEmpty)
         {
-            // Nothing interpretable — put the whole input into SearchText so it still filters
+            // Nothing interpretable — put the whole input into SearchText so it still filters.
             _state.NlResult = null;
             _state.NlSortHint = NlSortHint.None;
-            _state.Filter = _state.Filter with { SearchText = _state.NlInputText.Trim() };
+            _state.Filter = _state.Filter with { SearchText = query.Trim() };
         }
         else
         {
@@ -578,7 +623,6 @@
         }
 
         _state.Recompute();
-        return InvokeAsync(StateHasChanged);
     }
 
     private Task RemoveNlChipAsync(NlInferredChip chip)
