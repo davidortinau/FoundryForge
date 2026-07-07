@@ -97,6 +97,24 @@
                 </div>
             }
 
+            @if (_showSmartSearchHint)
+            {
+                <div class="smartsearch-hint" data-testid="smartsearch-hint" role="note">
+                    <span class="smartsearch-hint__icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M12 3l1.9 4.3L18 9.2l-3.4 3 .9 4.6L12 14.6 8.5 16.8l.9-4.6L6 9.2l4.1-1.9z"/></svg>
+                    </span>
+                    <span class="smartsearch-hint__text">
+                        <strong>Smart Search is on.</strong> Plain-language searches like
+                        “models under 4&nbsp;GB I haven’t tried” are interpreted by @SmartSearchEngineLabel —
+                        free and on-device. Change or turn this off in Settings.
+                    </span>
+                    <button type="button"
+                            class="smartsearch-hint__dismiss"
+                            data-testid="smartsearch-hint-dismiss"
+                            @onclick="DismissSmartSearchHintAsync">Got it</button>
+                </div>
+            }
+
             @if (_filtersOpen)
             {
                 <div id="catalog-filters-drawer" class="catalog-filters-drawer" role="group" aria-label="Filters">
@@ -411,6 +429,8 @@
             var settings = await settingsTask;
             _freeDiskGb = CatalogDiskSpace.GetFreeDiskGb(settings.ModelCacheDirectory);
             _modelCachePath = settings.ModelCacheDirectory;
+            _smartSearchEngine = settings.NlSearchEngine;
+            _smartSearchIntroSeen = settings.SmartSearchIntroSeen;
 
             // Personalization: read on-device context only when the user has opted in.
             _state.PersonalizationActive = settings.PersonalizedRecommendations;
@@ -545,6 +565,39 @@
     }
 
     private CancellationTokenSource? _nlCts;
+    private NlSearchEngine _smartSearchEngine = NlSearchEngine.Auto;
+    private bool _smartSearchIntroSeen = true; // assume seen until settings load, so it never flashes early
+    private bool _showSmartSearchHint;
+
+    // User-facing label for the active Smart Search engine (for the first-use hint copy).
+    private string SmartSearchEngineLabel => _smartSearchEngine switch
+    {
+        NlSearchEngine.AppleFoundationModels => "Apple Intelligence",
+        NlSearchEngine.LocalModel => "a local model",
+        NlSearchEngine.CopilotCli => "GitHub Copilot",
+        NlSearchEngine.Keyword => "keyword matching",
+        _ => "on-device AI",
+    };
+
+    private async Task DismissSmartSearchHintAsync()
+    {
+        _showSmartSearchHint = false;
+        try
+        {
+            var settings = await SettingsService.GetAsync();
+            if (!settings.SmartSearchIntroSeen)
+            {
+                await SettingsService.UpdateAsync(settings with { SmartSearchIntroSeen = true });
+            }
+            _smartSearchIntroSeen = true;
+        }
+        catch
+        {
+            // Best-effort; dismissing this session is enough even if persistence fails.
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
 
     private async Task ApplyNlQueryAsync()
     {
@@ -558,6 +611,18 @@
         // 1. Instant: deterministic result gives immediate chips + results (and is the safe fallback).
         var instant = _nlInterpreter.Interpret(query, _state.Facets.Tasks, _state.Facets.Providers, _state.Facets.SearchTokens);
         ApplyNlResult(instant, query);
+        var instantCount = _state.Visible.Count;
+
+        // First-use: introduce Smart Search once, on a genuinely natural-language submit (multi-word),
+        // when an AI engine is actually in play. Non-nagging — shown once, then dismissed for good.
+        if (!_smartSearchIntroSeen
+            && _smartSearchEngine != NlSearchEngine.Keyword
+            && query.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries).Length >= 3)
+        {
+            _showSmartSearchHint = true;
+            _smartSearchIntroSeen = true; // don't show again this session even before persistence completes
+        }
+
         await InvokeAsync(StateHasChanged);
 
         // 2. Async: refine with the resolved AI engine (Apple Intelligence / local model / Copilot / keyword).
@@ -580,6 +645,15 @@
             if (!cts.Token.IsCancellationRequested && string.Equals(query, _state.NlInputText, StringComparison.Ordinal))
             {
                 ApplyNlResult(refined, query);
+
+                // Safety net: the AI must never make results WORSE than the deterministic pass. If it
+                // over-constrained the catalog to zero while the instant pass had matches, keep the instant
+                // result (the whole point of Smart Search is better results, never the "0 of 46" bug).
+                if (_state.Visible.Count == 0 && instantCount > 0)
+                {
+                    ApplyNlResult(instant, query);
+                }
+
                 await InvokeAsync(StateHasChanged);
             }
         }

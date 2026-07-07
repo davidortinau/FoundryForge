@@ -72,7 +72,8 @@ public static class SettingsDocument
         dto.Theme ?? defaults.Theme,
         dto.SchemaVersion ?? defaults.SchemaVersion,
         dto.PersonalizedRecommendations ?? defaults.PersonalizedRecommendations,
-        dto.NlSearchEngine ?? defaults.NlSearchEngine);
+        dto.NlSearchEngine ?? defaults.NlSearchEngine,
+        dto.SmartSearchIntroSeen ?? defaults.SmartSearchIntroSeen);
 
     private sealed record SettingsDto(
         string? ModelCacheDirectory,
@@ -80,5 +81,6 @@ public static class SettingsDocument
         AppTheme? Theme,
         int? SchemaVersion,
         bool? PersonalizedRecommendations = null,
-        NlSearchEngine? NlSearchEngine = null);
+        NlSearchEngine? NlSearchEngine = null,
+        bool? SmartSearchIntroSeen = null);
 }

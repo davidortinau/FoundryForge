@@ -6,7 +6,8 @@ public sealed record AppSettings(
     AppTheme Theme,
     int SchemaVersion,
     bool PersonalizedRecommendations = false,
-    NlSearchEngine NlSearchEngine = NlSearchEngine.Auto);
+    NlSearchEngine NlSearchEngine = NlSearchEngine.Auto,
+    bool SmartSearchIntroSeen = false);
 
 public enum AppTheme
 {

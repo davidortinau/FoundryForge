@@ -132,6 +132,20 @@ public class ChatModelNlInterpreterTests
             () => interp.InterpretAsync("gpu", Facets, cts.Token));
     }
 
+    [Fact]
+    public async Task Drops_generic_word_keywords_that_would_overconstrain()
+    {
+        // The model wrongly emitted generic words as keywords; strict matching drops them so they can't
+        // filter the catalog to zero. "qwen" is a real family fragment and survives.
+        var interp = Build("""{"capabilities":["reasoning"],"sort":"size-asc","keywords":["small","reasoning","qwen"]}""");
+
+        var r = await interp.InterpretAsync("a small model good at reasoning like qwen", Facets);
+
+        Assert.Equal("qwen", r.Filter.SearchText);
+        Assert.Contains("reasoning", r.CapabilityHints);
+        Assert.Equal(NlSortHint.SizeAscending, r.SortHint);
+    }
+
     // Minimal IChatClient test double: returns a fixed reply or throws.
     private sealed class FakeChatClient : IChatClient
     {

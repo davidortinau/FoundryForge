@@ -1630,6 +1630,34 @@ details[open] > .chat-metrics-summary::before { transform: rotate(90deg); }
   gap: var(--fs-space-2);
 }
 
+/* First-use Smart Search hint — inline, dismissible, shown once. */
+.smartsearch-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--fs-space-3);
+  margin-top: var(--fs-space-3);
+  padding: var(--fs-space-3) var(--fs-space-4);
+  border: 1px solid color-mix(in srgb, var(--fs-accent) 35%, var(--fs-border));
+  border-radius: var(--fs-radius-md);
+  background: color-mix(in srgb, var(--fs-accent) 8%, var(--fs-surface));
+}
+.smartsearch-hint__icon { flex: 0 0 auto; color: var(--fs-accent-text); margin-top: 1px; }
+.smartsearch-hint__icon svg { width: 18px; height: 18px; fill: currentColor; }
+.smartsearch-hint__text { flex: 1 1 auto; font: var(--fs-type-body); color: var(--fs-text-secondary); }
+.smartsearch-hint__text strong { color: var(--fs-text); }
+.smartsearch-hint__dismiss {
+  flex: 0 0 auto;
+  align-self: center;
+  padding: var(--fs-space-2) var(--fs-space-4);
+  border: 1px solid var(--fs-accent-fill);
+  border-radius: var(--fs-radius-sm);
+  background: var(--fs-accent-fill);
+  color: var(--fs-text-inverse);
+  font: var(--fs-type-label);
+  cursor: pointer;
+}
+.smartsearch-hint__dismiss:hover { background: color-mix(in srgb, var(--fs-accent-fill) 88%, black); }
+
 .catalog-nl-interpreted-label {
   font: var(--fs-type-caption);
   color: var(--fs-text-secondary);

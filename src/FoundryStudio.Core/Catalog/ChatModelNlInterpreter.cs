@@ -110,8 +110,13 @@ public sealed class ChatModelNlInterpreter : INlQueryInterpreter
 
             Hard rules:
             - Do NOT guess. Only set a field when the user's words clearly imply it. When unsure, use null / omit.
+            - A search box needs RECALL: prefer FEWER filters. Set "device", "task", and "provider" ONLY when
+              the user explicitly named them (e.g. said "gpu", "for coding", or a provider name). Never infer
+              them from vague intent — a wrong filter that returns nothing is far worse than no filter.
+            - "capabilities" and "sort" are safe to infer from intent; "device"/"task"/"provider" are not.
             - "keywords" must contain ONLY concrete model or family name fragments. NEVER put filler verbs
-              or generic words (want, load, need, inspect, use, run, trigger, images, them) in keywords.
+              or generic words (want, load, need, inspect, use, run, trigger, small, fast, images, them,
+              reasoning, chat) in keywords.
             - Prefer null over a weak guess. An empty result is better than a wrong filter.
             """;
     }
@@ -287,10 +292,12 @@ public sealed class ChatModelNlInterpreter : INlQueryInterpreter
             chips.Add(new NlInferredChip(label, sortHint.ToString(), NlChipKind.SortHint));
         }
 
-        // Keywords -> SearchText, keeping only tokens that match a real catalog term.
+        // Keywords -> SearchText, keeping only tokens that clearly name a real catalog term. Stricter than
+        // the deterministic pass: an AI keyword must be a whole catalog token or a prefix of one (>=3 chars),
+        // so filler the model wrongly emitted as a "keyword" (e.g. "small", "reasoning") can't over-constrain.
         var kept = parsed.Keywords
             .Select(k => k.Trim().ToLowerInvariant())
-            .Where(k => k.Length >= 2 && MatchesCatalog(k, facets.SearchTokens))
+            .Where(k => k.Length >= 3 && MatchesCatalogStrict(k, facets.SearchTokens))
             .Distinct()
             .OrderBy(k => k)
             .ToList();
@@ -309,12 +316,15 @@ public sealed class ChatModelNlInterpreter : INlQueryInterpreter
         return new NlQueryResult(filter, sortHint, chips, capabilityHints);
     }
 
-    private static bool MatchesCatalog(string token, IReadOnlyList<string> catalogTerms)
+    // Stricter: the token must be a whole catalog term or a genuine prefix of one (a model/family name
+    // fragment like "qwen", "phi", "mistr"), not any incidental substring. Keeps hallucinated filler out.
+    private static bool MatchesCatalogStrict(string token, IReadOnlyList<string> catalogTerms)
     {
         foreach (var term in catalogTerms)
         {
-            if (term.Contains(token, StringComparison.OrdinalIgnoreCase) ||
-                token.Contains(term, StringComparison.OrdinalIgnoreCase))
+            if (term.Equals(token, StringComparison.OrdinalIgnoreCase) ||
+                term.StartsWith(token, StringComparison.OrdinalIgnoreCase) ||
+                token.StartsWith(term, StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }
