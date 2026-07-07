@@ -301,4 +301,56 @@ public class NaturalLanguageQueryInterpreterTests
         Assert.Equal(Device.Gpu, result.Filter.Device);
         Assert.Equal(NlSortHint.SizeAscending, result.SortHint);
     }
+
+    // ── Remainder validation against the catalog corpus (leak-fix regression) ─────
+    // Filler words the interpreter can't map must NOT be joined into a literal SearchText phrase that
+    // matches no model and zeroes out otherwise-valid results (the "0 of 46" bug).
+
+    private static readonly IReadOnlyList<string> DefaultSearchTerms = new[]
+    {
+        "phi", "phi3", "qwen", "qwen2", "llama", "mistral", "instruct", "mini", "generic", "gpu", "cpu",
+    };
+
+    private NlQueryResult InterpretWithCorpus(string query) =>
+        _interpreter.Interpret(query, DefaultTasks, DefaultProviders, DefaultSearchTerms);
+
+    [Fact]
+    public void Filler_remainder_is_dropped_not_searched()
+    {
+        // "I want to load images and inspect them" → vision capability, but "inspect/load/them" match
+        // no catalog term, so SearchText must be null (show results), not "and inspect load them" (0 hits).
+        var result = InterpretWithCorpus("I want to load images and inspect them");
+
+        Assert.Null(result.Filter.SearchText);
+        Assert.Contains("vision", result.CapabilityHints);
+    }
+
+    [Fact]
+    public void Filler_remainder_tool_use_is_dropped_not_searched()
+    {
+        // "i want the user to speak to the computer and trigger tools" → tool-use capability, filler dropped.
+        var result = InterpretWithCorpus("i want the user to speak to the computer and trigger tools");
+
+        Assert.Null(result.Filter.SearchText);
+        Assert.Contains("tool use", result.CapabilityHints);
+    }
+
+    [Fact]
+    public void Real_model_name_in_remainder_is_kept()
+    {
+        // A genuine catalog term alongside intent must survive: "fast qwen model" → size sort + search "qwen".
+        var result = InterpretWithCorpus("fast qwen model");
+
+        Assert.Equal(NlSortHint.SizeAscending, result.SortHint);
+        Assert.Equal("qwen", result.Filter.SearchText);
+    }
+
+    [Fact]
+    public void Without_corpus_remainder_keeps_legacy_behavior()
+    {
+        // No corpus supplied (older callers) → non-stop-word remainder is still kept, unchanged.
+        var result = _interpreter.Interpret("inspect widgets", DefaultTasks, DefaultProviders);
+
+        Assert.Equal("inspect widgets", result.Filter.SearchText);
+    }
 }

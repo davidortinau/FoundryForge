@@ -553,7 +553,8 @@
         var result = _nlInterpreter.Interpret(
             _state.NlInputText,
             _state.Facets.Tasks,
-            _state.Facets.Providers);
+            _state.Facets.Providers,
+            _state.Facets.SearchTokens);
 
         if (result.IsEmpty)
         {

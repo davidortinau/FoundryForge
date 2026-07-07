@@ -46,7 +46,8 @@ public sealed class NaturalLanguageQueryInterpreter
     public NlQueryResult Interpret(
         string query,
         IReadOnlyList<string> availableTasks,
-        IReadOnlyList<string> availableProviders)
+        IReadOnlyList<string> availableProviders,
+        IReadOnlyList<string>? availableSearchTerms = null)
     {
         ArgumentNullException.ThrowIfNull(availableTasks);
         ArgumentNullException.ThrowIfNull(availableProviders);
@@ -207,9 +208,17 @@ public sealed class NaturalLanguageQueryInterpreter
             }
         }
 
-        // ── 8. Remaining tokens → SearchText (stops stop-words from polluting search)
+        // ── 8. Remaining tokens → SearchText ──────────────────────────────────────
+        // Drop stop-words, then — when we know the catalog's real search corpus — keep ONLY tokens that
+        // actually match some alias/name/id term. This prevents filler words the interpreter didn't map
+        // (e.g. "inspect", "load", "them") from being joined into a literal phrase that matches no model
+        // and zeroes out otherwise-valid facet/capability results. Same honesty rule as CatalogFacets:
+        // never search for a term no model has. When no corpus is supplied, fall back to the prior
+        // behavior (keep non-stop-words) so callers without facet context still function.
+        var hasCorpus = availableSearchTerms is { Count: > 0 };
         var remainder = tokens
             .Where(t => !StopWords.Contains(t) && t.Length >= 2)
+            .Where(t => !hasCorpus || MatchesCatalog(t, availableSearchTerms!))
             .OrderBy(t => t)
             .ToList();
         var searchText = remainder.Count > 0 ? string.Join(" ", remainder) : null;
@@ -271,6 +280,22 @@ public sealed class NaturalLanguageQueryInterpreter
         {
             tokens.Remove(kw);
         }
+    }
+
+    // A remainder token counts as a real search term only if it substring-overlaps some catalog term
+    // (alias/name/id token). e.g. "qwen"/"phi" match; "inspect"/"them" match nothing and are dropped.
+    private static bool MatchesCatalog(string token, IReadOnlyList<string> catalogTerms)
+    {
+        foreach (var term in catalogTerms)
+        {
+            if (term.Contains(token, StringComparison.OrdinalIgnoreCase) ||
+                token.Contains(term, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
 

@@ -73,7 +73,7 @@ public sealed class CatalogViewState
     private readonly Dictionary<string, VariantSelectionState> _variantSelections = new(StringComparer.OrdinalIgnoreCase);
 
     public CatalogFacets Facets { get; private set; } =
-        new(Array.Empty<string>(), Array.Empty<string>(), Array.Empty<Device>());
+        new(Array.Empty<string>(), Array.Empty<string>(), Array.Empty<Device>(), Array.Empty<string>());
 
     public bool IsFilterEmpty =>
         string.IsNullOrWhiteSpace(Filter.SearchText) &&
