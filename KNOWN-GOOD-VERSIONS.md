@@ -14,6 +14,7 @@ Validated end-to-end on Apple Silicon (empty app + full FL slice: build, launch,
 | `Microsoft.AspNetCore.Components.WebView.Maui` | 11.0.0-preview.4.26230.3 | dotnet10 feed | **PROVEN** |
 | `Microsoft.Maui.DevFlow.{Agent,Blazor}` (Debug-only) | 0.25.0-dev | LocalNuGets | **PROVEN** |
 | `Microsoft.AI.Foundry.Local` | **1.2.3** (`sdk` line; stable) — pulls `.Core` 1.2.3 + ORT.Foundry 1.26.0 + ORT GenAI.Foundry 0.14.1 transitively | nuget.org | **CONFIRMED** (loaded + inference under net11) |
+| `Microsoft.Maui.Essentials.AI` (Apple Intelligence `IChatClient`) | 11.0.0-preview.2.26152.10 | dotnet10 feed | **PROVEN** (Phase 0 spike: macOS 26.5.1 / M4 Max, ~1.1s JSON extraction). Needs `<NoWarn>MAUIAI0001</NoWarn>` (experimental) + runtime guard `OperatingSystem.IsMacOSVersionAtLeast(26)`; Foundation Models async resumes on the main run loop. |
 
 ## Proven reference baseline — MAUI.Sherpa (net10, known to work)
 Use as the fallback reference and to validate the pattern. Source: [Redth/MAUI.Sherpa](https://github.com/Redth/MAUI.Sherpa) `src/MauiSherpa.MacOS`.

@@ -57,6 +57,9 @@
 
   <ItemGroup Label="M0d MEAI adapter pin">
     <PackageVersion Include="Microsoft.Extensions.AI" Version="10.0.1" />
+    <!-- On-device platform AI (Apple Intelligence Foundation Models) via IChatClient. macos26.2 asset;
+         gated at runtime with OperatingSystem.IsMacOSVersionAtLeast(26). From LocalNuGets. -->
+    <PackageVersion Include="Microsoft.Maui.Essentials.AI" Version="11.0.0-preview.2.26152.10" />
     <!-- KI-007 #3: Betalgo is FL's transitive OpenAI request-model lib. Pin it explicitly and isolate its
          use in FoundryStudio.Foundry/Internal/FoundryMessageMapper so an FL bump can't silently break us. -->
     <PackageVersion Include="Betalgo.Ranul.OpenAI" Version="9.1.0" />

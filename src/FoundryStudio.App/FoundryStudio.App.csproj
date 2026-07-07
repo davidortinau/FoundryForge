@@ -20,6 +20,9 @@
 
     <EnableDefaultCssItems>false</EnableDefaultCssItems>
     <EnableDefaultRazorItems>false</EnableDefaultRazorItems>
+
+    <!-- Opt in to the experimental Microsoft.Maui.Essentials.AI surface (Apple Intelligence IChatClient). -->
+    <NoWarn>$(NoWarn);MAUIAI0001</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -33,6 +36,7 @@
     <PackageReference Include="Microsoft.Maui.Platforms.MacOS.BlazorWebView" />
     <PackageReference Include="Microsoft.Maui.Platforms.MacOS.Essentials" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" />
+    <PackageReference Include="Microsoft.Maui.Essentials.AI" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(Configuration)' == 'Debug'">
