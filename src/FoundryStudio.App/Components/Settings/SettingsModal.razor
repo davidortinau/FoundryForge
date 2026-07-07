@@ -134,7 +134,7 @@
                                     class="smartsearch-opt @(active ? "is-active" : string.Empty) @(selectable ? string.Empty : "is-disabled")"
                                     role="radio"
                                     aria-checked="@(active ? "true" : "false")"
-                                    disabled="@(!selectable)"
+                                    aria-disabled="@(selectable ? null : "true")"
                                     data-testid="@($"smartsearch-{opt.Engine}")"
                                     @onclick="() => SelectEngineAsync(opt.Engine)">
                                 <span class="smartsearch-opt__radio" aria-hidden="true"></span>
@@ -146,7 +146,9 @@
                                         <span class="smartsearch-opt__reason">@reason</span>
                                     }
                                 </span>
-                                <span class="smartsearch-opt__status @StatusPillClass(opt.Availability.Status)">@StatusPillText(opt.Availability.Status)</span>
+                                <span class="smartsearch-opt__status @StatusPillClass(opt.Availability.Status)">
+                                    <span aria-hidden="true">@StatusGlyph(opt.Availability.Status)</span> @StatusPillText(opt.Availability.Status)
+                                </span>
                             </button>
                         }
                     </div>
@@ -361,17 +363,38 @@
         _ => "smartsearch-opt__status--off",
     };
 
+    private static string StatusGlyph(NlEngineStatus status) => status switch
+    {
+        NlEngineStatus.Available => "✓",
+        NlEngineStatus.NeedsDownload => "⤓",
+        NlEngineStatus.NeedsSignIn => "○",
+        _ => "✕",
+    };
+
+    // Descriptive states, not imperative verbs — a disabled row must not signify an action it can't perform.
     private static string StatusPillText(NlEngineStatus status) => status switch
     {
-        NlEngineStatus.Available => "✓ Available",
-        NlEngineStatus.NeedsDownload => "⤓ Download",
-        NlEngineStatus.NeedsSignIn => "⚠ Sign in",
-        _ => "✕ Unavailable",
+        NlEngineStatus.Available => "Available",
+        NlEngineStatus.NeedsDownload => "Not downloaded",
+        NlEngineStatus.NeedsSignIn => "Not signed in",
+        _ => "Unavailable",
     };
+
+    private bool IsEngineSelectable(NlSearchEngine engine)
+    {
+        if (engine is NlSearchEngine.Auto or NlSearchEngine.Keyword)
+        {
+            return true;
+        }
+
+        var availability = _engineAvailability.FirstOrDefault(a => a.Engine == engine);
+        return availability?.IsUsableNow ?? true;
+    }
 
     private async Task SelectEngineAsync(NlSearchEngine engine)
     {
-        if (_currentSettings is null || engine == _nlEngine)
+        // Guard: aria-disabled rows are still clickable in the DOM — a no-op keeps the promise honest.
+        if (_currentSettings is null || engine == _nlEngine || !IsEngineSelectable(engine))
         {
             return;
         }
