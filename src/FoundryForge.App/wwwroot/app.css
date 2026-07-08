@@ -2051,8 +2051,8 @@ details[open] > .chat-metrics-summary::before { transform: rotate(90deg); }
   height: 30px;
   padding: 0;
   border: none;
-  background: var(--fs-accent-fill);
-  color: var(--fs-text-inverse);
+  background: transparent;
+  color: var(--fs-text-tertiary);
   border-radius: var(--fs-radius-sm);
   cursor: pointer;
 }
@@ -2072,8 +2072,8 @@ details[open] > .chat-metrics-summary::before { transform: rotate(90deg); }
   stroke-linejoin: round;
 }
 .catalog-search-field__submit:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--fs-accent-fill) 88%, black);
-  color: var(--fs-text-inverse);
+  background: color-mix(in srgb, var(--fs-text) 8%, transparent);
+  color: var(--fs-text);
 }
 .catalog-search-field__submit:disabled { opacity: 0.4; cursor: default; }
 
