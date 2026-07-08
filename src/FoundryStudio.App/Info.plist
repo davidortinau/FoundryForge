@@ -16,5 +16,10 @@
     <true/>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.developer-tools</string>
+    <!-- FoundryStudio has no Bluetooth feature. A linked system framework (WebKit/Essentials) can
+         probe CoreBluetooth on macOS 26, and TCC SIGKILLs the app if this key is absent (KI-014).
+         The string is honest so that if a prompt ever surfaces it isn't misleading. -->
+    <key>NSBluetoothAlwaysUsageDescription</key>
+    <string>FoundryStudio does not use Bluetooth. This entry satisfies a macOS requirement from a linked system component.</string>
   </dict>
 </plist>

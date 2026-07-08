@@ -127,3 +127,12 @@ Ownership routing:
 - Workaround: never send `frequency_penalty`. Removed it from `InferenceParameters` (record + `ToChatOptions`), from `FoundryChatClient.ApplyInferenceSettings`, and from the Chat inference-parameter UI (honesty rule — no control for a param FL breaks on). Supported params are now temperature, max tokens, top-p only.
 - Remove when: a future FL build honors `frequency_penalty` without corrupting generation; then re-add the param + UI control after hardware re-verification.
 - Status: resolved in app (param removed); upstream FL issue to file.
+
+### KI-014 — macOS 26 TCC SIGKILL: Bluetooth access without usage description
+- Area: dotnet/macios + macOS 26 TCC (privacy) — surfaced via a linked system framework (WebKit/Essentials), NOT app code.
+- Symptom: the app is intermittently hard-killed (EXC_CRASH / SIGKILL, `namespace: TCC`) with "attempted to access privacy-sensitive data without a usage description … must contain an NSBluetoothAlwaysUsageDescription key". Reproduced across builds on 2026-07-05 and 2026-07-08 (predates the Smart Search work — not caused by it). Intermittent (~3 kills across dozens of launches); the TCC check fires on an async XPC reply thread, so the crash stack shows only the TCC killer, not the original CoreBluetooth caller.
+- Root cause: FoundryStudio has no Bluetooth feature. Some transitive native framework touches CoreBluetooth (likely WKWebView Web Bluetooth support or an Essentials probe); macOS 26 tightened TCC so a missing usage-description string is now a hard kill rather than a silent deny.
+- Workaround: added `NSBluetoothAlwaysUsageDescription` to `src/FoundryStudio.App/Info.plist` (merged via `<PartialAppManifest>`), with an honest string stating the app does not use Bluetooth. This satisfies the static TCC requirement so the async check no longer SIGKILLs.
+- Remove when: the offending framework stops probing CoreBluetooth, or we confirm the key is unnecessary on a future macOS/dotnet-macios build. If we ever genuinely add Bluetooth, replace the string with a real feature description.
+- Upstream: not yet filed (dotnet/macios — needs a minimal repro to identify the CoreBluetooth caller).
+- Status: worked around in app (Info.plist key); root-cause caller still unidentified.
