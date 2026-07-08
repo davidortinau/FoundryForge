@@ -10,7 +10,7 @@ This is the **validation/run guide** that proves M3 works end-to-end. It is not 
 
 ## Layer A — dylib-free unit tests (no hardware, CI seam gate)
 ```bash
-dotnet test tests/FoundryStudio.Tests/FoundryStudio.Tests.csproj
+dotnet test tests/FoundryForge.Tests/FoundryForge.Tests.csproj
 ```
 Expected green, covering:
 - `DiskFitHeuristicTests` — Fits / Warn / Unknown incl. null size + boundary + negative-free throws (SC-009).

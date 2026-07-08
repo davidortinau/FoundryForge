@@ -1,6 +1,6 @@
 # Contract: Catalog UI DOM surface (DevFlow verification hooks)
 
-The catalog Blazor UI exposes **stable `id` / `data-testid` attributes** so M2 can be verified via DevFlow DOM inspection (KI-001 path: `webview source` / `Runtime evaluate`) without relying on `ui screenshot`. This contract is what the DevFlow checks and any future UI tests assert against. Components live under `src/FoundryStudio.App/Components/Catalog/`.
+The catalog Blazor UI exposes **stable `id` / `data-testid` attributes** so M2 can be verified via DevFlow DOM inspection (KI-001 path: `webview source` / `Runtime evaluate`) without relying on `ui screenshot`. This contract is what the DevFlow checks and any future UI tests assert against. Components live under `src/FoundryForge.App/Components/Catalog/`.
 
 ## Page & regions
 

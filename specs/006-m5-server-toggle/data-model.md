@@ -1,12 +1,12 @@
 # Phase 1 Data Model: M5 — Local server toggle
 
-All entities below live in `FoundryStudio.Core` (FL-free, dylib-free) **except** the existing `ILocalServerService` seam (implemented in `.Foundry` by `LocalServerService`) and the FL-owned `FoundryLocalManager`. No persistent store is introduced — every entity is in-memory/display-only and reflects real service/SDK state (Constitution III/IV).
+All entities below live in `FoundryForge.Core` (FL-free, dylib-free) **except** the existing `ILocalServerService` seam (implemented in `.Foundry` by `LocalServerService`) and the FL-owned `FoundryLocalManager`. No persistent store is introduced — every entity is in-memory/display-only and reflects real service/SDK state (Constitution III/IV).
 
 ---
 
 ## `ServerState` (enum) — the honest lifecycle
 
-`src/FoundryStudio.Core/Server/ServerState.cs`
+`src/FoundryForge.Core/Server/ServerState.cs`
 
 ```csharp
 public enum ServerState
@@ -26,7 +26,7 @@ public enum ServerState
 
 ## `ServerStatus` (record) — display projection
 
-`src/FoundryStudio.Core/Server/ServerStatus.cs`
+`src/FoundryForge.Core/Server/ServerStatus.cs`
 
 ```csharp
 public sealed record ServerStatus(
@@ -50,7 +50,7 @@ public sealed record ServerStatus(
 
 ## `ServerStateMachine` — pure transition validator
 
-`src/FoundryStudio.Core/Server/ServerStateMachine.cs`
+`src/FoundryForge.Core/Server/ServerStateMachine.cs`
 
 Validates the legal lifecycle transitions; the UI/service use it to reject illegal interleavings and to map results to `ServerState`.
 
@@ -71,7 +71,7 @@ Error    → Starting | Stopped    (retry / acknowledge)
 
 ## `ServerEndpoints` — endpoint + route presentation
 
-`src/FoundryStudio.Core/Server/ServerEndpoints.cs`
+`src/FoundryForge.Core/Server/ServerEndpoints.cs`
 
 Derives the copy-friendly base URL and the documented OpenAI-compatible route list from the real `Urls` (R3). No FL dependency.
 
@@ -99,7 +99,7 @@ public sealed record ServerRoute(string Path, string Description);
 
 ## `ServerLimitations` — informational facts (never controls)
 
-`src/FoundryStudio.Core/Server/ServerLimitations.cs`
+`src/FoundryForge.Core/Server/ServerLimitations.cs`
 
 Static data describing what the FL server **is and is not** — rendered as plain text, never as toggles/fields (FR-019/020, Constitution IV).
 
@@ -121,7 +121,7 @@ public static class ServerLimitations
 
 ## `RequestActivity` (conditional) + `RequestActivityProjection`
 
-`src/FoundryStudio.Core/Server/RequestActivityProjection.cs`
+`src/FoundryForge.Core/Server/RequestActivityProjection.cs`
 
 The "render only observed activity, else omit" decision seam (R2). The activity **source** is abstracted so the projection is unit-testable without FL.
 

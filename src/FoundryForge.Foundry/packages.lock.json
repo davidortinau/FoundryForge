@@ -1,0 +1,209 @@
+{
+  "version": 2,
+  "dependencies": {
+    "net11.0": {
+      "Betalgo.Ranul.OpenAI": {
+        "type": "Direct",
+        "requested": "[9.1.0, )",
+        "resolved": "9.1.0",
+        "contentHash": "PwGW3nvCI65LQPu3EFdZfpB3Z9LNM3NTMGL6ewIrPXLxxCuMvwwJI87BAFQCvZhjILt49Me+gFu0HWQWYjtycA==",
+        "dependencies": {
+          "Microsoft.Bcl.AsyncInterfaces": "9.0.0",
+          "Microsoft.Extensions.AI.Abstractions": "9.5.0",
+          "Microsoft.Extensions.Http": "9.0.0",
+          "Microsoft.Extensions.Options.ConfigurationExtensions": "9.0.0"
+        }
+      },
+      "Microsoft.AI.Foundry.Local": {
+        "type": "Direct",
+        "requested": "[1.2.3, )",
+        "resolved": "1.2.3",
+        "contentHash": "kNVyMXybtEX+4hqZFGZsjBohPb/LCtrmkxxMKtc3cAvKaJQIkbV02scJ4q9ZzvvUdP4EeQ6msTUuGzG4cwA7hQ==",
+        "dependencies": {
+          "Betalgo.Ranul.OpenAI": "9.1.0",
+          "Microsoft.AI.Foundry.Local.Core": "1.2.3",
+          "Microsoft.Extensions.Logging": "9.0.15"
+        }
+      },
+      "Microsoft.Extensions.AI": {
+        "type": "Direct",
+        "requested": "[10.0.1, )",
+        "resolved": "10.0.1",
+        "contentHash": "1J4KAyZQsdHt0Dcq5Qsb9l+c5mtZM8F6//VwQse8iIov874aFX1E11UA+Fy/6Krkg2LCw8EtRnobeyADW4slNQ==",
+        "dependencies": {
+          "Microsoft.Extensions.AI.Abstractions": "10.0.1",
+          "System.Numerics.Tensors": "10.0.0"
+        }
+      },
+      "Microsoft.AI.Foundry.Local.Core": {
+        "type": "Transitive",
+        "resolved": "1.2.3",
+        "contentHash": "XqBSBTRqTfNXb8maQBbHtlth2gzVDJX0a8fAowOj0YGKeq4dzDxX6eUmW0fBOoHL6ijnjiNOIAatTcBgR2xjRQ==",
+        "dependencies": {
+          "Microsoft.ML.OnnxRuntime.Foundry": "1.26.0",
+          "Microsoft.ML.OnnxRuntimeGenAI.Foundry": "0.14.1"
+        }
+      },
+      "Microsoft.Bcl.AsyncInterfaces": {
+        "type": "Transitive",
+        "resolved": "9.0.0",
+        "contentHash": "owmu2Cr3IQ8yQiBleBHlGk8dSQ12oaF2e7TpzwJKEl4m84kkZJjEY1n33L67Y3zM5jPOjmmbdHjbfiL0RqcMRQ=="
+      },
+      "Microsoft.Extensions.AI.Abstractions": {
+        "type": "Transitive",
+        "resolved": "10.0.1",
+        "contentHash": "SR78I0BV7ljDovyVsZQqpt2NezdLoDtoIOCNwqAteuPc8f5PEmvDjokOQxKnTwXo/9RBKnmrzuPzbsuvueZcrg=="
+      },
+      "Microsoft.Extensions.Configuration": {
+        "type": "Transitive",
+        "resolved": "9.0.0",
+        "contentHash": "YIMO9T3JL8MeEXgVozKt2v79hquo/EFtnY0vgxmLnUvk1Rei/halI7kOWZL2RBeV9FMGzgM9LZA8CVaNwFMaNA=="
+      },
+      "Microsoft.Extensions.Configuration.Binder": {
+        "type": "Transitive",
+        "resolved": "9.0.0",
+        "contentHash": "RiScL99DcyngY9zJA2ROrri7Br8tn5N4hP4YNvGdTN/bvg1A3dwvDOxHnNZ3Im7x2SJ5i4LkX1uPiR/MfSFBLQ=="
+      },
+      "Microsoft.Extensions.DependencyInjection": {
+        "type": "Transitive",
+        "resolved": "9.0.15",
+        "contentHash": "IC2QYj9ctbepvv2etwVXFVSfVLyFuYMuHhclQeuFYyWOGOY8yHfv6GzND3Dr4u7AOhWC1p/HwbJQNCZvGdiQ0g=="
+      },
+      "Microsoft.Extensions.Diagnostics": {
+        "type": "Transitive",
+        "resolved": "9.0.0",
+        "contentHash": "0CF9ZrNw5RAlRfbZuVIvzzhP8QeWqHiUmMBU/2H7Nmit8/vwP3/SbHeEctth7D4Gz2fBnEbokPc1NU8/j/1ZLw==",
+        "dependencies": {
+          "Microsoft.Extensions.Configuration": "9.0.0",
+          "Microsoft.Extensions.Options.ConfigurationExtensions": "9.0.0"
+        }
+      },
+      "Microsoft.Extensions.Http": {
+        "type": "Transitive",
+        "resolved": "9.0.0",
+        "contentHash": "DqI4q54U4hH7bIAq9M5a/hl5Odr/KBAoaZ0dcT4OgutD8dook34CbkvAfAIzkMVjYXiL+E5ul9etwwqiX4PHGw==",
+        "dependencies": {
+          "Microsoft.Extensions.Diagnostics": "9.0.0",
+          "Microsoft.Extensions.Logging": "9.0.0"
+        }
+      },
+      "Microsoft.Extensions.Logging": {
+        "type": "Transitive",
+        "resolved": "9.0.15",
+        "contentHash": "+rAMD3QMdqEhUHmD79DZGyAivBSnLvYC5P6iBbvO6so0qYRe4rtJ0v9ABsbXkUOzYFVrN0w8+abNoNEOmbangw==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection": "9.0.15"
+        }
+      },
+      "Microsoft.Extensions.Options.ConfigurationExtensions": {
+        "type": "Transitive",
+        "resolved": "9.0.0",
+        "contentHash": "Ob3FXsXkcSMQmGZi7qP07EQ39kZpSBlTcAZLbJLdI4FIf0Jug8biv2HTavWmnTirchctPlq9bl/26CXtQRguzA==",
+        "dependencies": {
+          "Microsoft.Extensions.Configuration.Binder": "9.0.0"
+        }
+      },
+      "Microsoft.ML.OnnxRuntime.Gpu.Linux": {
+        "type": "Transitive",
+        "resolved": "1.26.0",
+        "contentHash": "TuVEsaYaiLyy5e18TFRZxyXAs7/Hxvb4LLoj13IWp2m/xPno5gSOZc+B+DD6/Pi7pMdZSgG5MmLR1IOFH4b7gg==",
+        "dependencies": {
+          "Microsoft.ML.OnnxRuntime.Managed": "1.26.0"
+        }
+      },
+      "Microsoft.ML.OnnxRuntime.Managed": {
+        "type": "Transitive",
+        "resolved": "1.26.0",
+        "contentHash": "hEmwYh5WL8n1xjNvmfdSUOqGGXAKCLtxfgUfGZRRAen9IWuSk7ieoBFH08+wlrYp1Vma80HtAirL3QLDbTeEzQ==",
+        "dependencies": {
+          "System.Numerics.Tensors": "9.0.0"
+        }
+      },
+      "Microsoft.ML.OnnxRuntimeGenAI.Managed": {
+        "type": "Transitive",
+        "resolved": "0.14.1",
+        "contentHash": "I5OCZdyAil9U9lDAYiDMtLF5teoGgU4tIIv3I3+iA3C/2iTLGiSxFTZkaYJ97RV1DgtqWNpTAo/LlvzbcfZ7mA==",
+        "dependencies": {
+          "Microsoft.Extensions.AI.Abstractions": "9.8.0"
+        }
+      },
+      "System.Numerics.Tensors": {
+        "type": "Transitive",
+        "resolved": "10.0.0",
+        "contentHash": "PxZKFx8ACAt7gRnTSDgtZFA06cimls5XL1Olv63bWF8qKL5+EQdqq3K02etW4LNut4xDoREPe9z7QYATLMkBPA=="
+      },
+      "foundryforge.core": {
+        "type": "Project",
+        "dependencies": {
+          "Markdig": "[0.44.0, )",
+          "Microsoft.Extensions.AI": "[10.0.1, )"
+        }
+      },
+      "Markdig": {
+        "type": "CentralTransitive",
+        "requested": "[0.44.0, )",
+        "resolved": "0.44.0",
+        "contentHash": "X+CYMjcUnh/yO24wOSQxVFLiGqWrrtXJ5M7toHiM1Zk4Fg9UMLN5fkaq6FSOWH+mIprsHHgDMlq3MJhmrXalhg=="
+      },
+      "Microsoft.ML.OnnxRuntime.Foundry": {
+        "type": "CentralTransitive",
+        "requested": "[1.26.0, )",
+        "resolved": "1.26.0",
+        "contentHash": "R7ojS2ixajwN6p4vSL2cABwvVU3A5nqxwuT2KzK5iMCRnn1VeqSi8qGqe5iBShAUHyZV+ZS8XQY6FLcyEuPvfA==",
+        "dependencies": {
+          "Microsoft.ML.OnnxRuntime.Gpu.Linux": "1.26.0",
+          "Microsoft.ML.OnnxRuntime.Managed": "1.26.0"
+        }
+      },
+      "Microsoft.ML.OnnxRuntimeGenAI.Foundry": {
+        "type": "CentralTransitive",
+        "requested": "[0.14.1, )",
+        "resolved": "0.14.1",
+        "contentHash": "rKIOaAyF9Q/6Wl83PbdAaSckSNcdrpbnZmzNYNMzgVLoXwcJJebtRCt72rqBxVXBeYl4irC1WIG+nBDffc04aw==",
+        "dependencies": {
+          "Microsoft.ML.OnnxRuntime.Foundry": "1.23.2",
+          "Microsoft.ML.OnnxRuntimeGenAI.Managed": "0.14.1"
+        }
+      }
+    },
+    "net11.0/osx-arm64": {
+      "Microsoft.AI.Foundry.Local.Core": {
+        "type": "Transitive",
+        "resolved": "1.2.3",
+        "contentHash": "XqBSBTRqTfNXb8maQBbHtlth2gzVDJX0a8fAowOj0YGKeq4dzDxX6eUmW0fBOoHL6ijnjiNOIAatTcBgR2xjRQ==",
+        "dependencies": {
+          "Microsoft.ML.OnnxRuntime.Foundry": "1.26.0",
+          "Microsoft.ML.OnnxRuntimeGenAI.Foundry": "0.14.1"
+        }
+      },
+      "Microsoft.ML.OnnxRuntime.Gpu.Linux": {
+        "type": "Transitive",
+        "resolved": "1.26.0",
+        "contentHash": "TuVEsaYaiLyy5e18TFRZxyXAs7/Hxvb4LLoj13IWp2m/xPno5gSOZc+B+DD6/Pi7pMdZSgG5MmLR1IOFH4b7gg==",
+        "dependencies": {
+          "Microsoft.ML.OnnxRuntime.Managed": "1.26.0"
+        }
+      },
+      "Microsoft.ML.OnnxRuntime.Foundry": {
+        "type": "CentralTransitive",
+        "requested": "[1.26.0, )",
+        "resolved": "1.26.0",
+        "contentHash": "R7ojS2ixajwN6p4vSL2cABwvVU3A5nqxwuT2KzK5iMCRnn1VeqSi8qGqe5iBShAUHyZV+ZS8XQY6FLcyEuPvfA==",
+        "dependencies": {
+          "Microsoft.ML.OnnxRuntime.Gpu.Linux": "1.26.0",
+          "Microsoft.ML.OnnxRuntime.Managed": "1.26.0"
+        }
+      },
+      "Microsoft.ML.OnnxRuntimeGenAI.Foundry": {
+        "type": "CentralTransitive",
+        "requested": "[0.14.1, )",
+        "resolved": "0.14.1",
+        "contentHash": "rKIOaAyF9Q/6Wl83PbdAaSckSNcdrpbnZmzNYNMzgVLoXwcJJebtRCt72rqBxVXBeYl4irC1WIG+nBDffc04aw==",
+        "dependencies": {
+          "Microsoft.ML.OnnxRuntime.Foundry": "1.23.2",
+          "Microsoft.ML.OnnxRuntimeGenAI.Managed": "0.14.1"
+        }
+      }
+    }
+  }
+}

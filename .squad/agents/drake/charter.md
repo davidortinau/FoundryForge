@@ -4,7 +4,7 @@ Owns the test seam and CI, defending the pinned-preview stack from silent churn.
 
 ## Project Context
 
-**Project:** FoundryStudio
+**Project:** FoundryForge
 
 ## Responsibilities
 

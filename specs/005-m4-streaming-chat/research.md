@@ -8,18 +8,18 @@ All decisions below are grounded in real code, the referenced MEAI 10.0.1 surfac
 
 **Question**: How to render assistant markdown (headings, lists, emphasis, inline + fenced code) with a per-block Copy control, dependency-light and safe against HTML injection from model output (FR-005)?
 
-**Evidence**: `Directory.Packages.props` already pins **`Markdig 0.44.0`** in the active `net11-primary` group (currently unreferenced by any project). Markdig is a pure managed CommonMark library — no native dependency — so it can be referenced by `FoundryStudio.Core` and stays unit-testable in the Core-only test project.
+**Evidence**: `Directory.Packages.props` already pins **`Markdig 0.44.0`** in the active `net11-primary` group (currently unreferenced by any project). Markdig is a pure managed CommonMark library — no native dependency — so it can be referenced by `FoundryForge.Core` and stays unit-testable in the Core-only test project.
 
-**Decision**: Add a `PackageReference` to **`FoundryStudio.Core`** for the already-pinned Markdig `0.44.0` (refresh `packages.lock.json` for Core; no new pin needed). Implement a pure Core seam `ChatMarkdown` that:
+**Decision**: Add a `PackageReference` to **`FoundryForge.Core`** for the already-pinned Markdig `0.44.0` (refresh `packages.lock.json` for Core; no new pin needed). Implement a pure Core seam `ChatMarkdown` that:
 - builds a `MarkdownPipeline` with **`.DisableHtml()`** so raw HTML in model output is encoded, not rendered (the primary injection defense, FR-005), plus `.UseAdvancedExtensions()` only as needed for tables/task-lists;
 - renders to an HTML string for the Blazor `MarkupString`;
 - **extracts each fenced code block's exact raw text + language** (via the parsed `MarkdownDocument` / `FencedCodeBlock` AST) so the UI can attach a Copy control that copies the *exact* code (not a re-serialized/HTML-escaped variant) (FR-005, US1.4).
 
-The Blazor `MessageBubble` consumes `ChatMarkdown` output; copy is wired with a tiny `wwwroot` JS clipboard helper (mirrors the existing `foundryStudioDialog` JS pattern). Streaming renders progressively: each partial update re-renders markdown for the in-progress assistant turn (incremental, real-token-driven, never a typewriter animation).
+The Blazor `MessageBubble` consumes `ChatMarkdown` output; copy is wired with a tiny `wwwroot` JS clipboard helper (mirrors the existing `foundryForgeDialog` JS pattern). Streaming renders progressively: each partial update re-renders markdown for the in-progress assistant turn (incremental, real-token-driven, never a typewriter animation).
 
 - **Rationale**: Markdig is already pinned/known-good, dependency-light, AST-accessible (clean code-block extraction), and `DisableHtml()` is the sanctioned safe-render path. Keeping it in Core makes markdown/code-block detection a dylib-free unit-testable seam (FR-038, SC-002).
 - **Alternatives rejected**: a hand-rolled minimal renderer (more code, weaker correctness, easy to mis-sanitize); rendering raw model HTML (injection risk — violates FR-005); a JS markdown lib in the WebView (moves sanitization/code-extraction out of the testable Core seam).
-- **Lock-file note**: adding the Core `PackageReference` requires a `dotnet restore` so `FoundryStudio.Core/packages.lock.json` records Markdig; call this out in the first implementation task.
+- **Lock-file note**: adding the Core `PackageReference` requires a `dotnet restore` so `FoundryForge.Core/packages.lock.json` records Markdig; call this out in the first implementation task.
 
 ---
 
@@ -86,7 +86,7 @@ Tools are supplied **per request** via `ChatOptions.Tools` (the `InferenceParame
 
 **Question**: What one or two *real*, working .NET tools ship in v1 (FR-030, Constitution IV)?
 
-**Decision**: Two genuine, deterministic, local-only `AIFunction`s (via `AIFunctionFactory.Create`), defined in `FoundryStudio.Foundry/Tools/ChatTools.cs`:
+**Decision**: Two genuine, deterministic, local-only `AIFunction`s (via `AIFunctionFactory.Create`), defined in `FoundryForge.Foundry/Tools/ChatTools.cs`:
 1. **`get_current_time`** — returns the current local date/time (ISO 8601). Real, verifiable, no network.
 2. **`get_loaded_model_info`** — returns the active model's alias + reported context length by calling `IFoundryCatalogService.ListLoadedAsync()` (real app state, genuinely useful in-conversation, and reinforces the honesty story).
 

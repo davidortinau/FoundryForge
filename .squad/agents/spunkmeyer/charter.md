@@ -4,7 +4,7 @@ Enforces review gates and product-honesty rules at the PR level.
 
 ## Project Context
 
-**Project:** FoundryStudio
+**Project:** FoundryForge
 
 ## Responsibilities
 

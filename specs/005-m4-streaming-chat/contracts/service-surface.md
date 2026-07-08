@@ -4,7 +4,7 @@ M4 is overwhelmingly UI + pure seams. It relies on the **existing** `IChatServic
 
 ---
 
-## `IChatService` (`src/FoundryStudio.Core/Abstractions/IChatService.cs`) — unchanged
+## `IChatService` (`src/FoundryForge.Core/Abstractions/IChatService.cs`) — unchanged
 
 ```csharp
 IAsyncEnumerable<ChatResponseUpdate> StreamAsync(
@@ -22,7 +22,7 @@ IAsyncEnumerable<ChatResponseUpdate> StreamAsync(
 
 ---
 
-## `ChatService` pipeline build (`src/FoundryStudio.Foundry/ChatService.cs`) — CHANGED
+## `ChatService` pipeline build (`src/FoundryForge.Foundry/ChatService.cs`) — CHANGED
 
 The constructor builds the MEAI middleware pipeline at the already-documented seam (research R4):
 ```csharp
@@ -41,7 +41,7 @@ _chatClient = adapter.AsBuilder()
 
 ---
 
-## `FoundryChatClient` options/usage/tools wiring (`src/FoundryStudio.Foundry/FoundryChatClient.cs` + `Internal/FoundryMessageMapper.cs`) — CHANGED
+## `FoundryChatClient` options/usage/tools wiring (`src/FoundryForge.Foundry/FoundryChatClient.cs` + `Internal/FoundryMessageMapper.cs`) — CHANGED
 
 Resolves the existing `TODO(M4)` at `FoundryChatClient.cs` L65.
 
@@ -60,7 +60,7 @@ Resolves the existing `TODO(M4)` at `FoundryChatClient.cs` L65.
 
 ---
 
-## `IFoundryCatalogService` (`src/FoundryStudio.Core/Abstractions/IFoundryCatalogService.cs`) — unchanged
+## `IFoundryCatalogService` (`src/FoundryForge.Core/Abstractions/IFoundryCatalogService.cs`) — unchanged
 
 | Method | M4 use | Story/FR |
 |--------|--------|----------|
@@ -73,14 +73,14 @@ The example tool `get_loaded_model_info` (Foundry layer) also calls `ListLoadedA
 
 ---
 
-## `IModelStateGate` (`src/FoundryStudio.Core/Abstractions/IModelStateGate.cs`) — unchanged
+## `IModelStateGate` (`src/FoundryForge.Core/Abstractions/IModelStateGate.cs`) — unchanged
 
 - Chat streaming takes a generation lease (`BeginGenerationAsync`) inside `FoundryChatClient` so a concurrent load/unload **drains/rejects** rather than tearing the stream (Constitution V).
 - A load rejected by an in-flight mutation throws `ModelBusyException`; the chat surface renders an honest "model busy, try again" — no hang (FR-010).
 
 ---
 
-## DI registration deltas (`src/FoundryStudio.App/MauiProgram.cs`) — CHANGED
+## DI registration deltas (`src/FoundryForge.App/MauiProgram.cs`) — CHANGED
 
 ```csharp
 // NEW — chat history store; App injects the app-data chats directory (mirrors the FileSettingsService registration)
@@ -97,7 +97,7 @@ services.AddSingleton<IReadOnlyList<AITool>>(sp => ChatTools.Create(sp));   // g
 ---
 
 ## Layering invariant (FR-034, Constitution V)
-- `FoundryStudio.App` references only `IChatService`, `IChatHistoryStore`, `IFoundryCatalogService`, `IModelStateGate`, and `FoundryStudio.Core` seams + MEAI types. **No** `using Microsoft.AI.Foundry.Local` / Betalgo anywhere in `.App`.
-- All FL/Betalgo types stay inside `FoundryStudio.Foundry` (`FoundryChatClient`, `FoundryMessageMapper`, `ChatTools`'s FL touchpoints).
+- `FoundryForge.App` references only `IChatService`, `IChatHistoryStore`, `IFoundryCatalogService`, `IModelStateGate`, and `FoundryForge.Core` seams + MEAI types. **No** `using Microsoft.AI.Foundry.Local` / Betalgo anywhere in `.App`.
+- All FL/Betalgo types stay inside `FoundryForge.Foundry` (`FoundryChatClient`, `FoundryMessageMapper`, `ChatTools`'s FL touchpoints).
 - All model mutations route through the single `IModelStateGate`; chat streams hold a generation lease.
 - Chat is **in-process** via `FoundryChatClient` — no 127.0.0.1 loopback (FR-002).

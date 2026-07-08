@@ -10,7 +10,7 @@
 
 ## Overview
 
-M0 is the linchpin go/no-go gate for FoundryStudio. Before any application code is built, the team must prove — on a real Apple Silicon Mac — that the chosen foundation actually works: that a Foundry Local-powered, Blazor Hybrid UI hosted on the maui-labs AppKit macOS head can build, load the Foundry Local native dylib chain in-process, render rich UI, and stream a real model reply.
+M0 is the linchpin go/no-go gate for FoundryForge. Before any application code is built, the team must prove — on a real Apple Silicon Mac — that the chosen foundation actually works: that a Foundry Local-powered, Blazor Hybrid UI hosted on the maui-labs AppKit macOS head can build, load the Foundry Local native dylib chain in-process, render rich UI, and stream a real model reply.
 
 M0 is staged into four sequential sub-gates (M0a → M0b → M0c → M0d). Each gate is independently demonstrable and fails cheap. A failed gate stops forward progress and triggers a recorded go/no-go decision before any later gate or milestone (M1+) begins. The deliverable of M0 is **a decision and the evidence behind it**, not shippable product features.
 
@@ -18,7 +18,7 @@ M0 is staged into four sequential sub-gates (M0a → M0b → M0c → M0d). Each 
 
 ### User Story 1 - Toolchain and stack baseline proven (M0a) (Priority: P1)
 
-As the FoundryStudio developer, I need to confirm that the pinned `net11.0-macos` AppKit + Blazor Hybrid package set builds and launches an empty, Sherpa-shaped app on my Mac, so that all later feasibility work stands on a known-good, version-pinned foundation rather than shifting preview packages.
+As the FoundryForge developer, I need to confirm that the pinned `net11.0-macos` AppKit + Blazor Hybrid package set builds and launches an empty, Sherpa-shaped app on my Mac, so that all later feasibility work stands on a known-good, version-pinned foundation rather than shifting preview packages.
 
 **Why this priority**: Every later gate depends on a buildable, launchable baseline. It is the cheapest gate and must pass first; if the net11 preview set is unstable, the team falls back to the proven net10 reference set before spending effort on native-load work.
 
@@ -34,7 +34,7 @@ As the FoundryStudio developer, I need to confirm that the pinned `net11.0-macos
 
 ### User Story 2 - Foundry Local native-load proven in a console head (M0b) (Priority: P1)
 
-As the FoundryStudio developer, I need to prove that the complete Foundry Local native dylib chain can be bundled into the macOS app package, resolve its inter-library references, load in-process, and run one inference — in a minimal console head with no UI — so that the project's single biggest unknown is resolved before any UI is built.
+As the FoundryForge developer, I need to prove that the complete Foundry Local native dylib chain can be bundled into the macOS app package, resolve its inter-library references, load in-process, and run one inference — in a minimal console head with no UI — so that the project's single biggest unknown is resolved before any UI is built.
 
 **Why this priority**: This is the project's true go/no-go. Foundry Local is a dylib *chain* (the core library plus the ONNX Runtime, ONNX Runtime GenAI, and Dawn dependencies) loaded into the process, unlike the single executable that the reference app bundles. If the chain cannot load under macOS library validation, the entire architecture is invalid and the project does not proceed.
 
@@ -51,7 +51,7 @@ As the FoundryStudio developer, I need to prove that the complete Foundry Local 
 
 ### User Story 3 - BlazorWebView capability probe (M0c) (Priority: P2)
 
-As the FoundryStudio developer, I need to confirm which web-view-hosted UI capabilities are available on the AppKit head — specifically local file intake into the page and hot reload during development — so that post-v1 features that depend on file intake are de-risked now and the inner development loop is known to work.
+As the FoundryForge developer, I need to confirm which web-view-hosted UI capabilities are available on the AppKit head — specifically local file intake into the page and hot reload during development — so that post-v1 features that depend on file intake are de-risked now and the inner development loop is known to work.
 
 **Why this priority**: Rich Blazor Hybrid UI on the AppKit head is already proven by the reference app, so core UI viability is not in question. Only two residual capabilities matter, and neither blocks the v1 lighthouse core; this gate informs post-v1 planning and developer ergonomics rather than v1 viability.
 
@@ -67,7 +67,7 @@ As the FoundryStudio developer, I need to confirm which web-view-hosted UI capab
 
 ### User Story 4 - Vertical slice and server capability check (M0d) (Priority: P1)
 
-As the FoundryStudio developer, I need an end-to-end vertical slice — an AppKit + Blazor Hybrid app that initializes Foundry Local in-process, lists the catalog, downloads and loads a small model, and streams one reply into a UI component — plus confirmation of whether the exposed local server honors tool-calling and structured-output requests, so that the full intended architecture is proven and downstream v1 scope is settled.
+As the FoundryForge developer, I need an end-to-end vertical slice — an AppKit + Blazor Hybrid app that initializes Foundry Local in-process, lists the catalog, downloads and loads a small model, and streams one reply into a UI component — plus confirmation of whether the exposed local server honors tool-calling and structured-output requests, so that the full intended architecture is proven and downstream v1 scope is settled.
 
 **Why this priority**: This is the gate that proves the actual product architecture (UI + in-process Foundry Local) works together, not just in isolation. Its server-capability check determines whether tool-calling and structured output stay in v1 scope or are descoped, so it directly bounds the v1 plan.
 

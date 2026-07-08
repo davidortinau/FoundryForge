@@ -1,10 +1,10 @@
-# FoundryStudio Constitution (draft body)
+# FoundryForge Constitution (draft body)
 
 Run `/speckit.constitution` in a Copilot session from this repo to generate `.specify/memory/constitution.md`. The slash command reads repo context (this draft, `docs/PLAN.md`, `.squad/decisions.md`, `AGENTS.md`). Use the body below as the input.
 
 ---
 
-Establish governing principles for FoundryStudio: a desktop client for Microsoft Foundry Local — a native macOS (AppKit) .NET MAUI app with a Blazor Hybrid UI, also exposing Foundry Local's local OpenAI server.
+Establish governing principles for FoundryForge: a desktop client for Microsoft Foundry Local — a native macOS (AppKit) .NET MAUI app with a Blazor Hybrid UI, also exposing Foundry Local's local OpenAI server.
 
 OUTCOMES (engineering culture):
 - Always retry and fix the root cause — no band-aids, no silent timeouts. Surface the diagnosed cause, not a generic failure.

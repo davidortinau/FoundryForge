@@ -2,7 +2,7 @@
 Sync Impact Report
 ==================
 Version change: TEMPLATE → 1.0.0
-Bump rationale: Initial ratification of the FoundryStudio constitution from
+Bump rationale: Initial ratification of the FoundryForge constitution from
   docs/constitution-draft.md. All template placeholders replaced with concrete
   governing principles; first formal version.
 
@@ -27,9 +27,9 @@ Templates requiring updates:
 Follow-up TODOs: none
 -->
 
-# FoundryStudio Constitution
+# FoundryForge Constitution
 
-FoundryStudio is a desktop client for Microsoft Foundry Local: a native macOS (AppKit)
+FoundryForge is a desktop client for Microsoft Foundry Local: a native macOS (AppKit)
 .NET MAUI app with a Blazor Hybrid UI that also exposes Foundry Local's local
 OpenAI-compatible server. These principles are non-negotiable and govern every feature.
 
@@ -83,7 +83,7 @@ Rationale: scoped diffs are reviewable and revertible; self-approval defeats rev
 
 The model cache (multi-GB), settings, and chat history are user data. They MUST NOT be wiped,
 dropped, uninstalled, or rewritten without explicit per-turn consent; back up before any
-destructive operation and prefer a settings toggle over deletion. FoundryStudio MUST NOT ship
+destructive operation and prefer a settings toggle over deletion. FoundryForge MUST NOT ship
 UI for capabilities Foundry Local does not have — server auth, LAN bind, GGUF import,
 `top_k`/`min_p`/`seed`, speculative decoding. Surface such limits honestly; never fake them.
 

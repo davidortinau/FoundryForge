@@ -7,19 +7,19 @@
 ## Summary
 
 M1 replaces the throwaway M0 spikes (`spikes/m0a-baseline-app`, `spikes/m0b-fl-console`,
-`spikes/m0d-vertical-slice`) with the **real, non-throwaway FoundryStudio solution** and the
+`spikes/m0d-vertical-slice`) with the **real, non-throwaway FoundryForge solution** and the
 Foundry Local service layer that M2–M5 build on. It ships **no end-user "wow" feature**; its
 value is a correct, tested, DI-wired foundation.
 
 Technical approach, grounded in the proven M0 work (DEC-004/005, M0a–M0d gates, the
 `spikes/m0d-vertical-slice` reference):
 
-- Scaffold a clean multi-project solution — an FL-free **`FoundryStudio.Core`** (interfaces,
+- Scaffold a clean multi-project solution — an FL-free **`FoundryForge.Core`** (interfaces,
   DTO records, pure-logic seams, the model-state concurrency-gate primitive), an FL-bound
-  **`FoundryStudio.Foundry`** (the singleton lifecycle manager wrapper, ready-gate, catalog
-  service, in-process `IChatClient` adapter, post-v1 stubs), the **`FoundryStudio.App`** AppKit
+  **`FoundryForge.Foundry`** (the singleton lifecycle manager wrapper, ready-gate, catalog
+  service, in-process `IChatClient` adapter, post-v1 stubs), the **`FoundryForge.App`** AppKit
   head (`net10.0-macos`, `Microsoft.NET.Sdk.Razor`, Blazor Hybrid UI), and an
-  **`FoundryStudio.Tests`** xUnit project that references **only Core** so its pure-logic seam
+  **`FoundryForge.Tests`** xUnit project that references **only Core** so its pure-logic seam
   tests need no native dylib.
 - Promote the M0d `FoundryReadyService` (`Lazy<Task<FoundryLocalManager>>` + `Task.Run`,
   no `.Result`/`.Wait()`) into the real ready-gate every consumer awaits, behind an app-level
@@ -67,7 +67,7 @@ separate T004 chore.
 multi-GB Foundry Local model cache is protected user data referenced by the cache-directory
 setting; never wiped/overwritten without explicit per-action consent.
 
-**Testing**: xUnit (`FoundryStudio.Tests`) over the pure-logic seams in `FoundryStudio.Core`
+**Testing**: xUnit (`FoundryForge.Tests`) over the pure-logic seams in `FoundryForge.Core`
 (settings model + serialization/merge-with-defaults, catalog filtering predicates, RAM-fit
 heuristic, concurrency-gate primitive). No native Foundry Local dylib required — the test
 project references **only** the FL-free Core project, and the native-bundling MSBuild target
@@ -113,7 +113,7 @@ pinned set advances under the normal "re-run the M0 gate" rule (Constitution V).
 
 *GATE: Must pass before Phase 0 research. Re-checked after Phase 1 design — still PASS.*
 
-Evaluated against FoundryStudio Constitution v1.0.0 (all five principles). **Result: PASS** on
+Evaluated against FoundryForge Constitution v1.0.0 (all five principles). **Result: PASS** on
 all five, both pre-Phase-0 and post-Phase-1. No deviations; Complexity Tracking is empty.
 
 | Principle | Assessment | Verdict |
@@ -163,8 +163,8 @@ specs/002-m1-app-shell-foundation/
 
 ```text
 src/
-├── FoundryStudio.Core/                 # net10.0 — NO Foundry Local SDK reference
-│   ├── FoundryStudio.Core.csproj       #   (keeps the pure-logic test seam dylib-free)
+├── FoundryForge.Core/                 # net10.0 — NO Foundry Local SDK reference
+│   ├── FoundryForge.Core.csproj       #   (keeps the pure-logic test seam dylib-free)
 │   ├── Abstractions/                   # interfaces every consumer/test codes against
 │   │   ├── IFoundryLifecycle.cs        #   ready-gate contract (ReadyAsync / GetManager)
 │   │   ├── IModelStateGate.cs          #   load/unload concurrency-gate contract
@@ -184,8 +184,8 @@ src/
 │       ├── CatalogFilter.cs            # pure filtering predicates (device/task/provider)
 │       └── RamFitHeuristic.cs          # pure "model size vs free RAM + margin" logic
 │
-├── FoundryStudio.Foundry/              # net10.0 — references Core + FL SDK + MEAI
-│   ├── FoundryStudio.Foundry.csproj
+├── FoundryForge.Foundry/              # net10.0 — references Core + FL SDK + MEAI
+│   ├── FoundryForge.Foundry.csproj
 │   ├── FoundryLifecycle.cs             # singleton manager wrapper + ReadyAsync (Task.Run,
 │   │                                   #   Lazy<Task<FoundryLocalManager>>, IAsyncDisposable)
 │   ├── FoundryCatalogService.cs        # wraps ICatalog/IModel; load/unload via IModelStateGate
@@ -197,8 +197,8 @@ src/
 │       ├── StubTranscriptionService.cs
 │       └── StubLocalServerService.cs
 │
-└── FoundryStudio.App/                  # net10.0-macos — Microsoft.NET.Sdk.Razor, AppKit head
-    ├── FoundryStudio.App.csproj        # references Core + Foundry; imports the bundle target
+└── FoundryForge.App/                  # net10.0-macos — Microsoft.NET.Sdk.Razor, AppKit head
+    ├── FoundryForge.App.csproj        # references Core + Foundry; imports the bundle target
     ├── Program.cs                      # NSApplication bootstrap (from M0d)
     ├── App.cs                          # MAUI Application + BlazorHostPage window
     ├── BlazorHostPage.cs
@@ -215,8 +215,8 @@ src/
     └── Platforms/macOS/                # Entitlements reference (../../Entitlements.Debug.plist)
 
 tests/
-└── FoundryStudio.Tests/               # net10.0 — references Core ONLY (no FL dylib)
-    ├── FoundryStudio.Tests.csproj
+└── FoundryForge.Tests/               # net10.0 — references Core ONLY (no FL dylib)
+    ├── FoundryForge.Tests.csproj
     ├── SettingsDocumentTests.cs        # defaults, round-trip, never-wipe-without-consent
     ├── CatalogFilterTests.cs           # filtering predicates
     ├── RamFitHeuristicTests.cs         # size-vs-free-RAM-with-margin
@@ -224,19 +224,19 @@ tests/
 
 # Reused as-is from M0 (repository root):
 Directory.Packages.props                # central pinned versions (source: KNOWN-GOOD-VERSIONS.md)
-build/BundleFoundryLocalNative.targets  # imported by FoundryStudio.App.csproj only
-Entitlements.Debug.plist                # referenced by FoundryStudio.App (CodesignEntitlements)
-FoundryStudio.sln                       # new in M1 — ties the four projects together
+build/BundleFoundryLocalNative.targets  # imported by FoundryForge.App.csproj only
+Entitlements.Debug.plist                # referenced by FoundryForge.App (CodesignEntitlements)
+FoundryForge.sln                       # new in M1 — ties the four projects together
 .github/workflows/ci.yml                # new in M1 — clean-checkout restore+build+test on pins
 ```
 
-**Structure Decision**: A four-project solution. The split of **`FoundryStudio.Core`** (no FL
-SDK reference) from **`FoundryStudio.Foundry`** (FL-bound) is deliberate and serves a concrete
+**Structure Decision**: A four-project solution. The split of **`FoundryForge.Core`** (no FL
+SDK reference) from **`FoundryForge.Foundry`** (FL-bound) is deliberate and serves a concrete
 spec requirement, not gratuitous layering: it guarantees the pure-logic seam tests
-(`FoundryStudio.Tests` → Core only) run **with no native Foundry Local dylib present**
+(`FoundryForge.Tests` → Core only) run **with no native Foundry Local dylib present**
 (FR-016, SC-008, Edge case "Unit tests run with no native dylib present"). The native-bundling
 MSBuild target (`build/BundleFoundryLocalNative.targets`) is imported **only** by the
-`-macos` head, so neither Core nor Tests ever bundles or loads native payload. `FoundryStudio.App`
+`-macos` head, so neither Core nor Tests ever bundles or loads native payload. `FoundryForge.App`
 is the AppKit host carrying the Razor UI (Blazor Hybrid in-process, per DEC-004), reusing the
 M0-proven `Directory.Packages.props`, bundle target, and `Entitlements.Debug.plist` unchanged.
 This project count is **not** a Constitution violation (no Complexity Tracking entry required);

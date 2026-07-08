@@ -8,9 +8,9 @@
 
 M5 activates the sidebar **Server** nav (today a disabled `nav-server` "Coming soon" `<button>` in `Sidebar.razor`) and ships the v1 lighthouse **"wow"**: a single user-facing toggle that turns on Foundry Local's **OpenAI-compatible HTTP server for EXTERNAL tools** (curl, Open WebUI, any OpenAI-SDK client) — with the delight being **transparency** (DESIGN §10 "Forge Lit"): a copper pilot-light dot, the **exact bound URL(s)** read back from `Urls`, a copy affordance, the OpenAI-compatible route list, the scope statement, and the honest limitations. The server is for external tools only; **in-app chat (M4) does not and will not route through it** — it stays on the in-process `IChatService`/`FoundryChatClient` adapter and behaves identically whether the server is stopped, starting, or running.
 
-M5 implements the existing honest stub `ILocalServerService` (`src/FoundryStudio.Core/PostV1/StubLocalServerService.cs` — today `IsSupported => false`, Start/Stop throw `"wired in M5"`) for real, in the **Foundry layer**, over the confirmed FL SDK surface: `FoundryLocalManager.StartWebServiceAsync(CancellationToken?)`, `StopWebServiceAsync(CancellationToken?)`, and `string[] Urls` (the **actual** bound URLs — there is **no port parameter**). The impl wraps the **single** `FoundryLocalManager` obtained via `FoundryLifecycle.GetManagerTypedAsync()` (the same `ReadyAsync()`-gated singleton backing the catalog and chat — `FoundryCatalogService.cs` L160-163 is the precedent) and **coordinates start/stop with the existing M1 `IModelStateGate`** so a server toggle never races an in-flight load/unload on shared native state. No `.Result`/`.Wait()` anywhere (KI-005).
+M5 implements the existing honest stub `ILocalServerService` (`src/FoundryForge.Core/PostV1/StubLocalServerService.cs` — today `IsSupported => false`, Start/Stop throw `"wired in M5"`) for real, in the **Foundry layer**, over the confirmed FL SDK surface: `FoundryLocalManager.StartWebServiceAsync(CancellationToken?)`, `StopWebServiceAsync(CancellationToken?)`, and `string[] Urls` (the **actual** bound URLs — there is **no port parameter**). The impl wraps the **single** `FoundryLocalManager` obtained via `FoundryLifecycle.GetManagerTypedAsync()` (the same `ReadyAsync()`-gated singleton backing the catalog and chat — `FoundryCatalogService.cs` L160-163 is the precedent) and **coordinates start/stop with the existing M1 `IModelStateGate`** so a server toggle never races an in-flight load/unload on shared native state. No `.Result`/`.Wait()` anywhere (KI-005).
 
-**Technical approach**: M5 is a **UI + pure-logic-seam** milestone with exactly **one** new FL-bound piece. New work lands as: (a) **Core pure seams** (FL-free, dylib-free, unit-tested in `tests/FoundryStudio.Tests`) — a `ServerState` enum + `ServerStatus` record, a `ServerStateMachine` pure transition validator, a `ServerEndpoints` helper (derive the copy-friendly base URL + the documented OpenAI-compatible route list from `Urls`), a `ServerLimitations` constant data set (localhost-only / no-auth / no-LAN as **data**, never controls), and a `RequestActivityProjection` "render only observed activity, else omit" decision seam over a fake activity source; (b) **Foundry-layer wiring** — one new class `LocalServerService : ILocalServerService` that awaits `ReadyAsync()`, calls `StartWebServiceAsync`/`StopWebServiceAsync` on the shared manager, reads `Urls` back, and serializes start/stop through `IModelStateGate.MutateAsync(...)` — the **only** new FL-bound code; (c) **Blazor UI** in `.App` (consuming **only** `ILocalServerService` + the Core seams + M1 lifecycle/gate — **never** FL types) — a `Server.razor` "Forge Lit" panel behind an activated `nav-server`, with start/stop toggle, copper pilot-light tied to real running state, exact bound URL + copy, route list, scope + limitations text, and a request-log region that is honestly omitted if FL exposes no observable activity. Verification follows Constitution II: dylib-free unit tests for every seam **plus** a real Apple-Silicon DevFlow run whose defining proof is an **external** `curl http://127.0.0.1:<port>/v1/chat/completions` returning a real response from the loaded model, and a connection-refused check after Stop.
+**Technical approach**: M5 is a **UI + pure-logic-seam** milestone with exactly **one** new FL-bound piece. New work lands as: (a) **Core pure seams** (FL-free, dylib-free, unit-tested in `tests/FoundryForge.Tests`) — a `ServerState` enum + `ServerStatus` record, a `ServerStateMachine` pure transition validator, a `ServerEndpoints` helper (derive the copy-friendly base URL + the documented OpenAI-compatible route list from `Urls`), a `ServerLimitations` constant data set (localhost-only / no-auth / no-LAN as **data**, never controls), and a `RequestActivityProjection` "render only observed activity, else omit" decision seam over a fake activity source; (b) **Foundry-layer wiring** — one new class `LocalServerService : ILocalServerService` that awaits `ReadyAsync()`, calls `StartWebServiceAsync`/`StopWebServiceAsync` on the shared manager, reads `Urls` back, and serializes start/stop through `IModelStateGate.MutateAsync(...)` — the **only** new FL-bound code; (c) **Blazor UI** in `.App` (consuming **only** `ILocalServerService` + the Core seams + M1 lifecycle/gate — **never** FL types) — a `Server.razor` "Forge Lit" panel behind an activated `nav-server`, with start/stop toggle, copper pilot-light tied to real running state, exact bound URL + copy, route list, scope + limitations text, and a request-log region that is honestly omitted if FL exposes no observable activity. Verification follows Constitution II: dylib-free unit tests for every seam **plus** a real Apple-Silicon DevFlow run whose defining proof is an **external** `curl http://127.0.0.1:<port>/v1/chat/completions` returning a real response from the loaded model, and a connection-refused check after Stop.
 
 ## Technical Context
 
@@ -20,7 +20,7 @@ M5 implements the existing honest stub `ILocalServerService` (`src/FoundryStudio
 
 **Storage**: **None new.** M5 introduces no persistent store. Server lifecycle is in-memory/native only; on next launch the panel starts in the honest **stopped** state (FR-018). No change to the model cache, `settings.json`, or chat history.
 
-**Testing**: xUnit in `tests/FoundryStudio.Tests` (Core-only, dylib-free) — unit tests for the state machine, `ServerEndpoints` (copy payload + route derivation), `ServerLimitations` data, the `RequestActivityProjection` (empty source ⇒ no log), and the gate-coordination/busy-mapping seam over a fake gate. MAUI DevFlow DOM inspection on real Apple Silicon for UI verification + the **external `curl`** out-of-process integration proof (KI-001 sanctioned evidence path; the curl is the SC-004/SC-011 external proof).
+**Testing**: xUnit in `tests/FoundryForge.Tests` (Core-only, dylib-free) — unit tests for the state machine, `ServerEndpoints` (copy payload + route derivation), `ServerLimitations` data, the `RequestActivityProjection` (empty source ⇒ no log), and the gate-coordination/busy-mapping seam over a fake gate. MAUI DevFlow DOM inspection on real Apple Silicon for UI verification + the **external `curl`** out-of-process integration proof (KI-001 sanctioned evidence path; the curl is the SC-004/SC-011 external proof).
 
 **Target Platform**: macOS / Apple Silicon only. No iOS/Android/Mac Catalyst. FL server is localhost-only.
 
@@ -66,7 +66,7 @@ specs/006-m5-server-toggle/
 ### Source Code (repository root) — extend the existing 4 projects, no new projects
 
 ```text
-src/FoundryStudio.Core/                       # FL-free, dylib-free (no new package references)
+src/FoundryForge.Core/                       # FL-free, dylib-free (no new package references)
 ├── Abstractions/
 │   └── ILocalServerService.cs     # (existing; unchanged — IsSupported / Urls / StartAsync / StopAsync seam)
 ├── Server/                         # NEW folder — pure server-presentation seams
@@ -80,7 +80,7 @@ src/FoundryStudio.Core/                       # FL-free, dylib-free (no new pack
 │   └── StubLocalServerService.cs  # (existing; retained as the non-macOS/default honest stub — IsSupported false)
 └── Concurrency/ModelStateGate.cs  # (existing; reused — server start/stop coordinate via IModelStateGate)
 
-src/FoundryStudio.Foundry/                    # FL behind the seam — the ONLY new FL-bound piece
+src/FoundryForge.Foundry/                    # FL behind the seam — the ONLY new FL-bound piece
 └── LocalServerService.cs          # NEW — ILocalServerService over the shared FoundryLocalManager
                                    #   • ctor(FoundryLifecycle, IModelStateGate, ILogger)
                                    #   • IsSupported (real platform/SDK capability)
@@ -88,7 +88,7 @@ src/FoundryStudio.Foundry/                    # FL behind the seam — the ONLY 
                                    #   • StopAsync:  await ReadyAsync → gate-coordinate → StopWebServiceAsync
                                    #   • no second manager; no .Result/.Wait()
 
-src/FoundryStudio.App/
+src/FoundryForge.App/
 ├── Components/
 │   ├── Layout/Sidebar.razor       # CHANGED — activate nav-server (disabled <button> → NavLink href="/server"); remove "Coming soon"
 │   ├── Pages/Server.razor         # NEW — route /server; orchestrates the "Forge Lit" panel; toggle + honest status
@@ -101,7 +101,7 @@ src/FoundryStudio.App/
 ├── MauiProgram.cs                 # CHANGED — swap AddSingleton<ILocalServerService, StubLocalServerService>() → real LocalServerService
 └── wwwroot/                       # CHANGED — copy-to-clipboard JS + pilot-light ember styles (Copper accent, AA, both themes)
 
-tests/FoundryStudio.Tests/         # Core-only, dylib-free
+tests/FoundryForge.Tests/         # Core-only, dylib-free
 ├── ServerStateMachineTests.cs         # NEW — valid/invalid transitions; pilot-light-lit ⇔ Running only (SC-006/SC-007)
 ├── ServerEndpointsTests.cs            # NEW — copy payload from Urls; multi-URL; documented route list; empty Urls ⇒ no live endpoint (SC-001/003)
 ├── ServerLimitationsTests.cs          # NEW — limitations present as data; zero capability controls implied (SC-002/008)
@@ -109,7 +109,7 @@ tests/FoundryStudio.Tests/         # Core-only, dylib-free
 └── ServerGateCoordinationTests.cs     # NEW — start/stop serialize via fake IModelStateGate; ModelBusyException → busy-state; no blocking (SC-007)
 ```
 
-**Structure Decision**: Single MAUI Blazor Hybrid desktop solution; extend the four existing projects (`FoundryStudio.App`, `.Core`, `.Foundry`, `.Tests`). All pure server-presentation logic lives in `.Core` (FL-free, dylib-free, unit-tested) in a new `Server/` folder, mirroring the M1–M4 seam precedent. The **single** FL-bound class `LocalServerService` lives in `.Foundry` and follows the established `FoundryCatalogService` pattern (manager via `FoundryLifecycle.GetManagerTypedAsync`, mutation coordination via `IModelStateGate`). The server UI in `.App` consumes only `ILocalServerService` + the M1 lifecycle/gate seams + the new Core seams — never the FL SDK (Constitution V / DEC-004 layering). The existing `StubLocalServerService` is **retained** as the honest non-macOS/default registration; the macOS head swaps to the real impl in `MauiProgram.cs`. No new projects, no new packages, no persistent store (Complexity Tracking not triggered).
+**Structure Decision**: Single MAUI Blazor Hybrid desktop solution; extend the four existing projects (`FoundryForge.App`, `.Core`, `.Foundry`, `.Tests`). All pure server-presentation logic lives in `.Core` (FL-free, dylib-free, unit-tested) in a new `Server/` folder, mirroring the M1–M4 seam precedent. The **single** FL-bound class `LocalServerService` lives in `.Foundry` and follows the established `FoundryCatalogService` pattern (manager via `FoundryLifecycle.GetManagerTypedAsync`, mutation coordination via `IModelStateGate`). The server UI in `.App` consumes only `ILocalServerService` + the M1 lifecycle/gate seams + the new Core seams — never the FL SDK (Constitution V / DEC-004 layering). The existing `StubLocalServerService` is **retained** as the honest non-macOS/default registration; the macOS head swaps to the real impl in `MauiProgram.cs`. No new projects, no new packages, no persistent store (Complexity Tracking not triggered).
 
 ## Complexity Tracking
 

@@ -4,7 +4,7 @@ Owns plan and spec evolution and the M0 feasibility gate go/no-go; sets phase ex
 
 ## Project Context
 
-**Project:** FoundryStudio
+**Project:** FoundryForge
 
 ## Responsibilities
 

@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "M1 establishes the production app skeleton for FoundryStudio (native macOS AppKit head + Blazor Hybrid). It replaces the disposable M0 spikes with the real solution structure and the Foundry Local service layer that every later milestone depends on. M1 delivers no end-user 'wow' feature; its value is a correct, tested, DI-wired foundation."
+**Input**: User description: "M1 establishes the production app skeleton for FoundryForge (native macOS AppKit head + Blazor Hybrid). It replaces the disposable M0 spikes with the real solution structure and the Foundry Local service layer that every later milestone depends on. M1 delivers no end-user 'wow' feature; its value is a correct, tested, DI-wired foundation."
 
 ## Overview
 
@@ -24,7 +24,7 @@ No outstanding clarifications. All open choices were resolved using reasonable d
 
 ### User Story 1 - Ready-gated Foundry Local lifecycle manager + DI so the app launches and reaches a ready state (Priority: P1)
 
-As the FoundryStudio developer, I need the real app to start, wire a single Foundry Local lifecycle service through dependency injection, run its heavy native initialization off the UI thread behind a ready-gate that every consumer awaits, and reach a well-defined "ready" state without freezing or deadlocking the UI — so that every later milestone can depend on a correctly initialized Foundry Local instance.
+As the FoundryForge developer, I need the real app to start, wire a single Foundry Local lifecycle service through dependency injection, run its heavy native initialization off the UI thread behind a ready-gate that every consumer awaits, and reach a well-defined "ready" state without freezing or deadlocking the UI — so that every later milestone can depend on a correctly initialized Foundry Local instance.
 
 **Why this priority**: Nothing else in the app can function until Foundry Local is initialized exactly once, off the dispatcher thread, behind a gate that downstream services await. This is the spine of the whole architecture; getting it wrong reintroduces the UI-freeze and deadlock failure modes M0 diagnosed (KI-005). It is the first thing that must exist and be testable.
 
@@ -42,7 +42,7 @@ As the FoundryStudio developer, I need the real app to start, wire a single Foun
 
 ### User Story 2 - Singleton load/unload concurrency gate (Priority: P1)
 
-As the FoundryStudio developer, I need a single Foundry Local manager — the one that backs both the in-process UI path and the later externally-exposed server — to enforce a load/unload concurrency contract that drains or rejects in-flight generations before mutating model state, so that a model is never loaded or unloaded while a generation is actively streaming on it (which would tear the generation or crash natively).
+As the FoundryForge developer, I need a single Foundry Local manager — the one that backs both the in-process UI path and the later externally-exposed server — to enforce a load/unload concurrency contract that drains or rejects in-flight generations before mutating model state, so that a model is never loaded or unloaded while a generation is actively streaming on it (which would tear the generation or crash natively).
 
 **Why this priority**: There is exactly one Foundry Local manager backing two surfaces (UI now, exposed server in M5). A load/unload that races an active stream is a native crash, not a recoverable error. The plan and constitution require this contract to be designed and implemented in M1, not discovered in M5. It is pure-logic concurrency behavior that can be built and tested independently of any UI.
 
@@ -60,7 +60,7 @@ As the FoundryStudio developer, I need a single Foundry Local manager — the on
 
 ### User Story 3 - Test project + CI seam from day one (Priority: P1)
 
-As the FoundryStudio developer, I need a unit-test project that covers the pure-logic seams behind the Foundry Local service interfaces (settings, catalog filtering, the RAM-fit heuristic) without requiring the native dylib, plus one CI job that restores and builds the whole solution on a clean checkout against the pinned known-good versions — so that the multi-preview stack is defended against silent churn and the foundation's logic is verifiable on every change.
+As the FoundryForge developer, I need a unit-test project that covers the pure-logic seams behind the Foundry Local service interfaces (settings, catalog filtering, the RAM-fit heuristic) without requiring the native dylib, plus one CI job that restores and builds the whole solution on a clean checkout against the pinned known-good versions — so that the multi-preview stack is defended against silent churn and the foundation's logic is verifiable on every change.
 
 **Why this priority**: The constitution forbids an engineer ever seeing a red CI X, and the plan mandates tests + CI "from day one." A pinned four-preview stack drifts silently without a clean-checkout build gate. The testable seams must be designed to need no native dylib so they run anywhere, including CI. This is P1 because it is the guardrail that keeps the foundation honest from the first commit.
 
@@ -77,7 +77,7 @@ As the FoundryStudio developer, I need a unit-test project that covers the pure-
 
 ### User Story 4 - Catalog service + in-process chat-client adapter (Priority: P2)
 
-As the FoundryStudio developer, I need a catalog service that wraps Foundry Local's catalog and model operations (browse, download, load, unload, delete, variants, and the cached/loaded lists) behind a stable interface, plus a thin in-process chat-client adapter over the Foundry Local SDK (no loopback socket) — so that M2's catalog UI and M4's chat UI build against stable seams instead of the SDK directly, and chat composes standard middleware without a network hop.
+As the FoundryForge developer, I need a catalog service that wraps Foundry Local's catalog and model operations (browse, download, load, unload, delete, variants, and the cached/loaded lists) behind a stable interface, plus a thin in-process chat-client adapter over the Foundry Local SDK (no loopback socket) — so that M2's catalog UI and M4's chat UI build against stable seams instead of the SDK directly, and chat composes standard middleware without a network hop.
 
 **Why this priority**: These are the primary service seams M2 and M4 consume, but they depend on Story 1's ready-gate and Story 2's concurrency gate existing first. The catalog service and chat adapter are the "real work" surfaces; defining them now lets later milestones move fast. They are P2 because the foundation (Stories 1–3) must exist before these seams are meaningful.
 
@@ -95,7 +95,7 @@ As the FoundryStudio developer, I need a catalog service that wraps Foundry Loca
 
 ### User Story 5 - App settings / persistence store (Priority: P2)
 
-As the FoundryStudio user, I need my app settings (model cache directory, default model, theme) persisted across launches, fully user-editable, and never wiped or rewritten without my consent — so that my configuration and the multi-gigabyte model cache it points at are treated as protected user data.
+As the FoundryForge user, I need my app settings (model cache directory, default model, theme) persisted across launches, fully user-editable, and never wiped or rewritten without my consent — so that my configuration and the multi-gigabyte model cache it points at are treated as protected user data.
 
 **Why this priority**: Settings are needed by several later milestones (cache directory for M3, default model and theme for M4/M6), and the constitution's data-preservation rule makes "never wiped without consent" non-negotiable. It is P2 because the core lifecycle/concurrency/CI foundation must land first, but it is a small, well-bounded seam that unblocks later work.
 

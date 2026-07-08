@@ -1,7 +1,7 @@
 # Contract: `IFoundryCatalogService` (catalog/model operations)
 
-**Project**: `FoundryStudio.Core/Abstractions` (interface) · impl
-`FoundryStudio.Foundry/FoundryCatalogService.cs`
+**Project**: `FoundryForge.Core/Abstractions` (interface) · impl
+`FoundryForge.Foundry/FoundryCatalogService.cs`
 **Satisfies**: FR-011 · SC-005 · PLAN.md lines 57, 99–101 · DEC-004
 
 Wraps Foundry Local's catalog/model operations behind a stable, FL-free interface so M2's
@@ -10,9 +10,9 @@ catalog UI and M3's management UI code against a seam, not the SDK. Load/unload 
 `ModelVariant` DTOs so filtering/heuristics stay pure (research R6).
 
 ```csharp
-namespace FoundryStudio.Core.Abstractions;
+namespace FoundryForge.Core.Abstractions;
 
-using FoundryStudio.Core.Models;
+using FoundryForge.Core.Models;
 
 public interface IFoundryCatalogService
 {

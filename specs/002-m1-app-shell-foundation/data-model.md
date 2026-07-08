@@ -6,7 +6,7 @@ domain entities and DTOs** that define the service-layer seams. FL SDK types
 the **FL-free shapes** the app, tests, and later milestones code against. Persisted/protected
 user data is flagged.
 
-Conventions: entities live in `FoundryStudio.Core` unless noted. "FL-free" = no
+Conventions: entities live in `FoundryForge.Core` unless noted. "FL-free" = no
 `Microsoft.AI.Foundry.Local` reference, so it is unit-testable with no native dylib (FR-016,
 SC-008).
 
@@ -24,7 +24,7 @@ The user-editable, auditable configuration. Located in `Core/Models`.
 | SchemaVersion | int | For non-destructive forward migration. |
 
 **Persistence**: JSON document on disk (human-readable, user-editable) keyed/anchored via MAUI
-Essentials `Preferences`. Bound by `FoundryStudio.Foundry.PreferencesSettingsService`; pure
+Essentials `Preferences`. Bound by `FoundryForge.Foundry.PreferencesSettingsService`; pure
 shape + (de)serialization + merge-with-defaults in `Core/Settings/SettingsDocument`.
 
 **Validation / rules**:
@@ -224,7 +224,7 @@ FoundryLifecycle (1 singleton) ── wraps ──> FoundryLocalManager (FL, 1)
         ├── PreferencesSettingsService ──persists──> AppSettings (protected user data)
         └── Stub{Embedding,Transcription,LocalServer}Service (honest not-implemented)
 
-FoundryStudio.Tests ── references ──> FoundryStudio.Core ONLY
+FoundryForge.Tests ── references ──> FoundryForge.Core ONLY
         └── covers: SettingsDocument, CatalogFilter, RamFitHeuristic, ModelStateGate
             (all FL-free → no native dylib needed)
 ```

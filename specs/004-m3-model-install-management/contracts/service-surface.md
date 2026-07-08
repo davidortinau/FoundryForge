@@ -4,7 +4,7 @@ M3 is overwhelmingly UI + pure seams. It relies on the **existing** `IFoundryCat
 
 ---
 
-## `IFoundryCatalogService` (`src/FoundryStudio.Core/Abstractions/IFoundryCatalogService.cs`)
+## `IFoundryCatalogService` (`src/FoundryForge.Core/Abstractions/IFoundryCatalogService.cs`)
 
 ### Relied on unchanged
 | Method | M3 use | Story/FR |
@@ -35,7 +35,7 @@ Task LoadAsync(string alias, string? variantId = null, CancellationToken ct = de
 
 ---
 
-## `ISettingsService` (`src/FoundryStudio.Core/Abstractions/ISettingsService.cs`) — unchanged
+## `ISettingsService` (`src/FoundryForge.Core/Abstractions/ISettingsService.cs`) — unchanged
 
 | Method | M3 use | FR |
 |--------|--------|----|
@@ -51,7 +51,7 @@ Task LoadAsync(string alias, string? variantId = null, CancellationToken ct = de
 
 ---
 
-## Foundry-layer changes (`src/FoundryStudio.Foundry/FoundryCatalogService.cs`)
+## Foundry-layer changes (`src/FoundryForge.Foundry/FoundryCatalogService.cs`)
 
 | Change | Detail | FR |
 |--------|--------|----|
@@ -63,6 +63,6 @@ Task LoadAsync(string alias, string? variantId = null, CancellationToken ct = de
 ---
 
 ## Layering invariant (FR-031, Constitution V)
-- `FoundryStudio.App` references only `IFoundryCatalogService`, `ISettingsService`, and `FoundryStudio.Core` seams. **No** `using Microsoft.AI.Foundry.Local` anywhere in `.App`.
-- All FL types (`IModel`, `ICatalog`, `SelectVariant`) stay inside `FoundryStudio.Foundry`.
+- `FoundryForge.App` references only `IFoundryCatalogService`, `ISettingsService`, and `FoundryForge.Core` seams. **No** `using Microsoft.AI.Foundry.Local` anywhere in `.App`.
+- All FL types (`IModel`, `ICatalog`, `SelectVariant`) stay inside `FoundryForge.Foundry`.
 - All model mutations route through the single `IModelStateGate` (one manager; drain/reject; `ModelBusyException` surfaced honestly).

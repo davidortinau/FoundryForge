@@ -111,7 +111,7 @@ enum Microsoft.AI.Foundry.Local.DeviceType { Invalid, CPU, GPU, NPU }
 **Decision**: The curated default is a **deterministic, app-defined allow-list of aliases** (a `CuratedCatalog` constant set in Core, e.g. a short recommended/popular subset such as the small Phi/Qwen instruct models known to be in the FL catalog), applied as a pure-logic selection (`CuratedSelector.Select(models)`) that:
 1. Surfaces only models whose alias is in the curated set, preserving a deterministic order.
 2. Is clearly labeled "Recommended" / "Curated" (distinct from "All models") with a single discoverable toggle to the full catalog.
-3. Makes **no** fabricated quality claim — the label is "curated by FoundryStudio", not "best" or "fastest".
+3. Makes **no** fabricated quality claim — the label is "curated by FoundryForge", not "best" or "fastest".
 4. Is bypassed entirely by any active search/filter, which always run over the **full** catalog (FR-009).
 
 **Rationale**: DEC-014 positioning reframes the curated catalog as a *feature* (trust/compliance), not a limitation. A static deterministic allow-list is honest, testable without a dylib (pure-logic seam, FR-019), and avoids fabricated "recommended" ranking the FL metadata cannot support. If a curated alias is absent from the live catalog it is simply skipped (the curated view degrades gracefully, never errors).

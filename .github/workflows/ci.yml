@@ -12,7 +12,7 @@ on:
 # layer, and the unit tests — all of which restore purely from nuget.org under
 # locked mode, so they run on a hosted runner.
 #
-# NOT built here: src/FoundryStudio.App (net11.0-macos AppKit + Blazor). It depends
+# NOT built here: src/FoundryForge.App (net11.0-macos AppKit + Blazor). It depends
 # on the maui-labs AppKit packages from a local feed (/Users/.../LocalNuGets) and the
 # macOS workload, so it requires a self-hosted Apple Silicon runner / local build.
 # Tracked in KNOWN-ISSUES.md (KI-007 #1) until a portable feed is available.
@@ -31,19 +31,19 @@ jobs:
       # Locked-mode restore FAILS if any dependency resolves off the pinned
       # Directory.Packages.props set (FR-017, SC-009). packages.lock.json files are committed.
       - name: Restore (locked) - Core
-        run: dotnet restore src/FoundryStudio.Core --locked-mode
+        run: dotnet restore src/FoundryForge.Core --locked-mode
       - name: Restore (locked) - Foundry
-        run: dotnet restore src/FoundryStudio.Foundry --locked-mode
+        run: dotnet restore src/FoundryForge.Foundry --locked-mode
       - name: Restore (locked) - Tests
-        run: dotnet restore tests/FoundryStudio.Tests --locked-mode
+        run: dotnet restore tests/FoundryForge.Tests --locked-mode
 
       - name: Build - Core
-        run: dotnet build src/FoundryStudio.Core -c Debug --no-restore
+        run: dotnet build src/FoundryForge.Core -c Debug --no-restore
       - name: Build - Foundry
-        run: dotnet build src/FoundryStudio.Foundry -c Debug --no-restore
+        run: dotnet build src/FoundryForge.Foundry -c Debug --no-restore
 
       # Pure-logic seam tests run with NO native Foundry Local dylib present (SC-008).
       # Includes the KI-005 no-blocking-init guard (T021/T028) and the concurrency-gate
       # tests (T024) - a regression in either fails the build (SC-012).
       - name: Test - pure-logic seams (dylib-free)
-        run: dotnet test tests/FoundryStudio.Tests -c Debug
+        run: dotnet test tests/FoundryForge.Tests -c Debug

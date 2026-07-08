@@ -18,7 +18,7 @@ M3 turns the M2 **browse-only** catalog into an **actionable model manager**. Fr
 
 **Storage**: Model cache (multi-GB, on disk under `AppSettings.ModelCacheDirectory`, managed by Foundry Local) — **protected user data** (Constitution IV). Settings: human-readable JSON via `FileSettingsService` (consent-gated). No new persistent store in M3; download/operation state is transient UI view-model state.
 
-**Testing**: xUnit in `tests/FoundryStudio.Tests` (dylib-free unit tests for all Core seams + the consent gate); MAUI DevFlow DOM inspection on real Apple Silicon for UI verification (KI-001 sanctioned evidence path).
+**Testing**: xUnit in `tests/FoundryForge.Tests` (dylib-free unit tests for all Core seams + the consent gate); MAUI DevFlow DOM inspection on real Apple Silicon for UI verification (KI-001 sanctioned evidence path).
 
 **Target Platform**: macOS / Apple Silicon only (DEC-004/016/017). No iOS/Android/Mac Catalyst. ONNX-only models; no GGUF/safetensors.
 
@@ -64,7 +64,7 @@ specs/004-m3-model-install-management/
 ### Source Code (repository root) — extend the existing 4 projects, no new projects
 
 ```text
-src/FoundryStudio.Core/                      # FL-free, dylib-free
+src/FoundryForge.Core/                      # FL-free, dylib-free
 ├── Catalog/
 │   ├── DiskFitHeuristic.cs        # NEW — SizeGb + safety margin vs free disk → fits | warn | unknown (mirrors RamFitHeuristic)
 │   ├── CatalogGrouping.cs         # NEW — partition ModelInfo into Cached / Available from authoritative cached source (KI-009)
@@ -79,11 +79,11 @@ src/FoundryStudio.Core/                      # FL-free, dylib-free
     ├── IFoundryCatalogService.cs  # CHANGED — additive optional `variantId` on DownloadAsync/LoadAsync (R7, back-compatible)
     └── ISettingsService.cs        # (existing; unchanged)
 
-src/FoundryStudio.Foundry/                   # FL behind the seam
+src/FoundryForge.Foundry/                   # FL behind the seam
 ├── FoundryCatalogService.cs       # CHANGED — KI-009 cached-source trust; variant targeting via IModel.SelectVariant; cancel pass-through (progress already wired)
 └── FileSettingsService.cs         # (existing; cache-dir update already consent-gated)
 
-src/FoundryStudio.App/Components/
+src/FoundryForge.App/Components/
 ├── Catalog/
 │   ├── ModelCard.razor            # CHANGED — management actions (download/cancel/auto-load, load/unload + loaded indicator, delete, variant select, disk-fit note)
 │   ├── ConfirmDialog.razor        # NEW — reusable model-naming consent dialog (delete + cache-dir change)
@@ -95,7 +95,7 @@ src/FoundryStudio.App/Components/
 │   └── Settings.razor             # NEW — view/change ModelCacheDirectory via ISettingsService (warn/confirm, invalid-dir reject)
 └── (BYOM import flow — OPTIONAL P3, only if implemented)
 
-tests/FoundryStudio.Tests/
+tests/FoundryForge.Tests/
 ├── DiskFitHeuristicTests.cs       # NEW — fits/warn/unknown matrix incl. null SizeGb (SC-009)
 ├── CatalogGroupingTests.cs        # NEW — exactly-one-group partition; KI-009 cached-source trust (SC-007)
 ├── VariantSelectionStateTests.cs  # NEW — default/pin/no-variants (SC-008)
@@ -103,7 +103,7 @@ tests/FoundryStudio.Tests/
 └── (existing tests — RamFitHeuristicTests, ModelStateGateTests, SettingsDocumentTests, …)
 ```
 
-**Structure Decision**: Single MAUI Blazor Hybrid desktop solution; extend the four existing projects (`FoundryStudio.App`, `.Core`, `.Foundry`, `.Tests`). Pure logic lives in `.Core` (dylib-free, unit-tested), FL access stays in `.Foundry`, UI in `.App` consuming only Core abstractions — preserving the DEC-004 / Constitution V layering. No new projects (Complexity Tracking not triggered).
+**Structure Decision**: Single MAUI Blazor Hybrid desktop solution; extend the four existing projects (`FoundryForge.App`, `.Core`, `.Foundry`, `.Tests`). Pure logic lives in `.Core` (dylib-free, unit-tested), FL access stays in `.Foundry`, UI in `.App` consuming only Core abstractions — preserving the DEC-004 / Constitution V layering. No new projects (Complexity Tracking not triggered).
 
 ## Complexity Tracking
 

@@ -1,0 +1,611 @@
+@inject ISettingsService SettingsService
+@inject FoundryForge.App.Services.SmartSearch.NlEngineResolver NlEngines
+@inject IJSRuntime JS
+
+@if (IsOpen)
+{
+    <div class="modal-backdrop modal-backdrop--settings" @onclick="CloseAsync">
+        <section @ref="_dialog"
+                 class="settings-modal card"
+                 data-testid="settings-modal"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-labelledby="@_titleId"
+                 aria-describedby="@_descriptionId"
+                 tabindex="-1"
+                 @onclick:stopPropagation="true"
+                 @onkeydown="HandleKeyDownAsync">
+            <header class="settings-modal__header">
+                <div>
+                    <p class="eyebrow">Foundry Forge settings</p>
+                    <h2 id="@_titleId">Settings</h2>
+                    <p id="@_descriptionId" class="settings-modal__subtitle">
+                        Manage local model storage and desktop appearance.
+                    </p>
+                </div>
+                <button id="settings-close"
+                        data-testid="settings-close"
+                        type="button"
+                        class="button button-secondary settings-modal__close"
+                        aria-label="Close settings"
+                        data-autofocus="true"
+                        @onclick="CloseAsync"
+                        disabled="@_isSaving">
+                    Close
+                </button>
+            </header>
+
+            <div class="settings-modal__body">
+                <section class="card settings-panel settings-modal__section" aria-labelledby="settings-cache-title">
+                    <h3 id="settings-cache-title" class="settings-section-title">Model cache</h3>
+                    <p class="metadata-muted">Change only the cache pointer. Existing cached models are never moved or deleted by this setting.</p>
+
+                    @if (_isLoading)
+                    {
+                        <p class="status" role="status">Loading settings…</p>
+                    }
+                    else
+                    {
+                        <div class="settings-grid">
+                            <div class="field">
+                                <label for="settings-cache-dir">Model cache directory</label>
+                                <input id="settings-cache-dir"
+                                       data-testid="cache-dir-input"
+                                       type="text"
+                                       value="@_pendingDirectory"
+                                       @oninput="OnDirectoryChanged"
+                                       autocomplete="off" />
+                            </div>
+                            <p class="metadata-muted">Current: @_currentSettings?.ModelCacheDirectory</p>
+
+                            @if (!string.IsNullOrWhiteSpace(_error))
+                            {
+                                <p data-testid="settings-cache-dir-error" class="operation-error" role="alert">@_error</p>
+                            }
+
+                            @if (!string.IsNullOrWhiteSpace(_status))
+                            {
+                                <p class="status" role="status">@_status</p>
+                            }
+
+                            <div class="settings-actions">
+                                <button id="settings-cache-dir-save"
+                                        data-testid="settings-cache-dir-save"
+                                        type="button"
+                                        class="button"
+                                        @onclick="OpenSaveConfirmationAsync"
+                                        disabled="@_isSaving">
+                                    Save cache directory
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </section>
+
+                <section class="card settings-panel settings-modal__section" aria-labelledby="settings-appearance-title" data-testid="settings-appearance">
+                    <h3 id="settings-appearance-title" class="settings-section-title">Appearance</h3>
+                    <p class="metadata-muted">Choose the theme. "System" follows macOS Light/Dark; the others override it.</p>
+                    <div class="theme-toggle" role="group" aria-label="Theme" data-testid="theme-toggle">
+                        @foreach (var option in ThemeOptions)
+                        {
+                            <button type="button"
+                                    class="theme-option @(_theme == option.Value ? "is-active" : string.Empty)"
+                                    data-testid="theme-@option.Value"
+                                    aria-pressed="@(_theme == option.Value ? "true" : "false")"
+                                    @onclick="() => SetThemeAsync(option.Value)">
+                                @option.Label
+                            </button>
+                        }
+                    </div>
+                </section>
+
+                <section class="card settings-panel settings-modal__section" aria-labelledby="settings-smartsearch-title" data-testid="settings-smartsearch">
+                    <h3 id="settings-smartsearch-title" class="settings-section-title">Smart Search</h3>
+                    <p class="metadata-muted">
+                        How your Discover searches are interpreted. All options run on this Mac unless noted.
+                        Cost and availability are shown per option — nothing downloads or bills without you choosing it.
+                    </p>
+
+                    <div class="smartsearch-list" role="radiogroup" aria-label="Smart Search engine" data-testid="smartsearch-list">
+                        @{
+                            var autoActive = _nlEngine == NlSearchEngine.Auto;
+                        }
+                        <button type="button"
+                                class="smartsearch-opt @(autoActive ? "is-active" : string.Empty)"
+                                role="radio"
+                                aria-checked="@(autoActive ? "true" : "false")"
+                                data-testid="smartsearch-auto"
+                                @onclick="() => SelectEngineAsync(NlSearchEngine.Auto)">
+                            <span class="smartsearch-opt__radio" aria-hidden="true"></span>
+                            <span class="smartsearch-opt__main">
+                                <span class="smartsearch-opt__label">Automatic <span class="smartsearch-opt__rec">recommended</span></span>
+                                <span class="smartsearch-opt__sub">Picks the best free, private engine available. Never downloads or spends credits without asking.</span>
+                            </span>
+                            <span class="smartsearch-opt__status smartsearch-opt__status--using">Using: @EngineLabel(_autoResolvesTo)</span>
+                        </button>
+
+                        <div class="smartsearch-divider" role="presentation"></div>
+
+                        @foreach (var opt in EngineRows)
+                        {
+                            var active = _nlEngine == opt.Engine;
+                            var selectable = opt.Availability.IsUsableNow || opt.Engine == NlSearchEngine.Keyword;
+                            <button type="button"
+                                    class="smartsearch-opt @(active ? "is-active" : string.Empty) @(selectable ? string.Empty : "is-disabled")"
+                                    role="radio"
+                                    aria-checked="@(active ? "true" : "false")"
+                                    aria-disabled="@(selectable ? null : "true")"
+                                    data-testid="@($"smartsearch-{opt.Engine}")"
+                                    @onclick="() => SelectEngineAsync(opt.Engine)">
+                                <span class="smartsearch-opt__radio" aria-hidden="true"></span>
+                                <span class="smartsearch-opt__main">
+                                    <span class="smartsearch-opt__label">@opt.Label</span>
+                                    <span class="smartsearch-opt__sub">@opt.Description</span>
+                                    @if (!selectable && opt.Availability.Reason is { Length: > 0 } reason)
+                                    {
+                                        <span class="smartsearch-opt__reason">@reason</span>
+                                    }
+                                </span>
+                                <span class="smartsearch-opt__status @StatusPillClass(opt.Availability.Status)">
+                                    <span aria-hidden="true">@StatusGlyph(opt.Availability.Status)</span> @StatusPillText(opt.Availability.Status)
+                                </span>
+                            </button>
+                        }
+                    </div>
+                </section>
+
+                <section class="card settings-panel settings-modal__section" aria-labelledby="settings-personalization-title" data-testid="settings-personalization">
+                    <h3 id="settings-personalization-title" class="settings-section-title">Personalized recommendations</h3>
+                    <p class="metadata-muted">
+                        When enabled, FoundryForge reads your local <code>~/.copilot/copilot-instructions.md</code>
+                        and skill names on <em>this Mac</em> to surface relevant models first in Discover.
+                        On-device only — nothing is uploaded, nothing is sent anywhere. Off by default.
+                    </p>
+                    <div class="field field-checkbox settings-personalization__toggle">
+                        <input id="settings-personalization"
+                               data-testid="settings-personalization-toggle"
+                               type="checkbox"
+                               checked="@_personalizedRecommendations"
+                               @onchange="OnPersonalizationChangedAsync" />
+                        <label for="settings-personalization">
+                            Read local Copilot context to personalize Discover ordering
+                        </label>
+                    </div>
+                </section>
+            </div>
+
+            <ConfirmDialog IsOpen="@_showConfirm"
+                           Eyebrow="Change cache directory"
+                           Title="Use a new model cache directory?"
+                           Message="@ConfirmMessage"
+                           ConfirmText="Use this directory"
+                           BusyText="Saving…"
+                           ConfirmButtonId="confirm-cache-dir-btn"
+                           CancelButtonId="cancel-cache-dir-btn"
+                           IsBusy="@_isSaving"
+                           ErrorMessage="@_error"
+                           OnConfirm="ConfirmSaveAsync"
+                           OnCancel="CloseSaveConfirmationAsync" />
+
+            <ConfirmDialog IsOpen="@_showCopilotConsent"
+                           Eyebrow="GitHub Copilot"
+                           Title="Use GitHub Copilot for search?"
+                           Message="Copilot gives the highest-quality interpretation, but it uses your paid Copilot credits and sends your search text to GitHub over the network. It is also slower (~15 seconds per search). Everything else stays on this Mac."
+                           ConfirmText="Use Copilot"
+                           BusyText="Saving…"
+                           ConfirmButtonId="confirm-copilot-btn"
+                           CancelButtonId="cancel-copilot-btn"
+                           OnConfirm="ConfirmCopilotAsync"
+                           OnCancel="CancelCopilotAsync" />
+        </section>
+    </div>
+}
+
+@code {
+    private readonly string _titleId = $"settings-title-{Guid.NewGuid():N}";
+    private readonly string _descriptionId = $"settings-description-{Guid.NewGuid():N}";
+    private ElementReference _dialog;
+    private AppSettings? _currentSettings;
+    private string _pendingDirectory = string.Empty;
+    private string? _candidateDirectory;
+    private string? _error;
+    private string? _status;
+    private bool _isLoading = true;
+    private bool _isSaving;
+    private bool _showConfirm;
+    private bool _needsFocus;
+    private bool _themeLoaded;
+    private bool _wasOpen;
+    private string _theme = "system";
+    private bool _personalizedRecommendations = false;
+
+    private NlSearchEngine _nlEngine = NlSearchEngine.Auto;
+    private NlSearchEngine _autoResolvesTo = NlSearchEngine.Keyword;
+    private IReadOnlyList<NlEngineAvailability> _engineAvailability = Array.Empty<NlEngineAvailability>();
+    private bool _showCopilotConsent;
+
+    [Parameter] public bool IsOpen { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private static readonly (string Value, string Label)[] ThemeOptions =
+    {
+        ("system", "System"),
+        ("light", "Light"),
+        ("dark", "Dark")
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSettingsAsync();
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen && !_wasOpen)
+        {
+            _needsFocus = true;
+        }
+
+        _wasOpen = IsOpen;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!IsOpen)
+        {
+            return;
+        }
+
+        if (_needsFocus)
+        {
+            _needsFocus = false;
+            await JS.InvokeVoidAsync("foundryForgeDialog.focusAndTrap", _dialog);
+        }
+
+        if (!_themeLoaded)
+        {
+            _themeLoaded = true;
+            await LoadThemeAsync();
+        }
+    }
+
+    private async Task LoadThemeAsync()
+    {
+        try
+        {
+            var current = await JS.InvokeAsync<string>("foundryForgeTheme.current");
+            if (!string.IsNullOrWhiteSpace(current) && current != _theme)
+            {
+                _theme = current;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch
+        {
+            // JS not ready / unavailable -> keep the default "system"; the UI still works.
+        }
+    }
+
+    private async Task LoadSettingsAsync()
+    {
+        try
+        {
+            _currentSettings = await SettingsService.GetAsync();
+            _pendingDirectory = _currentSettings.ModelCacheDirectory;
+            _personalizedRecommendations = _currentSettings.PersonalizedRecommendations;
+            _nlEngine = _currentSettings.NlSearchEngine;
+            await RefreshEngineAvailabilityAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = $"Settings could not be loaded: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task RefreshEngineAvailabilityAsync()
+    {
+        try
+        {
+            _engineAvailability = await NlEngines.GetAvailabilityAsync();
+            _autoResolvesTo = await NlEngines.ResolveAutoAsync();
+        }
+        catch
+        {
+            // Availability probing is best-effort; the list still renders with keyword always available.
+        }
+    }
+
+    // Fixed display order for the four explicit engine rows (Auto is rendered separately above).
+    private static readonly NlSearchEngine[] RowOrder =
+    {
+        NlSearchEngine.Keyword,
+        NlSearchEngine.AppleFoundationModels,
+        NlSearchEngine.LocalModel,
+        NlSearchEngine.CopilotCli,
+    };
+
+    private IEnumerable<(NlSearchEngine Engine, string Label, string Description, NlEngineAvailability Availability)> EngineRows =>
+        RowOrder.Select(e => (
+            e,
+            EngineLabel(e),
+            EngineDescription(e),
+            _engineAvailability.FirstOrDefault(a => a.Engine == e)
+                ?? new NlEngineAvailability(e, NlEngineStatus.Available, null)));
+
+    private static string EngineLabel(NlSearchEngine engine) => engine switch
+    {
+        NlSearchEngine.Keyword => "Keyword matching",
+        NlSearchEngine.AppleFoundationModels => "Apple Foundation Models",
+        NlSearchEngine.LocalModel => "Local model (Qwen 0.6B)",
+        NlSearchEngine.CopilotCli => "GitHub Copilot",
+        _ => "Automatic",
+    };
+
+    private static string EngineDescription(NlSearchEngine engine) => engine switch
+    {
+        NlSearchEngine.Keyword => "Fast, exact matches on the words you type. No AI — always available, offline.",
+        NlSearchEngine.AppleFoundationModels => "On-device Apple Intelligence. Free, private, nothing leaves your Mac.",
+        NlSearchEngine.LocalModel => "Runs offline after a one-time 0.5 GB download. Private · uses ~1.5 GB RAM.",
+        NlSearchEngine.CopilotCli => "Highest quality, ~15s. Uses paid credits and sends your query online.",
+        _ => string.Empty,
+    };
+
+    private static string StatusPillClass(NlEngineStatus status) => status switch
+    {
+        NlEngineStatus.Available => "smartsearch-opt__status--ok",
+        NlEngineStatus.NeedsDownload => "smartsearch-opt__status--download",
+        NlEngineStatus.NeedsSignIn => "smartsearch-opt__status--signin",
+        _ => "smartsearch-opt__status--off",
+    };
+
+    private static string StatusGlyph(NlEngineStatus status) => status switch
+    {
+        NlEngineStatus.Available => "✓",
+        NlEngineStatus.NeedsDownload => "⤓",
+        NlEngineStatus.NeedsSignIn => "○",
+        _ => "✕",
+    };
+
+    // Descriptive states, not imperative verbs — a disabled row must not signify an action it can't perform.
+    private static string StatusPillText(NlEngineStatus status) => status switch
+    {
+        NlEngineStatus.Available => "Available",
+        NlEngineStatus.NeedsDownload => "Not downloaded",
+        NlEngineStatus.NeedsSignIn => "Not signed in",
+        _ => "Unavailable",
+    };
+
+    private bool IsEngineSelectable(NlSearchEngine engine)
+    {
+        if (engine is NlSearchEngine.Auto or NlSearchEngine.Keyword)
+        {
+            return true;
+        }
+
+        var availability = _engineAvailability.FirstOrDefault(a => a.Engine == engine);
+        return availability?.IsUsableNow ?? true;
+    }
+
+    private async Task SelectEngineAsync(NlSearchEngine engine)
+    {
+        // Guard: aria-disabled rows are still clickable in the DOM — a no-op keeps the promise honest.
+        if (_currentSettings is null || engine == _nlEngine || !IsEngineSelectable(engine))
+        {
+            return;
+        }
+
+        // Copilot spends credits and sends the query online — confirm once before switching to it.
+        if (engine == NlSearchEngine.CopilotCli)
+        {
+            _showCopilotConsent = true;
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        await CommitEngineAsync(engine);
+    }
+
+    private async Task ConfirmCopilotAsync()
+    {
+        _showCopilotConsent = false;
+        await CommitEngineAsync(NlSearchEngine.CopilotCli);
+    }
+
+    private Task CancelCopilotAsync()
+    {
+        _showCopilotConsent = false;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private async Task CommitEngineAsync(NlSearchEngine engine)
+    {
+        if (_currentSettings is null)
+        {
+            return;
+        }
+
+        _nlEngine = engine;
+        try
+        {
+            var updated = _currentSettings with { NlSearchEngine = engine };
+            await SettingsService.UpdateAsync(updated);
+            _currentSettings = updated;
+        }
+        catch (Exception ex)
+        {
+            _error = $"Smart Search setting could not be saved: {ex.Message}";
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SetThemeAsync(string value)
+    {
+        _theme = value;
+        try
+        {
+            await JS.InvokeVoidAsync("foundryForgeTheme.apply", value);
+        }
+        catch
+        {
+            // Best-effort; the visible state reflects the user's choice regardless.
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private string ConfirmMessage => string.IsNullOrWhiteSpace(_candidateDirectory)
+        ? string.Empty
+        : $"Use '{_candidateDirectory}' for future model downloads? Existing cached models under the old directory may not appear; nothing is moved or deleted.";
+
+    private void OnDirectoryChanged(ChangeEventArgs args)
+    {
+        _pendingDirectory = args.Value?.ToString() ?? string.Empty;
+        _error = null;
+        _status = null;
+    }
+
+    private Task OpenSaveConfirmationAsync()
+    {
+        _error = null;
+        _status = null;
+
+        var candidate = _pendingDirectory.Trim();
+        if (string.IsNullOrWhiteSpace(candidate))
+        {
+            _error = "Enter an existing writable directory.";
+            return InvokeAsync(StateHasChanged);
+        }
+
+        if (!Directory.Exists(candidate))
+        {
+            _error = "Directory does not exist. Create it first; FoundryForge will not create, move, or wipe cache folders here.";
+            return InvokeAsync(StateHasChanged);
+        }
+
+        if (!CanWriteToDirectory(candidate))
+        {
+            _error = "Directory is not writable. Choose a directory where FoundryForge can create model files.";
+            return InvokeAsync(StateHasChanged);
+        }
+
+        _candidateDirectory = candidate;
+        _showConfirm = true;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task CloseSaveConfirmationAsync()
+    {
+        _showConfirm = false;
+        _candidateDirectory = null;
+        _error = null;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ConfirmSaveAsync()
+    {
+        if (_currentSettings is null || string.IsNullOrWhiteSpace(_candidateDirectory))
+        {
+            return;
+        }
+
+        _isSaving = true;
+        _error = null;
+
+        try
+        {
+            var updated = _currentSettings with { ModelCacheDirectory = _candidateDirectory };
+            await SettingsService.UpdateAsync(updated);
+            _currentSettings = updated;
+            _pendingDirectory = updated.ModelCacheDirectory;
+            _status = "Cache directory saved. Existing cached models were not moved or deleted.";
+            _showConfirm = false;
+            _candidateDirectory = null;
+        }
+        catch (Exception ex)
+        {
+            _error = $"Cache directory could not be saved: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task CloseAsync()
+    {
+        if (_isSaving)
+        {
+            return;
+        }
+
+        if (_showConfirm)
+        {
+            await CloseSaveConfirmationAsync();
+            return;
+        }
+
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task HandleKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (args.Key == "Escape" && !_showConfirm)
+        {
+            await CloseAsync();
+        }
+    }
+
+    private async Task OnPersonalizationChangedAsync(ChangeEventArgs args)
+    {
+        if (_currentSettings is null)
+        {
+            return;
+        }
+
+        var enabled = args.Value is true;
+        _personalizedRecommendations = enabled;
+
+        try
+        {
+            var updated = _currentSettings with { PersonalizedRecommendations = enabled };
+            await SettingsService.UpdateAsync(updated);
+            _currentSettings = updated;
+        }
+        catch (Exception ex)
+        {
+            _error = $"Personalization setting could not be saved: {ex.Message}";
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private static bool CanWriteToDirectory(string directory)
+    {
+        try
+        {
+            var probePath = Path.Combine(directory, $".foundryforge-write-test-{Guid.NewGuid():N}");
+            using (new FileStream(probePath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1, FileOptions.DeleteOnClose))
+            {
+            }
+
+            if (File.Exists(probePath))
+            {
+                File.Delete(probePath);
+            }
+
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+}

@@ -13,15 +13,15 @@ This is the **end-to-end validation guide** that proves M2 works. It is a run/ve
 
 ## Build & unit tests (dylib-free gate)
 ```bash
-dotnet build FoundryStudio.sln                       # 0 errors
-dotnet test tests/FoundryStudio.Tests                 # all green, no native dylib needed
+dotnet build FoundryForge.sln                       # 0 errors
+dotnet test tests/FoundryForge.Tests                 # all green, no native dylib needed
 ```
 Expected: existing M1 tests still pass **plus** new M2 tests for `CapabilityParser`, `CuratedSelector`, `CatalogFacets`, the FL→Core mapping pure transform, and updated `CatalogFilter`/null-device cases (FR-019, SC-003/SC-004).
 
 ## Launch
 ```bash
 # Run the inner binary directly (KI-004: app exits under `open`/`dotnet watch`)
-src/FoundryStudio.App/bin/Debug/net11.0-macos/.../FoundryStudio.app/Contents/MacOS/FoundryStudio
+src/FoundryForge.App/bin/Debug/net11.0-macos/.../FoundryForge.app/Contents/MacOS/FoundryForge
 ```
 
 ---

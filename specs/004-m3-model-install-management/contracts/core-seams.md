@@ -1,12 +1,12 @@
 # Contract: Core pure-logic seams (new/extended in M3)
 
-All seams below live in `FoundryStudio.Core`, are **FL-free and dylib-free**, and are unit-tested in `tests/FoundryStudio.Tests` without a native Foundry Local dylib (FR-034, SC-006/007/008/009). They mirror the M2 precedent (`RamFitHeuristic`, `CuratedSelector`, `CatalogFacets`).
+All seams below live in `FoundryForge.Core`, are **FL-free and dylib-free**, and are unit-tested in `tests/FoundryForge.Tests` without a native Foundry Local dylib (FR-034, SC-006/007/008/009). They mirror the M2 precedent (`RamFitHeuristic`, `CuratedSelector`, `CatalogFacets`).
 
 ---
 
 ## `DiskFitHeuristic` — non-blocking disk-fit verdict (US6, R3)
 
-`src/FoundryStudio.Core/Catalog/DiskFitHeuristic.cs`
+`src/FoundryForge.Core/Catalog/DiskFitHeuristic.cs`
 
 ```csharp
 public static DiskFitResult Evaluate(double? modelSizeGb, double freeDiskGb);
@@ -26,7 +26,7 @@ public static DiskFitResult Evaluate(double? modelSizeGb, double freeDiskGb);
 
 ## `CatalogGrouping` — cached vs available partition (US4, KI-009, R5)
 
-`src/FoundryStudio.Core/Catalog/CatalogGrouping.cs`
+`src/FoundryForge.Core/Catalog/CatalogGrouping.cs`
 
 ```csharp
 public static (IReadOnlyList<ModelInfo> Cached, IReadOnlyList<ModelInfo> Available)
@@ -46,7 +46,7 @@ public static (IReadOnlyList<ModelInfo> Cached, IReadOnlyList<ModelInfo> Availab
 
 ## `VariantSelectionState` — pinned-variant state (US5, R7)
 
-`src/FoundryStudio.Core/Catalog/VariantSelectionState.cs`
+`src/FoundryForge.Core/Catalog/VariantSelectionState.cs`
 
 ```csharp
 public sealed class VariantSelectionState

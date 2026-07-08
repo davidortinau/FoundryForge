@@ -1,7 +1,7 @@
 # Contract: `IFoundryLifecycle` (ready-gate, singleton lifecycle)
 
-**Project**: `FoundryStudio.Core/Abstractions` (interface) · impl
-`FoundryStudio.Foundry/FoundryLifecycle.cs`
+**Project**: `FoundryForge.Core/Abstractions` (interface) · impl
+`FoundryForge.Foundry/FoundryLifecycle.cs`
 **Satisfies**: FR-003, FR-004, FR-005, FR-006, FR-007 · SC-001, SC-002, SC-003 · KI-005 ·
 Constitution V · PLAN.md line 76
 
@@ -9,7 +9,7 @@ The single seam that owns Foundry Local initialization, the awaitable ready-gate
 Every service/component awaits this before touching Foundry Local.
 
 ```csharp
-namespace FoundryStudio.Core.Abstractions;
+namespace FoundryForge.Core.Abstractions;
 
 /// One Foundry Local lifecycle, shared by all consumers (the in-process UI path and the
 /// future exposed server). Init runs off the BlazorWebView dispatcher; the gate is awaited,
@@ -33,7 +33,7 @@ public enum FoundryReadyState { Uninitialized, Initializing, Ready, Failed }
 ```
 
 > Note: `GetManagerAsync` returns `object` in the **Core** abstraction so Core stays FL-free;
-> the `FoundryStudio.Foundry` implementation exposes a strongly-typed
+> the `FoundryForge.Foundry` implementation exposes a strongly-typed
 > `Task<FoundryLocalManager>` overload that FL-bound services consume. This keeps the test seam
 > dylib-free (research R7).
 

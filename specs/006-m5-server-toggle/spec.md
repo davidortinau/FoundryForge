@@ -12,9 +12,9 @@
 
 M4 is the v1 in-process lighthouse: a real, multi-turn, streaming conversation with a locally-loaded Foundry Local model, run entirely through the in-process MEAI `IChatService` adapter — **no socket**. The sidebar **"Server"** nav still renders a disabled **"Coming soon"** placeholder (`data-testid="nav-server"`, `is-disabled`). **M5 activates it** and ships the v1 "wow": a single user-facing toggle that turns on Foundry Local's **OpenAI-compatible HTTP server so EXTERNAL tools** (curl, Open WebUI, any OpenAI-SDK client) can talk to the model the user has loaded on this Mac — with the delight being **transparency**, per DESIGN §10 "Forge Lit."
 
-**M5 is a server for *external* tools, not a new path for our own chat.** FoundryStudio's own chat (M4) does **not** and **will not** route through this HTTP server — it uses the in-process `IChatClient` adapter over the same `FoundryLocalManager`. The server existing or running has **no effect** on in-app chat: in-app chat works identically whether the server is stopped, starting, or running. M5 must state this plainly in the UI so a user never believes the toggle is required for, or alters, their own conversations.
+**M5 is a server for *external* tools, not a new path for our own chat.** FoundryForge's own chat (M4) does **not** and **will not** route through this HTTP server — it uses the in-process `IChatClient` adapter over the same `FoundryLocalManager`. The server existing or running has **no effect** on in-app chat: in-app chat works identically whether the server is stopped, starting, or running. M5 must state this plainly in the UI so a user never believes the toggle is required for, or alters, their own conversations.
 
-The seam already exists and is currently an honest stub: `FoundryStudio.Core.Abstractions.ILocalServerService { bool IsSupported; IReadOnlyList<string> Urls; Task<IReadOnlyList<string>> StartAsync(ct); Task StopAsync(ct); }`. Today `StubLocalServerService.IsSupported` is `false` and `StartAsync`/`StopAsync` throw (`"wired in M5"`). **M5 implements it for real** over the confirmed Foundry Local SDK surface: `FoundryLocalManager.StartWebServiceAsync(CancellationToken?)`, `StopWebServiceAsync(CancellationToken?)`, and `string[] Urls` (the **actual** bound URLs). There is exactly **one** `FoundryLocalManager` singleton — held by `FoundryLifecycle` (awaited via `ReadyAsync()`) and backing **both** the in-app UI and the exposed server. M5 MUST use that singleton and MUST NOT construct a second manager.
+The seam already exists and is currently an honest stub: `FoundryForge.Core.Abstractions.ILocalServerService { bool IsSupported; IReadOnlyList<string> Urls; Task<IReadOnlyList<string>> StartAsync(ct); Task StopAsync(ct); }`. Today `StubLocalServerService.IsSupported` is `false` and `StartAsync`/`StopAsync` throw (`"wired in M5"`). **M5 implements it for real** over the confirmed Foundry Local SDK surface: `FoundryLocalManager.StartWebServiceAsync(CancellationToken?)`, `StopWebServiceAsync(CancellationToken?)`, and `string[] Urls` (the **actual** bound URLs). There is exactly **one** `FoundryLocalManager` singleton — held by `FoundryLifecycle` (awaited via `ReadyAsync()`) and backing **both** the in-app UI and the exposed server. M5 MUST use that singleton and MUST NOT construct a second manager.
 
 The single most important constraint of M5 is **honesty (Constitution III) and capability honesty (Constitution IV)** — and here the delight is *inseparable* from the honesty:
 
@@ -89,7 +89,7 @@ As a developer, I want to confirm that an **external** process (e.g. `curl`) poi
 
 ### User Story 4 - "Forge Lit": the transparent server panel (Priority: P1)
 
-As a FoundryStudio user, when I turn the server on I want the designed "Forge Lit" moment — a compact panel where a copper pilot-light dot ignites (soft ember pulse settling to steady) alongside the exact bound URL, the routes, the scope, and the limitations — so that the delight and the transparency arrive together and I instantly understand exactly what I just exposed.
+As a FoundryForge user, when I turn the server on I want the designed "Forge Lit" moment — a compact panel where a copper pilot-light dot ignites (soft ember pulse settling to steady) alongside the exact bound URL, the routes, the scope, and the limitations — so that the delight and the transparency arrive together and I instantly understand exactly what I just exposed.
 
 **Why this priority**: M5's job in v1 is to be the lighthouse "wow," and DESIGN §10 defines that wow as transparency-as-delight. The pilot-light maps to a *real* state (server running) and the panel's whole point is to show real facts. It is P1 because the milestone's identity is this signature moment; a plain switch with no transparent panel would miss the milestone's intent.
 
@@ -106,7 +106,7 @@ As a FoundryStudio user, when I turn the server on I want the designed "Forge Li
 
 ### User Story 5 - Server toggle is concurrency-safe with in-app load/unload (Priority: P1)
 
-As a FoundryStudio user who may load/unload models and toggle the server around the same time, I want the server toggle to coordinate safely with the in-app model state so that toggling the server or a load/unload in flight never corrupts the single shared Foundry Local manager or tears a native generation — and I get an honest "busy, try again" rather than a hang or crash.
+As a FoundryForge user who may load/unload models and toggle the server around the same time, I want the server toggle to coordinate safely with the in-app model state so that toggling the server or a load/unload in flight never corrupts the single shared Foundry Local manager or tears a native generation — and I get an honest "busy, try again" rather than a hang or crash.
 
 **Why this priority**: One `FoundryLocalManager` singleton backs both the UI and the server (PLAN line 75). Start/stop and load/unload touch shared native state; an uncoordinated race can crash natively. Constitution V makes this non-negotiable. It is P1 because a "wow" that can corrupt shared state or deadlock the UI is not shippable.
 
@@ -168,7 +168,7 @@ As a developer testing my external integration, I want to see live evidence that
 - **Server on, then in-app load/unload requested** — coordinated via `IModelStateGate`; either serialized or honestly rejected ("busy, try again"); never a torn native generation or corrupted shared state (US5).
 - **Server toggled while in-app chat is streaming** — in-app chat is independent of the server; the server toggle must not interrupt the in-app stream, and the shared-manager mutation rules still apply (no load/unload tearing an active generation).
 - **App quit with server running** — the server is stopped/disposed cleanly on app exit via the lifecycle (no orphaned listener); on next launch the panel starts in the honest stopped state.
-- **External client expects a route FL does not serve** — the route list reflects only what FL exposes (or the documented OpenAI-compatible surface, labeled honestly); FoundryStudio does not claim to serve routes FL does not.
+- **External client expects a route FL does not serve** — the route list reflects only what FL exposes (or the documented OpenAI-compatible surface, labeled honestly); FoundryForge does not claim to serve routes FL does not.
 
 ## Requirements *(mandatory)*
 
@@ -255,7 +255,7 @@ As a developer testing my external integration, I want to see live evidence that
 
 ## Assumptions
 
-- **External tools only**: the server exposes the loaded model to external OpenAI-compatible clients; FoundryStudio's own chat (M4) uses the in-process `IChatClient` adapter and never routes through this server. The server's existence/running state has no effect on in-app chat. (PLAN line 113/122; constraint confirmed.)
+- **External tools only**: the server exposes the loaded model to external OpenAI-compatible clients; FoundryForge's own chat (M4) uses the in-process `IChatClient` adapter and never routes through this server. The server's existence/running state has no effect on in-app chat. (PLAN line 113/122; constraint confirmed.)
 - **Confirmed FL SDK surface**: `FoundryLocalManager.StartWebServiceAsync(CancellationToken?)`, `StopWebServiceAsync(CancellationToken?)`, and `string[] Urls` are the real API (confirmed by reflection). There is **no** port parameter; FL binds its own port and reports the real address via `Urls`. These are treated as confirmed facts, not re-litigated.
 - **"Configurable port" wording is superseded**: `docs/PLAN.md` line 123's "configurable port" predates the reflection finding; per Constitution III/IV this spec ships the real bound URL with **no** port control (recorded in the Clarifications reconciliation note).
 - **Real FL limitations are binding**: the FL server is localhost-only, has no auth, and does not bind the LAN/`0.0.0.0`. These are surfaced as plain limits; no auth/LAN/TLS/CORS/rate-limit control is shipped (none exist in FL).

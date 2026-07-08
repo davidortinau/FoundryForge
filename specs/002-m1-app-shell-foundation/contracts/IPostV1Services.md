@@ -1,7 +1,7 @@
 # Contract: Post-v1 service interfaces (stubbed, non-faking)
 
-**Project**: `FoundryStudio.Core/Abstractions` (interfaces) · stub impls
-`FoundryStudio.Foundry/PostV1/Stub*Service.cs`
+**Project**: `FoundryForge.Core/Abstractions` (interfaces) · stub impls
+`FoundryForge.Foundry/PostV1/Stub*Service.cs`
 **Satisfies**: FR-013 · SC-010 · Constitution IV (capability honesty) · PLAN.md lines 63–66
 
 These interfaces are **defined in M1** so M5/M6 can implement them without reshaping the
@@ -9,7 +9,7 @@ dependency graph, but their v1 implementations are **honest stubs** — they sig
 "not implemented in v1," never fake behavior or return empty data implying support.
 
 ```csharp
-namespace FoundryStudio.Core.Abstractions;
+namespace FoundryForge.Core.Abstractions;
 
 /// Embeddings (powers RAG, post-v1 / M6).
 public interface IEmbeddingService

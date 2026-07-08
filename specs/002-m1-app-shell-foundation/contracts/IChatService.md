@@ -1,7 +1,7 @@
 # Contract: `IChatService` + in-process `IChatClient` adapter
 
-**Project**: `FoundryStudio.Core/Abstractions` (`IChatService`) · impls
-`FoundryStudio.Foundry/FoundryChatClient.cs` (`IChatClient` adapter) + `ChatService.cs`
+**Project**: `FoundryForge.Core/Abstractions` (`IChatService`) · impls
+`FoundryForge.Foundry/FoundryChatClient.cs` (`IChatClient` adapter) + `ChatService.cs`
 **Satisfies**: FR-012, FR-018 · SC-006, SC-010 · PLAN.md lines 59–62, 74 · DEC-004 · E4 (M0d)
 
 A thin in-process adapter over the Foundry Local SDK presenting a conventional
@@ -10,7 +10,7 @@ Microsoft.Extensions.AI `IChatClient` surface that standard middleware composes 
 of M1 scope** (M5).
 
 ```csharp
-namespace FoundryStudio.Core.Abstractions;
+namespace FoundryForge.Core.Abstractions;
 
 using Microsoft.Extensions.AI; // ChatMessage, ChatResponse, ChatResponseUpdate, ChatOptions
 
@@ -27,7 +27,7 @@ public interface IChatService
 The implementation is the M0d-proven adapter, promoted:
 
 ```csharp
-// FoundryStudio.Foundry
+// FoundryForge.Foundry
 public sealed class FoundryChatClient : IChatClient   // Microsoft.Extensions.AI
 {
     // Backed by IModel.GetChatClientAsync() -> CompleteChatStreamingAsync (in-process).

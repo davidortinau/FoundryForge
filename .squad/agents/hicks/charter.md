@@ -4,7 +4,7 @@ Owns the Blazor Hybrid UI rendered in the AppKit BlazorWebView.
 
 ## Project Context
 
-**Project:** FoundryStudio
+**Project:** FoundryForge
 
 ## Responsibilities
 

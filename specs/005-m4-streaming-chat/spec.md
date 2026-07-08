@@ -12,7 +12,7 @@
 
 M3 is DONE: the catalog is now an actionable model manager — a user can download, load/unload (through the M1 `IModelStateGate`), delete (consent-gated), pin a variant, and configure the cache directory. The sidebar "Chat" nav still renders a disabled **"Coming soon"** placeholder. **M4 activates it** and ships the v1 lighthouse payoff: an actual, multi-turn, *streaming* conversation with a model the user has loaded on this Mac.
 
-**M4 is in-process, not a server.** Chat runs entirely through the existing in-process MEAI adapter — `FoundryStudio.Core.Abstractions.IChatService.StreamAsync(IEnumerable<ChatMessage>, ChatOptions?, CancellationToken) → IAsyncEnumerable<ChatResponseUpdate>`, implemented by `FoundryStudio.Foundry.ChatService` over `FoundryChatClient`. There is **no loopback socket** in this path. The local OpenAI-compatible server is M5 and exists only to expose the model to *external* tools; it is never how FoundryStudio's own chat talks to the model. The `ChatService` seam already documents the M4 pipeline shape: `adapter.AsBuilder().UseFunctionInvocation().UseOpenTelemetry().Build()`.
+**M4 is in-process, not a server.** Chat runs entirely through the existing in-process MEAI adapter — `FoundryForge.Core.Abstractions.IChatService.StreamAsync(IEnumerable<ChatMessage>, ChatOptions?, CancellationToken) → IAsyncEnumerable<ChatResponseUpdate>`, implemented by `FoundryForge.Foundry.ChatService` over `FoundryChatClient`. There is **no loopback socket** in this path. The local OpenAI-compatible server is M5 and exists only to expose the model to *external* tools; it is never how FoundryForge's own chat talks to the model. The `ChatService` seam already documents the M4 pipeline shape: `adapter.AsBuilder().UseFunctionInvocation().UseOpenTelemetry().Build()`.
 
 M4 builds on confirmed feasibility from **M0d**: the Foundry Local chat path **honors `tools`** (function calling works end-to-end), and `response_format` / structured output is **accepted-but-not-enforced** (best-effort only). This split is binding on scope: tool/function calling is **in** M4; structured output is **best-effort only**, with no "guaranteed JSON" claim and no toggle that implies enforcement.
 
@@ -28,7 +28,7 @@ No outstanding clarifications. All open choices were resolved using reasonable d
 
 ### User Story 1 - Multi-turn streaming chat with a loaded local model (Priority: P1)
 
-As a FoundryStudio user with a model loaded, I want to type a message and watch the model's reply stream in token-by-token, then keep the conversation going across multiple turns — with markdown rendered and code blocks given a copy button — so that I can actually *use* a local model in a real back-and-forth conversation on my Mac.
+As a FoundryForge user with a model loaded, I want to type a message and watch the model's reply stream in token-by-token, then keep the conversation going across multiple turns — with markdown rendered and code blocks given a copy button — so that I can actually *use* a local model in a real back-and-forth conversation on my Mac.
 
 **Why this priority**: This is the headline payoff of the entire v1 lighthouse — "I can chat with a local model, fully offline, in-process." It is the smallest slice that delivers the milestone's standalone end-user value, and every other story refines it. The seam (`IChatService.StreamAsync` → `IAsyncEnumerable<ChatResponseUpdate>`) already exists; M4 builds the chat surface that consumes it.
 
@@ -48,7 +48,7 @@ As a FoundryStudio user with a model loaded, I want to type a message and watch 
 
 ### User Story 2 - Gate chat on a loaded model, with load-on-demand (Priority: P1)
 
-As a FoundryStudio user, when I open Chat without a model loaded I want to be told clearly that a model must be loaded first and be offered a one-step way to load one (reusing the existing load path), rather than typing into a dead box or getting a cryptic failure — so that I always know whether chat is ready and can make it ready.
+As a FoundryForge user, when I open Chat without a model loaded I want to be told clearly that a model must be loaded first and be offered a one-step way to load one (reusing the existing load path), rather than typing into a dead box or getting a cryptic failure — so that I always know whether chat is ready and can make it ready.
 
 **Why this priority**: Chat is meaningless without a loaded model, and silently failing or pretending to chat would violate honesty. Gating + load-on-demand is the prerequisite that makes US1 reliably usable. Loading already exists (M3 `LoadAsync` through the `IModelStateGate`); M4 surfaces the gate and a load-on-demand entry from the chat surface.
 
@@ -66,7 +66,7 @@ As a FoundryStudio user, when I open Chat without a model loaded I want to be to
 
 ### User Story 3 - Cancel / stop a streaming generation mid-flight (Priority: P1)
 
-As a FoundryStudio user, while the model is streaming a reply I want a clear Stop control that halts generation immediately and keeps whatever was produced so far — so that I am never trapped waiting on a long or off-track answer.
+As a FoundryForge user, while the model is streaming a reply I want a clear Stop control that halts generation immediately and keeps whatever was produced so far — so that I am never trapped waiting on a long or off-track answer.
 
 **Why this priority**: Streaming without a stop is a trap; cancellation is a core, expected chat affordance and a correctness requirement (clean cancellation, no orphaned async, no `.Result`/`.Wait()` per KI-005). It is P1 because US1 is not genuinely usable without it.
 
@@ -83,9 +83,9 @@ As a FoundryStudio user, while the model is streaming a reply I want a clear Sto
 
 ### User Story 4 - Honest token metrics from the real stream (Priority: P1)
 
-As a FoundryStudio user, after (and during) a reply I want to see real performance metrics — time-to-first-token, tokens/sec, total tokens, and the stop reason — shown in the calm mono metrics row, sourced straight from the engine, so that I can judge this model's real local performance and never see a fabricated number.
+As a FoundryForge user, after (and during) a reply I want to see real performance metrics — time-to-first-token, tokens/sec, total tokens, and the stop reason — shown in the calm mono metrics row, sourced straight from the engine, so that I can judge this model's real local performance and never see a fabricated number.
 
-**Why this priority**: Honest metrics are a defining promise of FoundryStudio (Constitution III) and a primary reason a developer evaluates a *local* model. The DESIGN already specifies the metrics row (mono, tertiary: tokens/sec · token count · time · stop reason). It is P1 because shipping chat without honest metrics — or with faked ones — would break the product's core trust contract.
+**Why this priority**: Honest metrics are a defining promise of FoundryForge (Constitution III) and a primary reason a developer evaluates a *local* model. The DESIGN already specifies the metrics row (mono, tertiary: tokens/sec · token count · time · stop reason). It is P1 because shipping chat without honest metrics — or with faked ones — would break the product's core trust contract.
 
 **Independent Test**: Send a message and confirm via DevFlow DOM that the metrics row shows TTFT, tokens/sec, total tokens, and a stop reason, that the values are plausible and derived from the real stream timing/usage (e.g., TTFT matches first-update arrival; total tokens matches the stream's usage when available), and that when a metric is genuinely unavailable from the engine it renders an honest "unknown" rather than a guessed value. The metrics-derivation logic (TTFT from first-update timestamp, tokens/sec from token count over elapsed, total from usage, stop reason mapping, the unknown case) is fully unit-testable as a pure seam over a synthetic `ChatResponseUpdate` sequence.
 
@@ -101,7 +101,7 @@ As a FoundryStudio user, after (and during) a reply I want to see real performan
 
 ### User Story 5 - Per-chat system prompt and the real inference parameters (Priority: P2)
 
-As a FoundryStudio user, I want to set a system prompt for a conversation and adjust the inference parameters that Foundry Local actually supports — temperature, max tokens, top_p, frequency_penalty — so that I can steer the model's behavior, while trusting that every control shown is real.
+As a FoundryForge user, I want to set a system prompt for a conversation and adjust the inference parameters that Foundry Local actually supports — temperature, max tokens, top_p, frequency_penalty — so that I can steer the model's behavior, while trusting that every control shown is real.
 
 **Why this priority**: System prompt and parameter control are how a developer meaningfully exercises a model, but they refine the P1 chat rather than enabling it (chat works at defaults). Constitution IV makes the *honesty* of the parameter surface non-negotiable: only the four FL-supported params may appear, and absent ones must not be faked.
 
@@ -119,7 +119,7 @@ As a FoundryStudio user, I want to set a system prompt for a conversation and ad
 
 ### User Story 6 - Context-window tracker with an honest estimate warning (Priority: P2)
 
-As a FoundryStudio user, I want to see roughly how much of the model's context window the current conversation is using and get a warning as I approach the limit — clearly labeled as an *estimate* — so that I understand when older turns may fall out of context, without being told a false exact figure.
+As a FoundryForge user, I want to see roughly how much of the model's context window the current conversation is using and get a warning as I approach the limit — clearly labeled as an *estimate* — so that I understand when older turns may fall out of context, without being told a false exact figure.
 
 **Why this priority**: Long conversations silently exceeding context produce confusing model behavior; a tracker helps the user manage it. It refines the P1 chat experience and is P2 because chat functions without it. Honesty is the binding constraint: token counting against a model's context length is an approximation and MUST be presented as such (Constitution III — never claim exactness we cannot prove).
 
@@ -136,7 +136,7 @@ As a FoundryStudio user, I want to see roughly how much of the model's context w
 
 ### User Story 7 - Persisted chat history with consent-gated destructive actions (Priority: P2)
 
-As a FoundryStudio user, I want my conversations saved automatically and available after I restart the app, with the ability to start a new chat, duplicate one, and clear/delete one — but only delete behind an explicit confirmation that names the conversation and says it cannot be undone — so that my chat history (my data) is preserved and never destroyed by accident.
+As a FoundryForge user, I want my conversations saved automatically and available after I restart the app, with the ability to start a new chat, duplicate one, and clear/delete one — but only delete behind an explicit confirmation that names the conversation and says it cannot be undone — so that my chat history (my data) is preserved and never destroyed by accident.
 
 **Why this priority**: Chat history is user data under Constitution IV; persistence + a correct consent flow are required for the milestone to be trustworthy, but they layer on the P1 conversation rather than enabling it. New/duplicate are non-destructive conveniences; clear/delete are the safety-critical part.
 
@@ -155,7 +155,7 @@ As a FoundryStudio user, I want my conversations saved automatically and availab
 
 ### User Story 8 - Tool / function calling with minimal, real .NET tools (Priority: P2)
 
-As a FoundryStudio user, I want the model to be able to call one or two genuine app-provided tools (functions) during a conversation when relevant — wired via MEAI `UseFunctionInvocation()` — so that I can see real local function calling working, not a tool UI that does nothing.
+As a FoundryForge user, I want the model to be able to call one or two genuine app-provided tools (functions) during a conversation when relevant — wired via MEAI `UseFunctionInvocation()` — so that I can see real local function calling working, not a tool UI that does nothing.
 
 **Why this priority**: M0d confirmed Foundry Local honors `tools`, so function calling is a real, demonstrable capability and a meaningful part of the lighthouse. It is P2 because plain chat (P1) stands without it, and the v1 tool surface is deliberately minimal. Constitution IV forbids shipping dead UI: any tool surfaced must actually work.
 
@@ -172,7 +172,7 @@ As a FoundryStudio user, I want the model to be able to call one or two genuine 
 
 ### User Story 9 - [OPTIONAL] Best-effort structured output and regenerate-last (Priority: P3)
 
-As a FoundryStudio user, I may want to request structured (JSON) output and to regenerate the last reply — understanding that structured output is **best-effort only** (Foundry Local accepts but does not enforce `response_format`) and is never promised as guaranteed.
+As a FoundryForge user, I may want to request structured (JSON) output and to regenerate the last reply — understanding that structured output is **best-effort only** (Foundry Local accepts but does not enforce `response_format`) and is never promised as guaranteed.
 
 **Why this priority**: Both are nice refinements, not lighthouse-critical. M0d found structured output **accepted-but-not-enforced**, so it may be passed through but MUST NOT be promised; a dedicated "guaranteed JSON" toggle is forbidden (Constitution III/IV — no fake enforcement). Regenerate-last is an explicitly-optional simple convenience (full branching/regenerate trees are out of scope). This story is lowest priority and may be deferred without affecting M4's definition of done.
 

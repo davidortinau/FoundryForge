@@ -18,7 +18,7 @@ M4 activates the sidebar **Chat** nav (today a disabled "Coming soon" placeholde
 
 **Storage**: **NEW** persistent store — chat history as human-readable JSON under `FileSystem.AppDataDirectory` (e.g. `<AppData>/chats/`), one file per conversation plus serialization owned by Core (`ChatHistoryDocument`), file IO by `FileChatHistoryStore`. This is **protected user data** (Constitution IV): consent-gated clear/delete, `.bak` non-destructive recovery on parse failure. No change to the model cache or `settings.json`.
 
-**Testing**: xUnit in `tests/FoundryStudio.Tests` (Core-only, dylib-free) — unit tests for all Core seams, the history round-trip, the consent gate, the params→`ChatOptions` mapping, and a tool-invocation wiring test (fake `IChatClient` through `UseFunctionInvocation()` over a scripted stream). MAUI DevFlow DOM inspection on real Apple Silicon for UI verification (KI-001 sanctioned evidence path).
+**Testing**: xUnit in `tests/FoundryForge.Tests` (Core-only, dylib-free) — unit tests for all Core seams, the history round-trip, the consent gate, the params→`ChatOptions` mapping, and a tool-invocation wiring test (fake `IChatClient` through `UseFunctionInvocation()` over a scripted stream). MAUI DevFlow DOM inspection on real Apple Silicon for UI verification (KI-001 sanctioned evidence path).
 
 **Target Platform**: macOS / Apple Silicon only. No iOS/Android/Mac Catalyst. ONNX-only models.
 
@@ -64,7 +64,7 @@ specs/005-m4-streaming-chat/
 ### Source Code (repository root) — extend the existing 4 projects, no new projects
 
 ```text
-src/FoundryStudio.Core/                       # FL-free, dylib-free (references Microsoft.Extensions.AI + Markdig)
+src/FoundryForge.Core/                       # FL-free, dylib-free (references Microsoft.Extensions.AI + Markdig)
 ├── Abstractions/
 │   ├── IChatService.cs            # (existing; unchanged — StreamAsync seam)
 │   └── IChatHistoryStore.cs       # NEW — persistence abstraction (list/load/save/delete; consent-gated delete)
@@ -85,13 +85,13 @@ src/FoundryStudio.Core/                       # FL-free, dylib-free (references 
 ├── Catalog/ConsentGuard.cs        # (existing; reused for clear/delete consent)
 └── Settings/SettingsDocument.cs   # (existing; persistence/serialization precedent)
 
-src/FoundryStudio.Foundry/                    # FL behind the seam
+src/FoundryForge.Foundry/                    # FL behind the seam
 ├── ChatService.cs                 # CHANGED — build adapter.AsBuilder().UseFunctionInvocation().UseOpenTelemetry().Build(); register app tools
 ├── FoundryChatClient.cs           # CHANGED — map ChatOptions (4 params + tools + best-effort response_format) into request; emit UsageContent + FinishReason from the stream
 ├── Internal/FoundryMessageMapper.cs  # CHANGED — options→request mapping; extract usage/finish-reason; tool-call passthrough (Betalgo isolated here)
 └── Tools/ChatTools.cs             # NEW — 1–2 genuine app-defined AIFunctions (e.g. get_current_time, get_loaded_model_info via IFoundryCatalogService)
 
-src/FoundryStudio.App/
+src/FoundryForge.App/
 ├── Components/
 │   ├── Layout/Sidebar.razor       # CHANGED — activate nav-chat (NavLink → /chat); remove disabled "Coming soon"
 │   ├── Pages/Chat.razor           # NEW — route /chat; orchestrates the chat surface; gate + load-on-demand
@@ -109,7 +109,7 @@ src/FoundryStudio.App/
 ├── MauiProgram.cs                 # CHANGED — register IChatHistoryStore (FileChatHistoryStore w/ AppData path) + app tools collection
 └── wwwroot/                       # CHANGED — code-copy JS + markdown/code-block styles (Copper accent, AA, both themes)
 
-tests/FoundryStudio.Tests/         # Core-only, dylib-free
+tests/FoundryForge.Tests/         # Core-only, dylib-free
 ├── TranscriptAssemblerTests.cs        # NEW — system + multi-turn ordering (SC-001)
 ├── InferenceParametersMappingTests.cs # NEW — 4 params flow into ChatOptions; zero unsupported keys (SC-006)
 ├── TokenStatsAccumulatorTests.cs      # NEW — TTFT/tok-per-sec/total/stop-reason + unknown over synthetic updates (SC-005)
@@ -120,7 +120,7 @@ tests/FoundryStudio.Tests/         # Core-only, dylib-free
 └── ToolInvocationWiringTests.cs       # NEW — fake IChatClient through UseFunctionInvocation over a scripted stream invokes a real tool (SC-010)
 ```
 
-**Structure Decision**: Single MAUI Blazor Hybrid desktop solution; extend the four existing projects (`FoundryStudio.App`, `.Core`, `.Foundry`, `.Tests`). All pure chat logic lives in `.Core` (FL-free, dylib-free, unit-tested) — including the new `IChatHistoryStore` + `FileChatHistoryStore` (plain managed file IO, directly testable with a temp dir), a deliberate, documented refinement over `FileSettingsService`'s Foundry-layer placement (research R3). FL access (pipeline build, options/usage/tools mapping, the example tools) stays in `.Foundry`; the chat UI in `.App` consumes only Core abstractions + `IChatService` + the M1–M3 services — preserving the Constitution V / DEC-004 layering. No new projects (Complexity Tracking not triggered).
+**Structure Decision**: Single MAUI Blazor Hybrid desktop solution; extend the four existing projects (`FoundryForge.App`, `.Core`, `.Foundry`, `.Tests`). All pure chat logic lives in `.Core` (FL-free, dylib-free, unit-tested) — including the new `IChatHistoryStore` + `FileChatHistoryStore` (plain managed file IO, directly testable with a temp dir), a deliberate, documented refinement over `FileSettingsService`'s Foundry-layer placement (research R3). FL access (pipeline build, options/usage/tools mapping, the example tools) stays in `.Foundry`; the chat UI in `.App` consumes only Core abstractions + `IChatService` + the M1–M3 services — preserving the Constitution V / DEC-004 layering. No new projects (Complexity Tracking not triggered).
 
 ## Complexity Tracking
 

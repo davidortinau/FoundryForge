@@ -1,6 +1,6 @@
 # Implementation Plan — Foundry Local desktop client (.NET MAUI, AppKit + Blazor Hybrid)
 
-> Working codename: **FoundryStudio** (placeholder — rename freely).
+> Working codename: **FoundryForge** (placeholder — rename freely).
 > An LM Studio-style desktop client for Microsoft Foundry Local, built as a native macOS (AppKit) .NET MAUI app with a Blazor Hybrid UI, also exposing Foundry Local's OpenAI-compatible local server.
 
 ## Why / success measure
@@ -19,7 +19,7 @@
 | FL integration | **In-process SDK** for catalog/model/chat **+** expose the **local OpenAI-compatible server** |
 | Scope | **Lighthouse core** — v1 = M0→M4 (catalog → load → streaming chat) **+ the M5 server toggle as the "wow."** RAG / voice / presets / MCP / i18n are **post-v1**. Reframed from "full parity" per skeptic review (LM Studio is a multi-year product; "parity in one push" by one person on an unproven foundation = many half-features). |
 | Distribution | **Internal dogfood — runs only from a local `dotnet build -t:Run` on the dev's own Mac.** Handing a zipped `.app` to a colleague needs `xattr -dr com.apple.quarantine` + a `disable-library-validation` entitlement (unsigned third-party dylibs); not truly distributable until signed/notarized (post-v1). |
-| Repo | **`~/work/FoundryStudio`** — new standalone git repo (flat under `~/work/`, matching your convention); consumes maui-labs AppKit packages via the **LocalNuGets feed** (`~/work/LocalNuGets/`) and/or project references into `~/work/maui-labs` during dev |
+| Repo | **`~/work/FoundryForge`** — new standalone git repo (flat under `~/work/`, matching your convention); consumes maui-labs AppKit packages via the **LocalNuGets feed** (`~/work/LocalNuGets/`) and/or project references into `~/work/maui-labs` during dev |
 
 ## Feasibility verdict: LIKELY — architecture proven by MAUI.Sherpa; one FL-specific native spike remains
 
@@ -164,7 +164,7 @@ Do **not** build app code until M0d passes. Each gate fails cheap.
 
 > Grounded in current (2025–2026) developer sentiment from the LM Studio bug tracker, Reddit, and comparison reviews, plus Foundry Local's own GitHub issues. Two corrections to stale assumptions: **LM Studio became free for commercial/work use in July 2025** (only its Enterprise tier — SSO, model gating, private sharing — is paid), and **LM Studio now ships speculative decoding**. Do not pitch "we're free, they cost money" or treat spec-decoding as a unique LM Studio edge.
 
-**The reframe — we are not a general-purpose local-LLM runner.** On the single most-wanted capability (run *any* GGUF from HuggingFace), we lose decisively and it is **not fixable at our layer** — we inherit Foundry Local's curated, ONNX-only, Microsoft-gated catalog. A hobbyist who wants tonight's new HF model picks LM Studio or Ollama. We do not compete for that buyer. **FoundryStudio is the on-device client for the Foundry platform**: trusted/curated models, NPU/ONNX optimization, governance, and a path to Foundry cloud. That framing turns the curated catalog from a *limitation* into a *feature* (trust/compliance) and concedes the "run-anything" crowd on purpose.
+**The reframe — we are not a general-purpose local-LLM runner.** On the single most-wanted capability (run *any* GGUF from HuggingFace), we lose decisively and it is **not fixable at our layer** — we inherit Foundry Local's curated, ONNX-only, Microsoft-gated catalog. A hobbyist who wants tonight's new HF model picks LM Studio or Ollama. We do not compete for that buyer. **FoundryForge is the on-device client for the Foundry platform**: trusted/curated models, NPU/ONNX optimization, governance, and a path to Foundry cloud. That framing turns the curated catalog from a *limitation* into a *feature* (trust/compliance) and concedes the "run-anything" crowd on purpose.
 
 **Where we look weak to someone comparing side by side (and whose limit it is):**
 
@@ -178,11 +178,11 @@ Do **not** build app code until M0d passes. Each gate fails cheap.
 | Limited sampling params (no top_k/min_p/repeat_penalty/seed) | 🟡 Med | Foundry Local |
 | No speculative decoding | 🟢 Low (hit-or-miss in practice) | Foundry Local |
 
-Most reds/oranges trace to **Foundry Local**, not FoundryStudio — they are product-feedback bullets, not app engineering debt.
+Most reds/oranges trace to **Foundry Local**, not FoundryForge — they are product-feedback bullets, not app engineering debt.
 
 **LM Studio complaints = our opportunities (current, sourced):**
 
-1. **Closed source + unverifiable privacy/telemetry** — LM Studio's most-cited criticism and a real enterprise-compliance blocker. The FL backend is already open. **If FoundryStudio ships open-source with our constitution's "no PII in logs, OpenTelemetry-only" telemetry, that's a wedge LM Studio structurally cannot match.** (OSS for FoundryStudio is an open decision — see DEC entry — currently v1 is build-locally dogfood.)
+1. **Closed source + unverifiable privacy/telemetry** — LM Studio's most-cited criticism and a real enterprise-compliance blocker. The FL backend is already open. **If FoundryForge ships open-source with our constitution's "no PII in logs, OpenTelemetry-only" telemetry, that's a wedge LM Studio structurally cannot match.** (OSS for FoundryForge is an open decision — see DEC entry — currently v1 is build-locally dogfood.)
 2. **Model import / directory friction** (manual folder placement, surprise re-downloads, broken symlinks) — we sidestep it entirely; FL manages the cache. "Models just work, no folder archaeology" is a demo-able contrast.
 3. **Enterprise governance is paywalled in LM Studio** (SSO / model gating / private sharing = paid Enterprise). Foundry Local + Entra/Azure could offer **model gating + governance natively** as a differentiator, not an upsell.
 4. **Resource/memory opacity** — recurring complaint. Lean into honest RAM-fit UX + clear EP/device visibility (see M2 memory-fit badge, rated as a *size-vs-free-RAM* indicator, not a confident verdict).
@@ -222,7 +222,7 @@ Most reds/oranges trace to **Foundry Local**, not FoundryStudio — they are pro
 | **Docs & API truth** | `learndocs` MCP (Microsoft Learn: FL, MAUI, MEAI), `context7` MCP (library docs), `github-mcp-server` (read FL + maui-labs source), `mihubot` (search dotnet repos), `web_search`/`web_fetch` |
 | **Build diagnostics** | `mcp-binlog-tool` (analyze the MSBuild binlog — especially M0, to confirm whether/why `runtimes/osx-arm64/native/*.dylib` copy into the `.app`), DevFlow native logs |
 | **Server & UI testing** | `playwright` (drive a browser/Open WebUI against the exposed `/v1` endpoint; optional Blazor UI smoke), `curl` for the M5 external-endpoint check |
-| **Repo hygiene & review** | `repo-bootstrap` (make `~/work/FoundryStudio` Copilot-ready: copilot-instructions + skills), `git-commit`, `review` / `deep-review` (pre-push gate), `validate`, `skill-builder` (if we author a project "foundry-local-client" skill) |
+| **Repo hygiene & review** | `repo-bootstrap` (make `~/work/FoundryForge` Copilot-ready: copilot-instructions + skills), `git-commit`, `review` / `deep-review` (pre-push gate), `validate`, `skill-builder` (if we author a project "foundry-local-client" skill) |
 | **Escalation / contacts** | `workiq` — only to reach FL owners (**Maanav Dalal** IC / **Meng Tang** portfolio) when filing upstream issues |
 
 ## When an upstream dependency, tool, or skill falls short
@@ -239,7 +239,7 @@ Default posture: **never block — ship a documented workaround, file upstream, 
 
 ## AGENTS.md for the new repo (focus + effectiveness guardrails)
 
-Generate `~/work/FoundryStudio/AGENTS.md` during M1 scaffolding using the `agents` skill, seeded with the content below, and keep it in sync as decisions change. It exists to keep every coding agent (and us) focused. Draft content:
+Generate `~/work/FoundryForge/AGENTS.md` during M1 scaffolding using the `agents` skill, seeded with the content below, and keep it in sync as decisions change. It exists to keep every coding agent (and us) focused. Draft content:
 
 - **What this is (one line):** LM Studio-style desktop client for Foundry Local — native macOS (AppKit) .NET MAUI app, Blazor Hybrid UI, also exposing Foundry Local's local OpenAI server.
 - **Non-negotiable architecture:** AppKit head (`Microsoft.Maui.Platforms.MacOS`, maui-labs) · Blazor Hybrid (BlazorWebView) · `net11.0-macos` · in-process FL SDK for catalog/model/chat **+** the exposed local server · **one `FoundryLocalManager` singleton** backs both surfaces (never construct a second).
@@ -253,6 +253,6 @@ Generate `~/work/FoundryStudio/AGENTS.md` during M1 scaffolding using the `agent
 Add a `KNOWN-ISSUES.md` alongside it for workaround tracking (each entry links its upstream issue and is removed when fixed).
 
 ## Open questions (non-blocking; assumptions noted)
-- App/codename + bundle id (assuming placeholder `FoundryStudio` / `com.example.foundrystudio`).
+- App/codename + bundle id (assuming placeholder `FoundryForge` / `com.example.foundryforge`).
 - Repo name/location for the new standalone repo.
 - Whether MCP host stays in v1 (currently a stretch in M6).

@@ -1,6 +1,6 @@
-# FoundryStudio Design Guide
+# FoundryForge Design Guide
 
-> The durable design system for FoundryStudio. Every surface — current and future (chat, server,
+> The durable design system for FoundryForge. Every surface — current and future (chat, server,
 > settings) — is built from the tokens, components, and rules below. This guide is **enforceable**:
 > if a screen contradicts it, the screen is wrong. It is paired with the Constitution — where the
 > two touch (honesty, data preservation), the Constitution wins and this guide encodes how to
@@ -12,7 +12,7 @@ Status: v1.0 · Scope: macOS (Apple Silicon) · Stack: .NET MAUI + Blazor Hybrid
 
 ## 1. Vision & principles
 
-**Vision:** FoundryStudio is the calm, official-feeling forge for local AI — models are inspected,
+**Vision:** FoundryForge is the calm, official-feeling forge for local AI — models are inspected,
 **cast** (downloaded), **tempered** (loaded), and **served** with visible truth at every step.
 
 **North-star words:** **Trustworthy · Elemental · Precise.**
@@ -34,7 +34,7 @@ Principles (in priority order):
 6. **Accessible by default.** WCAG 2.1 AA minimum: contrast, focus-visible, full keyboard
    operation, `prefers-reduced-motion`, correct ARIA. Non-negotiable.
 
-**The motif, stated once:** FoundryStudio is a **workshop, not a robot companion.** The forge
+**The motif, stated once:** FoundryForge is a **workshop, not a robot companion.** The forge
 metaphor is *state language and subtle material atmosphere* — never decoration, never kitsch.
 LM Studio owns the friendly-mascot space; we own governed, transparent, native craft.
 
@@ -42,7 +42,7 @@ LM Studio owns the friendly-mascot space; we own governed, transparent, native c
 
 ## 2. Identity
 
-- **Accent:** Foundry Copper (see §3). It is the single unmistakable FoundryStudio mark. We use a
+- **Accent:** Foundry Copper (see §3). It is the single unmistakable FoundryForge mark. We use a
   Fluent-2 *structure* (spacing, elevation, neutral discipline, WCAG-first color) but **do not**
   adopt Fluent blue as identity — copper says "local forge, visible compute, heat under control."
 - **No mascot.** Instead, a **foundry mark**: a small stamped copper glyph (a blackened steel tray
@@ -288,7 +288,7 @@ This supersedes the earlier "state language only" phrasing: forge vocabulary map
 stays out of the controls. Never mix two vocabularies for one state in one view (no "Forge lit" title
 above a "running" badge — pick "Running").
 
-Reference microcopy (FoundryStudio voice) — plain is primary; forge is optional decoration:
+Reference microcopy (FoundryForge voice) — plain is primary; forge is optional decoration:
 
 | Context | Primary (plain — use this) | Optional forge flavor (decoration only) |
 |---|---|---|

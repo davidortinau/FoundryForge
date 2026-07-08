@@ -6,11 +6,11 @@ This is the **validation/run guide** that proves M4 works end-to-end. It is not 
 - macOS / Apple Silicon; .NET 11 SDK (`global.json` pin); FL native chain present (M0 gate green).
 - A model **loaded** via M3 (e.g. `qwen2.5-0.5b`); a tool-capable model for US8.
 - DevFlow Agent/Blazor `0.25.0-dev` (KI-002). Evidence path = **DOM inspection** (KI-001): `maui devflow webview source` / `Runtime evaluate`. `ui screenshot` only as a frontmost-window supplement, never the gate.
-- Markdig `0.44.0` referenced by `FoundryStudio.Core` (already pinned) — run `dotnet restore` to refresh `FoundryStudio.Core/packages.lock.json` (research R1).
+- Markdig `0.44.0` referenced by `FoundryForge.Core` (already pinned) — run `dotnet restore` to refresh `FoundryForge.Core/packages.lock.json` (research R1).
 
 ## Layer A — dylib-free unit tests (no hardware, CI seam gate)
 ```bash
-dotnet test tests/FoundryStudio.Tests/FoundryStudio.Tests.csproj
+dotnet test tests/FoundryForge.Tests/FoundryForge.Tests.csproj
 ```
 Expected green, covering (each maps to a Core seam in `contracts/core-seams.md`):
 - `TranscriptAssemblerTests` — system + multi-turn ordering & roles (SC-001).

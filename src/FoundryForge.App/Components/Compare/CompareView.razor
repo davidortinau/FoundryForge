@@ -1,0 +1,142 @@
+@using FoundryForge.Core.Compare
+@implements IAsyncDisposable
+
+@if (LoadedModels.Count < 2)
+{
+    <section class="compare-empty chat-state card" data-testid="compare-empty" aria-labelledby="compare-empty-title">
+        <span class="foundry-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false"><path d="M5 6.5h14v11H5z" /><path d="M8 17.5V9h8" /><path d="M8 12.75h6.5" /></svg>
+        </span>
+        <div>
+            <h2 id="compare-empty-title">Load 2 or more models to compare.</h2>
+            <p class="status">Go to <a href="/server">Serve</a> or <a href="/catalog">Discover</a> to load additional models, then return here to compare them side-by-side.</p>
+        </div>
+    </section>
+}
+else
+{
+    <div class="compare-surface" data-testid="compare-surface">
+        <div class="compare-toolbar card">
+            <!-- Model picker: select 2–3 from the loaded set -->
+            <div class="compare-model-picker" data-testid="compare-model-picker"
+                 role="group" aria-label="Select 2 to 3 models to compare">
+                <span class="eyebrow" aria-hidden="true">Compare models</span>
+                @foreach (var model in LoadedModels)
+                {
+                    var alias = model.Alias;
+                    var isChecked = _selectedAliases.Contains(alias);
+                    var atMax = _selectedAliases.Count >= 3 && !isChecked;
+                    var isDisabled = Orchestrator.IsRunning || atMax;
+                    <label class="compare-model-check @(isChecked ? "is-selected" : "") @(isDisabled ? "is-disabled" : "")">
+                        <input type="checkbox"
+                               aria-label="@ModelDisplayName(model)"
+                               checked="@isChecked"
+                               disabled="@isDisabled"
+                               @onchange="() => ToggleModel(alias)" />
+                        @ModelDisplayName(model)
+                    </label>
+                }
+            </div>
+
+            <!-- Shared prompt -->
+            <div class="compare-prompt-row">
+                <div class="field compare-prompt-field">
+                    <label for="compare-prompt-input">Shared prompt</label>
+                    <textarea id="compare-prompt-input"
+                              data-testid="compare-prompt"
+                              class="compare-prompt"
+                              rows="3"
+                              placeholder="Enter a prompt to run on all selected models…"
+                              value="@_prompt"
+                              @oninput="OnPromptChanged"
+                              disabled="@Orchestrator.IsRunning"></textarea>
+                </div>
+                <div class="compare-prompt-actions">
+                    @if (Orchestrator.IsRunning)
+                    {
+                        <button type="button" class="button button-secondary" @onclick="CancelRun">Stop</button>
+                    }
+                    else
+                    {
+                        <button type="button"
+                                class="button compare-run-btn"
+                                data-testid="compare-run"
+                                disabled="@(!CanRun)"
+                                @onclick="RunAsync">Run</button>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Response columns -->
+        @if (Orchestrator.Columns.Count > 0)
+        {
+            <div class="compare-columns" style="--compare-col-count: @Orchestrator.Columns.Count;">
+                @foreach (var col in Orchestrator.Columns)
+                {
+                    <CompareColumn State="@col" />
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<ModelInfo> LoadedModels { get; set; } = Array.Empty<ModelInfo>();
+
+    [Parameter, EditorRequired] public CompareOrchestrator Orchestrator { get; set; } = null!;
+
+    private readonly HashSet<string> _selectedAliases = new();
+    private string _prompt = string.Empty;
+
+    private bool CanRun => _selectedAliases.Count >= 2
+                        && !string.IsNullOrWhiteSpace(_prompt)
+                        && !Orchestrator.IsRunning;
+
+    protected override void OnInitialized()
+    {
+        Orchestrator.OnChanged += OnOrchestratorChanged;
+        // Pre-select the first 2 loaded models as a convenient default.
+        foreach (var m in LoadedModels.Take(2))
+            _selectedAliases.Add(m.Alias);
+    }
+
+    protected override void OnParametersSet()
+    {
+        // If the loaded model set has changed, drop any selected aliases that are no longer loaded.
+        var validAliases = LoadedModels.Select(m => m.Alias).ToHashSet();
+        _selectedAliases.IntersectWith(validAliases);
+    }
+
+    private void OnOrchestratorChanged()
+        => _ = InvokeAsync(StateHasChanged);
+
+    private void ToggleModel(string alias)
+    {
+        if (!_selectedAliases.Remove(alias))
+            _selectedAliases.Add(alias);
+    }
+
+    private void OnPromptChanged(ChangeEventArgs args)
+        => _prompt = args.Value?.ToString() ?? string.Empty;
+
+    private async Task RunAsync()
+    {
+        if (!CanRun) return;
+        var selected = LoadedModels
+            .Where(m => _selectedAliases.Contains(m.Alias))
+            .ToList();
+        await Orchestrator.RunAsync(selected, _prompt.Trim());
+    }
+
+    private void CancelRun() => Orchestrator.Cancel();
+
+    private static string ModelDisplayName(ModelInfo model)
+        => string.IsNullOrWhiteSpace(model.DisplayName) ? model.Alias : model.DisplayName;
+
+    public ValueTask DisposeAsync()
+    {
+        Orchestrator.OnChanged -= OnOrchestratorChanged;
+        return ValueTask.CompletedTask;
+    }
+}

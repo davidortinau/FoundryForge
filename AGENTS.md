@@ -1,4 +1,4 @@
-# AGENTS.md — FoundryStudio
+# AGENTS.md — FoundryForge
 
 Guidance for every agent (and human) working in this repo. Keep it short and obeyed. Canonical detail lives in [`docs/PLAN.md`](docs/PLAN.md).
 

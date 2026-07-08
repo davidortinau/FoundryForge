@@ -28,7 +28,7 @@ No outstanding clarifications. All open choices were resolved using reasonable d
 
 ### User Story 1 - Download a model with live progress, cancel, and optional auto-load (Priority: P1)
 
-As a FoundryStudio user, from a not-cached model's card I want to start a download and watch live progress (percent), cancel it if I change my mind, and optionally have the model auto-load once the download finishes — so that I can install a model and (optionally) make it immediately ready to use.
+As a FoundryForge user, from a not-cached model's card I want to start a download and watch live progress (percent), cancel it if I change my mind, and optionally have the model auto-load once the download finishes — so that I can install a model and (optionally) make it immediately ready to use.
 
 **Why this priority**: This is the headline action that turns the browse-only M2 catalog into a usable manager; "I can install a model" is the smallest slice of M3 that delivers standalone end-user value. The service capability (`DownloadAsync` with an `IProgress<double>` callback) already exists — M3 wires real progress to the card and adds the cancel and auto-load affordances.
 
@@ -46,7 +46,7 @@ As a FoundryStudio user, from a not-cached model's card I want to start a downlo
 
 ### User Story 2 - Load / unload a model with a currently-loaded indicator reflected on cards (Priority: P1)
 
-As a FoundryStudio user, from a cached model's card I want to load the model (making it ready) or unload it (freeing resources), see a clear "currently loaded" indicator, and have all cards reflect the current loaded state — with honest behavior when the system is busy and cannot load right now — so that I control which model is active.
+As a FoundryForge user, from a cached model's card I want to load the model (making it ready) or unload it (freeing resources), see a clear "currently loaded" indicator, and have all cards reflect the current loaded state — with honest behavior when the system is busy and cannot load right now — so that I control which model is active.
 
 **Why this priority**: Loading is the prerequisite for M4 chat and is a core management action; combined with US1 it completes "install and make ready." Load/unload already route through the M1 `IModelStateGate` (drain/reject) — M3 surfaces them on the cards and adds the loaded indicator and honest busy/rejected feedback.
 
@@ -64,7 +64,7 @@ As a FoundryStudio user, from a cached model's card I want to load the model (ma
 
 ### User Story 3 - Delete a cached model from disk behind an explicit confirmation (Priority: P1)
 
-As a FoundryStudio user, from a cached model's card I want to delete the model from disk to free space, but only after an explicit confirmation step that names the exact model and tells me this frees disk space — with a cancel path that does nothing — so that I can never destroy multi-GB protected data by accident.
+As a FoundryForge user, from a cached model's card I want to delete the model from disk to free space, but only after an explicit confirmation step that names the exact model and tells me this frees disk space — with a cancel path that does nothing — so that I can never destroy multi-GB protected data by accident.
 
 **Why this priority**: This is the most safety-critical action in M3 and the direct embodiment of Constitution IV (Data Preservation). It is P1 because shipping cache management without a correct, non-destructive-by-default consent flow would violate the constitution. The service method `DeleteFromCacheAsync(alias, userConfirmed, ct)` is already consent-gated (it throws without `userConfirmed`); M3 builds the in-UI confirmation that supplies that consent.
 
@@ -82,7 +82,7 @@ As a FoundryStudio user, from a cached model's card I want to delete the model f
 
 ### User Story 4 - Cached vs available grouping in the catalog (Priority: P2)
 
-As a FoundryStudio user, I want the catalog to clearly group/section models I already have cached separately from models that are only available to download — using the real cached state — so that I can see at a glance what is installed versus what I could install.
+As a FoundryForge user, I want the catalog to clearly group/section models I already have cached separately from models that are only available to download — using the real cached state — so that I can see at a glance what is installed versus what I could install.
 
 **Why this priority**: Grouping makes the now-actionable catalog navigable (manage what I have vs. discover what I could add) and is the natural home for resolving KI-009. It is P2 because the per-card cached badge from M2 already conveys the state; sectioning is a usability refinement layered on the P1 actions.
 
@@ -99,7 +99,7 @@ As a FoundryStudio user, I want the catalog to clearly group/section models I al
 
 ### User Story 5 - Variant (quantization/device) selection (Priority: P2)
 
-As a FoundryStudio user, for a model that reports multiple variants I want to pick (pin) a specific variant — by quantization and/or device — that will be used for download/load, and see an honest "no variants reported" when a model exposes none — so that I can choose the build that fits my hardware.
+As a FoundryForge user, for a model that reports multiple variants I want to pick (pin) a specific variant — by quantization and/or device — that will be used for download/load, and see an honest "no variants reported" when a model exposes none — so that I can choose the build that fits my hardware.
 
 **Why this priority**: Variant selection is a real Foundry Local capability (`GetVariantsAsync` / `IModel.Variants`) and meaningfully affects what gets downloaded/loaded, but it refines the P1 download/load actions rather than enabling them. It is P2 because the P1 stories function with a default variant.
 
@@ -116,7 +116,7 @@ As a FoundryStudio user, for a model that reports multiple variants I want to pi
 
 ### User Story 6 - Disk-space check before download (Priority: P2)
 
-As a FoundryStudio user, before I start a download I want a warning when the model is unlikely to fit in my available free disk space — and an honest "size unknown" when the model size is not reported — so that I am not surprised by a failed or space-exhausting download. The check warns; it does not block.
+As a FoundryForge user, before I start a download I want a warning when the model is unlikely to fit in my available free disk space — and an honest "size unknown" when the model size is not reported — so that I am not surprised by a failed or space-exhausting download. The check warns; it does not block.
 
 **Why this priority**: This is a "don't surprise the user" safeguard layered onto the P1 download action. It is P2 because download functions without it; the heuristic is a refinement that improves trust and avoids a poor outcome.
 
@@ -133,7 +133,7 @@ As a FoundryStudio user, before I start a download I want a warning when the mod
 
 ### User Story 7 - Configurable model cache directory (Priority: P2)
 
-As a FoundryStudio user, I want to view and change the directory where models are cached on disk — without the app silently moving or wiping my existing cache — so that I can put multi-GB models on the volume I choose.
+As a FoundryForge user, I want to view and change the directory where models are cached on disk — without the app silently moving or wiping my existing cache — so that I can put multi-GB models on the volume I choose.
 
 **Why this priority**: The cache directory is a real, persisted setting (`AppSettings.ModelCacheDirectory` via the consent-aware `ISettingsService`) and a legitimate management need, but it is a settings refinement rather than a core card action. It is P2 and carries a sharp data-preservation constraint that must be encoded carefully.
 
@@ -150,7 +150,7 @@ As a FoundryStudio user, I want to view and change the directory where models ar
 
 ### User Story 8 - [OPTIONAL stretch] Bring-your-own ONNX model (BYOM) import (Priority: P3)
 
-As an advanced FoundryStudio user, I want a guided flow to import my own Olive-compiled ONNX model into the model cache (with a docs link) — explicitly ONNX-only — so that I can run a model I compiled myself. **This is an optional, lowest-priority stretch; it may be deferred without failing M3.**
+As an advanced FoundryForge user, I want a guided flow to import my own Olive-compiled ONNX model into the model cache (with a docs link) — explicitly ONNX-only — so that I can run a model I compiled myself. **This is an optional, lowest-priority stretch; it may be deferred without failing M3.**
 
 **Why this priority**: BYOM is a genuine but advanced, narrow capability that the parity map flags as a documented limit (ONNX-only via Olive/BYOM; no GGUF/safetensors). It is P3 and explicitly optional because none of the P1/P2 management value depends on it and it must never compromise the capability-honesty guarantee (no GGUF).
 

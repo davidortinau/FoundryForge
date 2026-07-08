@@ -6,7 +6,7 @@ the implementation phase. Each scenario maps to the spec's success criteria.
 
 ## Prerequisites
 
-- **Apple Silicon Mac** (macOS 14+). FoundryStudio is macOS / Apple-Silicon only; the FL native
+- **Apple Silicon Mac** (macOS 14+). FoundryForge is macOS / Apple-Silicon only; the FL native
   dylib chain loads on the AppKit head (DEC-004).
 - **.NET 10 SDK** matching the M0 baseline (`net10.0-macos`). The net11 pin is the separate open
   chore **T004** and is not required for M1.
@@ -20,9 +20,9 @@ the implementation phase. Each scenario maps to the spec's success criteria.
 ## Solution layout (built in this milestone)
 
 See [plan.md → Project Structure](./plan.md#project-structure). Four projects:
-`src/FoundryStudio.Core` (FL-free seams + interfaces), `src/FoundryStudio.Foundry` (FL impls +
-in-process `IChatClient` adapter + stubs), `src/FoundryStudio.App` (`net10.0-macos` AppKit +
-Blazor Hybrid head), `tests/FoundryStudio.Tests` (xUnit, references **Core only**). The M0
+`src/FoundryForge.Core` (FL-free seams + interfaces), `src/FoundryForge.Foundry` (FL impls +
+in-process `IChatClient` adapter + stubs), `src/FoundryForge.App` (`net10.0-macos` AppKit +
+Blazor Hybrid head), `tests/FoundryForge.Tests` (xUnit, references **Core only**). The M0
 spikes under `spikes/` are deleted/archived once the real solution is scaffolded (research R11).
 
 ---
@@ -30,24 +30,24 @@ spikes under `spikes/` are deleted/archived once the real solution is scaffolded
 ## Scenario 1 — Build the solution clean on pinned versions  *(SC-009 / FR-017)*
 
 ```bash
-cd ~/work/FoundryStudio
-dotnet restore FoundryStudio.sln            # resolves ONLY the pinned set; fails on float
-dotnet build  FoundryStudio.sln -c Debug    # builds Core, Foundry, App (macOS head), Tests
+cd ~/work/FoundryForge
+dotnet restore FoundryForge.sln            # resolves ONLY the pinned set; fails on float
+dotnet build  FoundryForge.sln -c Debug    # builds Core, Foundry, App (macOS head), Tests
 ```
 
 **Expected**: clean restore + build using only pinned versions; the macOS head bundles the FL
-dylib chain into `…/FoundryStudio.App.app/Contents/MonoBundle/runtimes/osx-arm64/native/`.
+dylib chain into `…/FoundryForge.App.app/Contents/MonoBundle/runtimes/osx-arm64/native/`.
 A dependency resolving off the pinned set **fails** the restore (the CI guardrail).
 
 ## Scenario 2 — Pure-logic seam tests pass with no native dylib  *(SC-008 / FR-016)*
 
 ```bash
-dotnet test tests/FoundryStudio.Tests -c Debug
+dotnet test tests/FoundryForge.Tests -c Debug
 ```
 
 **Expected**: green. Covers `SettingsDocument` (defaults / round-trip / never-wipe-without-
 consent), `CatalogFilter`, `RamFitHeuristic`, and `ModelStateGate` (drains/rejects, serialization,
-per-model isolation). These reference **only** `FoundryStudio.Core`, so they run with **no
+per-model isolation). These reference **only** `FoundryForge.Core`, so they run with **no
 Foundry Local dylib present** (the bundle target runs only for the `-macos` head). See
 [contracts/IModelStateGate.md](./contracts/IModelStateGate.md),
 [contracts/ISettingsService.md](./contracts/ISettingsService.md).
@@ -58,8 +58,8 @@ Per KI-004, run the inner Mach-O binary directly (not via `open`) so the AppKit 
 agent persist:
 
 ```bash
-dotnet build src/FoundryStudio.App -c Debug
-"$(find src/FoundryStudio.App/bin/Debug -name 'FoundryStudio.App' -path '*/MacOS/*' | head -1)"
+dotnet build src/FoundryForge.App -c Debug
+"$(find src/FoundryForge.App/bin/Debug -name 'FoundryForge.App' -path '*/MacOS/*' | head -1)"
 # then attach DevFlow to confirm the live DOM state:
 maui devflow wait
 maui devflow webview source           # inspect rendered state (KI-001: screenshot won't capture WKWebView)

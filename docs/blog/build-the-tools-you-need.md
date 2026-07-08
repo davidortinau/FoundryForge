@@ -10,9 +10,9 @@ tags: [ai, dotnet, maui, foundry-local, agents, copilot]
 
 I wanted a clean, native macOS client for running local models, the kind that run on your own machine instead of behind a cloud API. Browse a catalog, download a model, load it, chat with it, and flip on a local server so my other tools could reach it. LM Studio does a version of this for the run-anything crowd. I wanted something that felt native to my Mac and spoke to [Foundry Local](https://learn.microsoft.com/azure/foundry-local/) directly.
 
-It didn't exist. A year ago that's where the story ends, or turns into a feature request I file and wait on. This time I opened a terminal and built it. It's called [FoundryStudio](https://github.com/davidortinau/FoundryStudio), and here's what it looks like today.
+It didn't exist. A year ago that's where the story ends, or turns into a feature request I file and wait on. This time I opened a terminal and built it. It's called [FoundryForge](https://github.com/davidortinau/FoundryForge), and here's what it looks like today.
 
-![FoundryStudio Serve page in Workshop Daylight](images/serve-light.png)
+![FoundryForge Serve page in Workshop Daylight](images/serve-light.png)
 
 That's a real net11 .NET MAUI app with a Blazor Hybrid UI, running on the macOS AppKit head (the native-Mac build target), talking to Foundry Local in-process. I built it with coding assistants over a handful of sessions. This post is about how, because the how is the interesting part now, not the fact that an AI wrote some C#.
 
@@ -20,7 +20,7 @@ That's a real net11 .NET MAUI app with a Blazor Hybrid UI, running on the macOS 
 
 The hype version of this story is "AI writes my code." That's not it. The real shift is who gets to build a tool. Building a native desktop app that loads ONNX models (a portable AI model format) through a chain of native dylibs (the macOS name for a .dll) used to be a project. You need to know MAUI, AppKit signing, Blazor Hybrid, the Foundry Local SDK, and a dozen small platform traps. I know some of that. I don't know all of it, and I didn't want to spend a month relearning the parts I've forgotten.
 
-Coding assistants like GitHub Copilot CLI and Claude Code close that gap. I mean the terminal-based kind that can read your files, run commands, and change a whole project, not the inline autocomplete you may already use. They help, but only if you give them a workflow. Point one at an empty folder and say "build me a local model app" and you get a mess. Give it structure, guardrails, and a way to see its own work, and you get FoundryStudio. The tips below are the difference between those two outcomes.
+Coding assistants like GitHub Copilot CLI and Claude Code close that gap. I mean the terminal-based kind that can read your files, run commands, and change a whole project, not the inline autocomplete you may already use. They help, but only if you give them a workflow. Point one at an empty folder and say "build me a local model app" and you get a mess. Give it structure, guardrails, and a way to see its own work, and you get FoundryForge. The tips below are the difference between those two outcomes.
 
 ## Plan before you build (spec-kit)
 
@@ -62,7 +62,7 @@ The tip: your assistant needs eyes. Whether that's DevFlow for a MAUI app, Playw
 
 ## Package expertise as skills
 
-The knowledge that makes UI good is reusable, so I stored it as skills the agent loads on demand. FoundryStudio's repo carries a small library of them:
+The knowledge that makes UI good is reusable, so I stored it as skills the agent loads on demand. FoundryForge's repo carries a small library of them:
 
 - `ux-first-principles`, `ux-desktop`, `ux-tablet`, `ux-mobile` for layout and interaction rules
 - a `design-review` agent that sweeps a screen for principle violations and dead controls
@@ -88,7 +88,7 @@ An app is a pile of small decisions. A few of ours are worth showing because we 
 
 ![Discover, the two-column model grid in Night Forge](images/discover-dark.png)
 
-**Say what you mean.** I love a good metaphor, and FoundryStudio has a forge theme running through it: copper accent, an ember that glows when the server is live. Early on the metaphor crept into the controls. Downloading a model was "Cast to local cache." Loading it was "Temper in memory."
+**Say what you mean.** I love a good metaphor, and FoundryForge has a forge theme running through it: copper accent, an ember that glows when the server is live. Early on the metaphor crept into the controls. Downloading a model was "Cast to local cache." Loading it was "Temper in memory."
 
 ![The earlier design, with forge words as buttons](images/before-forge-jargon.png)
 
@@ -124,7 +124,7 @@ You'll know it's working when you catch yourself building a small tool on a Tues
 
 Everything here is public. Grab what's useful.
 
-- **FoundryStudio source:** [github.com/davidortinau/FoundryStudio](https://github.com/davidortinau/FoundryStudio). The full app, plus the plan, the constitution, the design guide, and the decision log that shaped it.
+- **FoundryForge source:** [github.com/davidortinau/FoundryForge](https://github.com/davidortinau/FoundryForge). The full app, plus the plan, the constitution, the design guide, and the decision log that shaped it.
 - **The UX skills:** published on their own in [davidortinau/maui-skills](https://github.com/davidortinau/maui-skills), which also carries 37 .NET MAUI and Xamarin skills. You get `ux-first-principles` plus the medium layers `ux-desktop`, `ux-tablet`, and `ux-mobile`. Install them into GitHub Copilot CLI or Claude Code:
 
   ```console

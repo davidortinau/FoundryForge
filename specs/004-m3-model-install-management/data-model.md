@@ -1,25 +1,25 @@
 # Phase 1 Data Model: M3 — Model Install & Management
 
-M3 adds **no persistent schema** (the model cache and `AppSettings` are unchanged). The entities below are (a) **pure-logic Core seams** (dylib-free, unit-tested — `FoundryStudio.Core`) and (b) **transient UI view-model state** (`FoundryStudio.App`). Existing entities (`ModelInfo`, `ModelVariant`, `AppSettings`) are consumed unchanged for the P1/P2 stories.
+M3 adds **no persistent schema** (the model cache and `AppSettings` are unchanged). The entities below are (a) **pure-logic Core seams** (dylib-free, unit-tested — `FoundryForge.Core`) and (b) **transient UI view-model state** (`FoundryForge.App`). Existing entities (`ModelInfo`, `ModelVariant`, `AppSettings`) are consumed unchanged for the P1/P2 stories.
 
 ---
 
 ## Existing entities (consumed, unchanged)
 
-### `ModelInfo` — `src/FoundryStudio.Core/Models/ModelInfo.cs`
+### `ModelInfo` — `src/FoundryForge.Core/Models/ModelInfo.cs`
 Consumed fields in M3: `Alias`, `Id`, `SizeGb` (disk-fit, nullable = unknown), `Variants`, `IsCached`, `IsLoaded`, `Device`. **No schema change** for P1/P2.
 
-### `ModelVariant` — `src/FoundryStudio.Core/Models/ModelVariant.cs`
+### `ModelVariant` — `src/FoundryForge.Core/Models/ModelVariant.cs`
 `VariantId` (= FL variant `Info.Id`), `Quantization`, `Device`, `SizeGb`. The unit of selection in US5; `VariantId` is the value passed as the additive `variantId` targeting parameter (research R7).
 
-### `AppSettings` — `src/FoundryStudio.Core/Models/AppSettings.cs`
+### `AppSettings` — `src/FoundryForge.Core/Models/AppSettings.cs`
 `record (string ModelCacheDirectory, string? DefaultModel, AppTheme Theme, int SchemaVersion)`. US7 edits `ModelCacheDirectory` via `ISettingsService` (consent-gated, no-wipe). Edge case: deleting a model equal to `DefaultModel` must leave `DefaultModel` honest (cleared/flagged), not dangling.
 
 ---
 
 ## New Core seam entities (pure, dylib-free)
 
-### `DiskFitResult` + `DiskFit` — `src/FoundryStudio.Core/Models/DiskFitResult.cs`
+### `DiskFitResult` + `DiskFit` — `src/FoundryForge.Core/Models/DiskFitResult.cs`
 Mirrors `RamFitResult`/`RamFit`.
 ```csharp
 public sealed record DiskFitResult(DiskFit Fit, double? MarginGb);
@@ -32,7 +32,7 @@ public enum DiskFit { Fits, Warn, Unknown }
 
 **Producer**: `DiskFitHeuristic.Evaluate(double? modelSizeGb, double freeDiskGb)` (research R3). Pure; no I/O. State transitions: none (stateless verdict).
 
-### `VariantSelectionState` — `src/FoundryStudio.Core/Catalog/VariantSelectionState.cs`
+### `VariantSelectionState` — `src/FoundryForge.Core/Catalog/VariantSelectionState.cs`
 Pure per-model pinned-variant state (US5).
 | Concept | Rule |
 |---------|------|
@@ -43,7 +43,7 @@ Pure per-model pinned-variant state (US5).
 | `Effective` | `PinnedVariantId ?? <default>`; `null` when no variants |
 **State transitions**: `unset → pinned(id) → re-pinned(id') `; no-variants state is terminal/honest. Unit-tested: default, pin, re-pin, no-variants (SC-008).
 
-### `CatalogGrouping` (cached/available partition) — `src/FoundryStudio.Core/Catalog/CatalogGrouping.cs`
+### `CatalogGrouping` (cached/available partition) — `src/FoundryForge.Core/Catalog/CatalogGrouping.cs`
 Pure partition for US4 / KI-009 (research R5).
 ```csharp
 public static (IReadOnlyList<ModelInfo> Cached, IReadOnlyList<ModelInfo> Available)
@@ -58,9 +58,9 @@ public static (IReadOnlyList<ModelInfo> Cached, IReadOnlyList<ModelInfo> Availab
 
 ---
 
-## New UI view-model entities (transient, `FoundryStudio.App`)
+## New UI view-model entities (transient, `FoundryForge.App`)
 
-### `ModelOperationState` — `src/FoundryStudio.App/Components/Catalog/ModelOperationState.cs`
+### `ModelOperationState` — `src/FoundryForge.App/Components/Catalog/ModelOperationState.cs`
 Per-model transient state driving card rendering (not persisted).
 ```csharp
 public enum ModelOpPhase { Idle, Downloading, Cancelling, Loading, Unloading, Deleting, Failed, Busy }

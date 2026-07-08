@@ -1,6 +1,6 @@
 # Contract: Management UI DOM surface (DevFlow verification hooks)
 
-M3 extends the M2 catalog UI with **management actions**, exposing stable `id` / `data-testid` attributes so M3 is verified via DevFlow DOM inspection (KI-001 path: `webview source` / `Runtime evaluate`) without relying on `ui screenshot`. Components live under `src/FoundryStudio.App/Components/Catalog/` and `…/Components/Pages/`. This contract is what the DevFlow e2e and any future UI tests assert against. (M2 hooks in `specs/003…/contracts/catalog-ui.dom.md` remain valid; M3 **adds** the hooks below and **flips** the M2 negative invariants that are now intentionally present.)
+M3 extends the M2 catalog UI with **management actions**, exposing stable `id` / `data-testid` attributes so M3 is verified via DevFlow DOM inspection (KI-001 path: `webview source` / `Runtime evaluate`) without relying on `ui screenshot`. Components live under `src/FoundryForge.App/Components/Catalog/` and `…/Components/Pages/`. This contract is what the DevFlow e2e and any future UI tests assert against. (M2 hooks in `specs/003…/contracts/catalog-ui.dom.md` remain valid; M3 **adds** the hooks below and **flips** the M2 negative invariants that are now intentionally present.)
 
 ## Cached vs Available grouping (US4 / FR-016)
 

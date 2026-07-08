@@ -4,7 +4,7 @@ Owns the Foundry Local SDK seam: lifecycle, catalog/model management, chat, embe
 
 ## Project Context
 
-**Project:** FoundryStudio
+**Project:** FoundryForge
 
 ## Responsibilities
 

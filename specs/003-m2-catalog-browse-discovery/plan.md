@@ -6,7 +6,7 @@
 
 ## Summary
 
-M2 builds the first real end-user screen of FoundryStudio on the M1 foundation (DEC-016): a browsable, searchable, filterable catalog of Foundry Local models rendered as informative, honest per-model cards, surfaced only after the M1 ready-gate reaches "ready". It is **discovery only** — zero download/load/delete/variant-select/chat affordances; browsing triggers no FL mutation (FR-013, R7). M2 replaces the M1 `MapBasic`/`GetVariantsAsync` stubs (`TODO(M2)`) with **real** enriched metadata mapped from the reflected Foundry Local `1.2.3` surface (`ModelInfo`/`Runtime`/`IModel.Variants` — research.md R1), rendering an explicit "unknown / not provided" wherever FL genuinely omits a value (Constitution IV). All model data flows through the FL-free `IFoundryCatalogService` seam; the UI never touches the FL SDK (Constitution V / DEC-004). Filter/search reuse the existing tested `CatalogFilter`/`CatalogFilterExtensions` pure-logic seam; new pure helpers (`CapabilityParser`, `CuratedSelector`, `CatalogFacets`) stay dylib-free testable in Core. Verification closes with a real Apple-Silicon DevFlow end-to-end check (DOM primary per KI-001; `ui screenshot` re-tested per R6) + unit tests green + CI clean + a `Verified:` line.
+M2 builds the first real end-user screen of FoundryForge on the M1 foundation (DEC-016): a browsable, searchable, filterable catalog of Foundry Local models rendered as informative, honest per-model cards, surfaced only after the M1 ready-gate reaches "ready". It is **discovery only** — zero download/load/delete/variant-select/chat affordances; browsing triggers no FL mutation (FR-013, R7). M2 replaces the M1 `MapBasic`/`GetVariantsAsync` stubs (`TODO(M2)`) with **real** enriched metadata mapped from the reflected Foundry Local `1.2.3` surface (`ModelInfo`/`Runtime`/`IModel.Variants` — research.md R1), rendering an explicit "unknown / not provided" wherever FL genuinely omits a value (Constitution IV). All model data flows through the FL-free `IFoundryCatalogService` seam; the UI never touches the FL SDK (Constitution V / DEC-004). Filter/search reuse the existing tested `CatalogFilter`/`CatalogFilterExtensions` pure-logic seam; new pure helpers (`CapabilityParser`, `CuratedSelector`, `CatalogFacets`) stay dylib-free testable in Core. Verification closes with a real Apple-Silicon DevFlow end-to-end check (DOM primary per KI-001; `ui screenshot` re-tested per R6) + unit tests green + CI clean + a `Verified:` line.
 
 ## Technical Context
 
@@ -16,7 +16,7 @@ M2 builds the first real end-user screen of FoundryStudio on the M1 foundation (
 
 **Storage**: None new. Transient in-memory catalog per browse session; FL's own ~6h catalog cache is upstream/untouched. Settings remain the M1 `FileSettingsService` (unused by M2).
 
-**Testing**: xUnit in `tests/FoundryStudio.Tests` (Core-only, dylib-free). New tests: `CapabilityParser`, `CuratedSelector`, `CatalogFacets`, FL→Core pure mapping transform, updated `CatalogFilter` null-device case. Plus real-hardware DevFlow DOM verification (quickstart V1–V8).
+**Testing**: xUnit in `tests/FoundryForge.Tests` (Core-only, dylib-free). New tests: `CapabilityParser`, `CuratedSelector`, `CatalogFacets`, FL→Core pure mapping transform, updated `CatalogFilter` null-device case. Plus real-hardware DevFlow DOM verification (quickstart V1–V8).
 
 **Target Platform**: macOS / Apple Silicon only (DEC-004), AppKit head.
 
@@ -62,7 +62,7 @@ specs/003-m2-catalog-browse-discovery/
 ### Source Code (repository root) — build on the existing 4 projects (no new projects)
 
 ```text
-src/FoundryStudio.Core/                       # FL-free DTOs + pure-logic seams
+src/FoundryForge.Core/                       # FL-free DTOs + pure-logic seams
 ├── Models/
 │   ├── ModelInfo.cs                          # EXTEND: SizeGb→double?, Device→Device?, + EP/Context/MaxOut/License/Publisher/ModelType/Capabilities
 │   ├── ModelVariant.cs                        # EXTEND: Device→Device?, SizeGb→double?
@@ -76,11 +76,11 @@ src/FoundryStudio.Core/                       # FL-free DTOs + pure-logic seams
 │   └── RamFitHeuristic.cs                     # UNCHANGED (R5 optional)
 └── Abstractions/IFoundryCatalogService.cs     # UNCHANGED interface (read methods used by M2)
 
-src/FoundryStudio.Foundry/
+src/FoundryForge.Foundry/
 └── FoundryCatalogService.cs                   # ENRICH: MapBasic→MapEnriched (FL ModelInfo/Runtime/Variants→Core); GetVariantsAsync real mapping (resolve TODO(M2))
     # + FoundryLifecycle.cs                    # OPTIONAL: KI-008 dispose hardening (FR-022/R8)
 
-src/FoundryStudio.App/Components/
+src/FoundryForge.App/Components/
 ├── Pages/
 │   └── Catalog.razor                          # NEW: the catalog page (route "/"; replaces Home smoke as the landing surface)
 ├── Catalog/                                   # NEW component folder
@@ -91,7 +91,7 @@ src/FoundryStudio.App/Components/
 ├── Pages/Home.razor                           # DEMOTE/REMOVE the M1 chat-smoke landing (Catalog becomes "/")
 └── wwwroot/app.css                            # EXTEND: catalog/card/badge/filter styles (AA contrast, no color-only)
 
-tests/FoundryStudio.Tests/                     # Core-only, dylib-free
+tests/FoundryForge.Tests/                     # Core-only, dylib-free
 ├── CapabilityParserTests.cs                   # NEW (R2)
 ├── CuratedSelectorTests.cs                    # NEW (R3)
 ├── CatalogFacetsTests.cs                      # NEW (R4)
@@ -99,7 +99,7 @@ tests/FoundryStudio.Tests/                     # Core-only, dylib-free
 └── CatalogFilterTests.cs                      # EXTEND: null-device case
 ```
 
-**Structure Decision**: Single existing solution, four existing projects (Core / Foundry / App / Tests) — no new projects (per the task's PROJECT STRUCTURE constraint). FL-free DTOs and all pure-logic seams live in `FoundryStudio.Core` (dylib-free testable, FR-019); FL-touching enrichment lives in `FoundryStudio.Foundry` (`FoundryCatalogService.MapEnriched`), with the *post-FL pure transform* (capability parse, size conversion, unknown handling) delegated to Core helpers so it is fixture-testable without a dylib; the catalog UI lives under `src/FoundryStudio.App/Components/` (a `Pages/Catalog.razor` + a `Catalog/` component folder) with stable `id`/`data-testid` hooks for DevFlow DOM verification (contracts/catalog-ui.dom.md). The CI seam gate (lock files, Core-only test project) stays green.
+**Structure Decision**: Single existing solution, four existing projects (Core / Foundry / App / Tests) — no new projects (per the task's PROJECT STRUCTURE constraint). FL-free DTOs and all pure-logic seams live in `FoundryForge.Core` (dylib-free testable, FR-019); FL-touching enrichment lives in `FoundryForge.Foundry` (`FoundryCatalogService.MapEnriched`), with the *post-FL pure transform* (capability parse, size conversion, unknown handling) delegated to Core helpers so it is fixture-testable without a dylib; the catalog UI lives under `src/FoundryForge.App/Components/` (a `Pages/Catalog.razor` + a `Catalog/` component folder) with stable `id`/`data-testid` hooks for DevFlow DOM verification (contracts/catalog-ui.dom.md). The CI seam gate (lock files, Core-only test project) stays green.
 
 ## Complexity Tracking
 

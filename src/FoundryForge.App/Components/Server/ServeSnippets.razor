@@ -1,0 +1,168 @@
+@*
+  ServeSnippets — copy-paste consumer snippets for external-tool authors.
+  Only renders when the server is running with a REAL bound endpoint — never fabricates a URL.
+  Uses the first loaded model's id, or a clearly-labelled <model-id> placeholder if none is loaded yet.
+  Order: curl (always works) → Python OpenAI SDK → Continue (honest label — not GitHub Copilot).
+*@
+@using FoundryForge.Core.Server
+@inject ServingStateService ServingState
+@inject IJSRuntime Js
+@implements IDisposable
+
+@if (ServingState.IsRunning && BaseEndpoint is not null)
+{
+    <div class="serve-snippets-section">
+        <p class="serve-snippets-hint">
+            The base URL and model id below are the real live values.
+            @if (ModelIdLabel == "<model-id>")
+            {
+                <strong>No model is loaded yet</strong> <span>— load one to get its exact id.</span>
+            }
+        </p>
+
+        <p class="serve-snippets-compat-note server-note server-note--info" role="note">
+            Works with any OpenAI-compatible client — curl, the OpenAI SDKs, or extensions like Continue/Cline.
+            GitHub Copilot's model picker does not accept an arbitrary local endpoint.
+        </p>
+
+        <div class="serve-snippets-grid">
+
+            @* ── curl ─────────────────────────────────────────────────────────────────────── *@
+            <div class="serve-snippet-block" data-testid="serve-snippet-curl">
+                <div class="serve-snippet-header">
+                    <span class="serve-snippet-label">curl</span>
+                    <button type="button"
+                            class="button button-secondary serve-snippet-copy-btn"
+                            data-testid="serve-snippet-copy"
+                            aria-label="Copy curl snippet"
+                            @onclick='() => CopyAsync("curl", CurlSnippet)'>
+                        @_labels["curl"]
+                    </button>
+                </div>
+                <pre class="serve-snippet-pre" aria-label="curl POST snippet"><code>@CurlSnippet</code></pre>
+            </div>
+
+            @* ── Python OpenAI SDK ────────────────────────────────────────────────────────── *@
+            <div class="serve-snippet-block" data-testid="serve-snippet-sdk">
+                <div class="serve-snippet-header">
+                    <span class="serve-snippet-label">Python — openai SDK</span>
+                    <button type="button"
+                            class="button button-secondary serve-snippet-copy-btn"
+                            data-testid="serve-snippet-copy"
+                            aria-label="Copy Python OpenAI SDK snippet"
+                            @onclick='() => CopyAsync("sdk", SdkSnippet)'>
+                        @_labels["sdk"]
+                    </button>
+                </div>
+                <pre class="serve-snippet-pre" aria-label="Python OpenAI SDK snippet"><code>@SdkSnippet</code></pre>
+            </div>
+
+            @* ── Continue (continue.dev) VS Code extension ───────────────────────────────── *@
+            <div class="serve-snippet-block" data-testid="serve-snippet-copilot">
+                <div class="serve-snippet-header">
+                    <span class="serve-snippet-label">Continue — third-party VS Code extension (continue.dev)</span>
+                    <button type="button"
+                            class="button button-secondary serve-snippet-copy-btn"
+                            data-testid="serve-snippet-copy"
+                            aria-label="Copy Continue config.json snippet"
+                            @onclick='() => CopyAsync("continue", ContinueSnippet)'>
+                        @_labels["continue"]
+                    </button>
+                </div>
+                <pre class="serve-snippet-pre" aria-label="Continue config.json snippet"><code>@ContinueSnippet</code></pre>
+                <p class="serve-snippet-note">
+                    Add to <code>~/.continue/config.json</code>.
+                    Continue is an open-source AI assistant extension, not affiliated with GitHub Copilot.
+                </p>
+            </div>
+
+        </div>
+    </div>
+}
+
+@code {
+    private readonly Dictionary<string, string> _labels = new()
+    {
+        ["curl"] = "Copy",
+        ["sdk"] = "Copy",
+        ["continue"] = "Copy",
+    };
+
+    // ── Derived values — always from real live state, never fabricated ─────────────────────────
+    private string? BaseEndpoint => ServerEndpoints.BaseUrl(ServingState.Urls);
+
+    private string ModelIdLabel =>
+        ServingState.LoadedModels.Count > 0
+            ? ServingState.LoadedModels[0].Id
+            : "<model-id>";
+
+    private string CurlSnippet =>
+        $$"""
+        curl {{BaseEndpoint}}/v1/chat/completions \
+          -H "Content-Type: application/json" \
+          -d '{
+            "model": "{{ModelIdLabel}}",
+            "messages": [
+              {"role": "user", "content": "Hello from Foundry Local"}
+            ]
+          }'
+        """;
+
+    private string SdkSnippet =>
+        $$"""
+        from openai import OpenAI
+
+        client = OpenAI(
+            base_url="{{BaseEndpoint}}/v1",
+            api_key="foundry",
+        )
+
+        response = client.chat.completions.create(
+            model="{{ModelIdLabel}}",
+            messages=[
+                {"role": "user", "content": "Hello from Foundry Local"}
+            ],
+        )
+
+        print(response.choices[0].message.content)
+        """;
+
+    private string ContinueSnippet =>
+        $$"""
+        // ~/.continue/config.json
+        {
+          "models": [
+            {
+              "title": "Foundry Local",
+              "provider": "openai",
+              "apiBase": "{{BaseEndpoint}}/v1",
+              "model": "{{ModelIdLabel}}",
+              "apiKey": "foundry"
+            }
+          ]
+        }
+        """;
+
+    // ── Event wiring ──────────────────────────────────────────────────────────────────────────
+    protected override void OnInitialized()
+    {
+        ServingState.OnChanged += HandleChanged;
+    }
+
+    private void HandleChanged() => InvokeAsync(StateHasChanged);
+
+    private async Task CopyAsync(string key, string content)
+    {
+        await Js.InvokeVoidAsync("foundryForgeClipboard.copy", content);
+        _labels[key] = "Copied ✓";
+        await InvokeAsync(StateHasChanged);
+        await Task.Delay(1800);
+        _labels[key] = "Copy";
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        ServingState.OnChanged -= HandleChanged;
+    }
+}

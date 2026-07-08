@@ -1,12 +1,12 @@
 # Contract: Server UI DOM hooks + honesty/concurrency/accessibility invariants
 
-The server surface in `FoundryStudio.App` consumes **only** `ILocalServerService` + the Core seams (`ServerState`/`ServerStatus`, `ServerStateMachine`, `ServerEndpoints`, `ServerLimitations`, `RequestActivityProjection`) + the M1 lifecycle/gate — **never** FL types (FR-024). Stable `id` / `data-testid` hooks make every assertion DevFlow-DOM-verifiable (KI-001 is the sanctioned autonomous evidence path; the WebView pixel screenshot needs the window frontmost, so DOM is the evidence channel).
+The server surface in `FoundryForge.App` consumes **only** `ILocalServerService` + the Core seams (`ServerState`/`ServerStatus`, `ServerStateMachine`, `ServerEndpoints`, `ServerLimitations`, `RequestActivityProjection`) + the M1 lifecycle/gate — **never** FL types (FR-024). Stable `id` / `data-testid` hooks make every assertion DevFlow-DOM-verifiable (KI-001 is the sanctioned autonomous evidence path; the WebView pixel screenshot needs the window frontmost, so DOM is the evidence channel).
 
 ---
 
 ## Sidebar activation (FR-001)
 
-`src/FoundryStudio.App/Components/Layout/Sidebar.razor`
+`src/FoundryForge.App/Components/Layout/Sidebar.razor`
 
 Replace the disabled placeholder (today L30-33):
 ```razor

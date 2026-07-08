@@ -1,0 +1,95 @@
+@inject ServingStateService ServingState
+@inject NavigationManager Navigation
+@inject IJSRuntime Js
+@implements IDisposable
+
+<div class="serving-dock" data-testid="serving-dock" aria-label="Serving status">
+    <span class="serving-dock__pilot @(ServingState.IsRunning ? "is-lit" : string.Empty)" aria-hidden="true"></span>
+
+    <span class="serving-dock__label">
+        @if (ServingState.IsRunning)
+        {
+            <strong>Server on</strong>
+        }
+        else if (ServingState.IsBusy)
+        {
+            <span>@(ServingState.Status.State == ServerState.Starting ? "Starting…" : "Stopping…")</span>
+        }
+        else
+        {
+            <span class="serving-dock__label--off">Server off</span>
+        }
+    </span>
+
+    <span class="serving-dock__count" data-testid="serving-dock-count" aria-label="Models in memory count">
+        @ServingState.LoadedCount @(ServingState.LoadedCount == 1 ? "model in memory" : "models in memory")
+    </span>
+
+    @if (ServingState.IsRunning && DockEndpoint is not null)
+    {
+        <code class="serving-dock__endpoint" data-testid="serving-dock-endpoint">@DockEndpoint</code>
+        <button type="button"
+                class="button button-ghost serving-dock__action"
+                data-testid="serving-dock-copy"
+                aria-label="Copy server endpoint"
+                @onclick="CopyEndpointAsync">
+            @_copyText
+        </button>
+    }
+    else
+    {
+        <span class="serving-dock__endpoint serving-dock__endpoint--none" data-testid="serving-dock-endpoint" aria-label="No endpoint (server off)">—</span>
+    }
+
+    <button type="button"
+            class="button button-secondary serving-dock__action serving-dock__manage"
+            data-testid="serving-dock-manage"
+            aria-label="Manage server"
+            @onclick="NavigateToServe">
+        Manage
+    </button>
+</div>
+
+@code {
+    private string _copyText = "Copy";
+
+    private string? DockEndpoint => ServingState.IsRunning
+        ? ServerEndpoints.BaseUrl(ServingState.Urls)
+        : null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ServingState.OnChanged += OnServingStateChanged;
+        await ServingState.RefreshLoadedCountAsync();
+    }
+
+    private void OnServingStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task CopyEndpointAsync()
+    {
+        var payload = ServerEndpoints.CopyPayload(ServingState.Urls);
+        if (payload is null) return;
+
+        await Js.InvokeVoidAsync("foundryForgeClipboard.copy", payload);
+        _copyText = "Copied!";
+        await InvokeAsync(StateHasChanged);
+
+        // Reset after brief feedback window
+        await Task.Delay(1800);
+        _copyText = "Copy";
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void NavigateToServe()
+    {
+        Navigation.NavigateTo("/server");
+    }
+
+    public void Dispose()
+    {
+        ServingState.OnChanged -= OnServingStateChanged;
+    }
+}

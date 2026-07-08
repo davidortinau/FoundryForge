@@ -5,7 +5,7 @@ Two-layer verification per Constitution II. **Layer A** is dylib-free unit tests
 ## Prerequisites
 
 - Repo at `net11.0` / `net11.0-macos` (pinned via `global.json` / `Directory.Packages.props`).
-- **Layer A**: none beyond the SDK — `tests/FoundryStudio.Tests` is Core-only, dylib-free.
+- **Layer A**: none beyond the SDK — `tests/FoundryForge.Tests` is Core-only, dylib-free.
 - **Layer B**: an Apple-Silicon Mac; the FL dylib chain bundled/signed (M0 gate green); a model loaded via M3; `curl` available; MAUI DevFlow `0.25.0-dev` (KI-001).
 
 ---
@@ -13,7 +13,7 @@ Two-layer verification per Constitution II. **Layer A** is dylib-free unit tests
 ## Layer A — dylib-free unit tests (autonomous; run anywhere)
 
 ```bash
-dotnet test tests/FoundryStudio.Tests/FoundryStudio.Tests.csproj
+dotnet test tests/FoundryForge.Tests/FoundryForge.Tests.csproj
 ```
 
 | Test class | Asserts | SC |

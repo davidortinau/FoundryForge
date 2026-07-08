@@ -1,12 +1,12 @@
 # Contract: Core pure-logic seams (new in M4)
 
-All seams below live in `FoundryStudio.Core`, are **FL-free and dylib-free**, and are unit-tested in `tests/FoundryStudio.Tests` without a native Foundry Local dylib (FR-038, SC-001/002/005/006/007/008/009). They mirror the M1–M3 precedent (`SettingsDocument`, `RamFitHeuristic`, `ConsentGuard`). `FoundryStudio.Core` references `Microsoft.Extensions.AI` (already) and adds a `PackageReference` to the already-pinned `Markdig 0.44.0` (refresh `packages.lock.json` — research R1).
+All seams below live in `FoundryForge.Core`, are **FL-free and dylib-free**, and are unit-tested in `tests/FoundryForge.Tests` without a native Foundry Local dylib (FR-038, SC-001/002/005/006/007/008/009). They mirror the M1–M3 precedent (`SettingsDocument`, `RamFitHeuristic`, `ConsentGuard`). `FoundryForge.Core` references `Microsoft.Extensions.AI` (already) and adds a `PackageReference` to the already-pinned `Markdig 0.44.0` (refresh `packages.lock.json` — research R1).
 
 ---
 
 ## `TranscriptAssembler` — session → request messages (US1)
 
-`src/FoundryStudio.Core/Chat/TranscriptAssembler.cs`
+`src/FoundryForge.Core/Chat/TranscriptAssembler.cs`
 
 ```csharp
 public static IReadOnlyList<ChatMessage> Assemble(ChatSession session);
@@ -24,7 +24,7 @@ public static IReadOnlyList<ChatMessage> Assemble(ChatSession session);
 
 ## `InferenceParameters` — the four real params → `ChatOptions` (US5, R6)
 
-`src/FoundryStudio.Core/Chat/InferenceParameters.cs`
+`src/FoundryForge.Core/Chat/InferenceParameters.cs`
 
 ```csharp
 public sealed record InferenceParameters(double? Temperature = null, int? MaxOutputTokens = null,
@@ -47,7 +47,7 @@ public sealed record InferenceParameters(double? Temperature = null, int? MaxOut
 
 ## `TokenStatsAccumulator` + `GenerationMetrics`/`StopReason` — honest metrics (US4, R2)
 
-`src/FoundryStudio.Core/Chat/TokenStatsAccumulator.cs`, `src/FoundryStudio.Core/Models/GenerationMetrics.cs`
+`src/FoundryForge.Core/Chat/TokenStatsAccumulator.cs`, `src/FoundryForge.Core/Models/GenerationMetrics.cs`
 
 ```csharp
 public sealed class TokenStatsAccumulator
@@ -74,7 +74,7 @@ public enum StopReason { Natural, MaxTokens, ToolCalls, UserCancelled, Error, Un
 
 ## `ContextWindowEstimator` + `ContextWindowEstimate` — honest estimate (US6, R7)
 
-`src/FoundryStudio.Core/Chat/ContextWindowEstimator.cs`, `src/FoundryStudio.Core/Models/ContextWindowEstimate.cs`
+`src/FoundryForge.Core/Chat/ContextWindowEstimator.cs`, `src/FoundryForge.Core/Models/ContextWindowEstimate.cs`
 
 ```csharp
 public static ContextWindowEstimate Estimate(int usedTokensEstimate, int? contextLength, double warnFraction = 0.8);
@@ -95,7 +95,7 @@ public sealed record ContextWindowEstimate(int UsedTokensEstimate, int? ContextL
 
 ## `ChatMarkdown` + `RenderedMarkdown`/`CodeBlock` — safe markdown + code copy (US1, R1)
 
-`src/FoundryStudio.Core/Chat/ChatMarkdown.cs`
+`src/FoundryForge.Core/Chat/ChatMarkdown.cs`
 
 ```csharp
 public static RenderedMarkdown Render(string markdown);
@@ -115,7 +115,7 @@ public sealed record RenderedMarkdown(string Html, IReadOnlyList<CodeBlock> Code
 
 ## `IChatHistoryStore` + `FileChatHistoryStore` + `ChatHistoryDocument` — persistence & consent (US7, R3)
 
-`src/FoundryStudio.Core/Abstractions/IChatHistoryStore.cs`, `src/FoundryStudio.Core/Chat/FileChatHistoryStore.cs`, `…/Chat/ChatHistoryDocument.cs`
+`src/FoundryForge.Core/Abstractions/IChatHistoryStore.cs`, `src/FoundryForge.Core/Chat/FileChatHistoryStore.cs`, `…/Chat/ChatHistoryDocument.cs`
 
 ```csharp
 public interface IChatHistoryStore
@@ -144,7 +144,7 @@ public interface IChatHistoryStore
 
 ## `ChatTools` (Foundry layer — referenced here for completeness) — genuine tools (US8, R5)
 
-`src/FoundryStudio.Foundry/Tools/ChatTools.cs` — **not** a Core seam (it touches `IFoundryCatalogService`), but its *wiring* is unit-testable in Core via a fake `IChatClient` through `UseFunctionInvocation()`:
+`src/FoundryForge.Foundry/Tools/ChatTools.cs` — **not** a Core seam (it touches `IFoundryCatalogService`), but its *wiring* is unit-testable in Core via a fake `IChatClient` through `UseFunctionInvocation()`:
 - `get_current_time` → current local ISO 8601 datetime (real, no network).
 - `get_loaded_model_info` → active model alias + context length via `ListLoadedAsync()` (real app state).
 

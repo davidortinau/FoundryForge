@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "M2 delivers the catalog browse + discovery experience — the first real screen of FoundryStudio. A user opens the app (which reaches 'ready' via the M1 lifecycle gate) and sees a browsable, searchable, filterable catalog of Foundry Local models with informative per-model cards, so they can find a model to download/run. M2 is browse/discovery only: it does NOT download, load, or chat (those are M3/M4) — but cards must clearly indicate cached vs not-cached state."
+**Input**: User description: "M2 delivers the catalog browse + discovery experience — the first real screen of FoundryForge. A user opens the app (which reaches 'ready' via the M1 lifecycle gate) and sees a browsable, searchable, filterable catalog of Foundry Local models with informative per-model cards, so they can find a model to download/run. M2 is browse/discovery only: it does NOT download, load, or chat (those are M3/M4) — but cards must clearly indicate cached vs not-cached state."
 
 ## Overview
 
@@ -14,7 +14,7 @@ M1 is DONE and GO (DEC-016): the real `net11.0-macos` AppKit head + Blazor Hybri
 
 **M2 builds the first real end-user screen on that foundation.** A user launches the app, the M1 ready-gate transitions from "initializing" to "ready", and they land on a browsable catalog of Foundry Local models: a curated default view, full-text search, device/task/provider filters, a cached-only toggle, and informative per-model cards. The single most important honesty constraint of M2 is that it is **discovery only** — no model is downloaded, loaded, deleted, or chatted with (those are M3/M4). Cards clearly distinguish cached from not-cached state, but the actions that change that state do not exist yet.
 
-M2 also turns the M1 catalog service's currently-stubbed metadata (`MapBasic` returns `SizeGb: 0`, `Device.Gpu`, empty `Task`/`Provider`, empty `Variants` — see the `TODO(M2)` markers in `src/FoundryStudio.Foundry/FoundryCatalogService.cs`) into **honest, enriched metadata** sourced from real Foundry Local model metadata, with an honest "unknown / not provided" rendering wherever a field is genuinely unavailable from FL (capability honesty, Constitution IV).
+M2 also turns the M1 catalog service's currently-stubbed metadata (`MapBasic` returns `SizeGb: 0`, `Device.Gpu`, empty `Task`/`Provider`, empty `Variants` — see the `TODO(M2)` markers in `src/FoundryForge.Foundry/FoundryCatalogService.cs`) into **honest, enriched metadata** sourced from real Foundry Local model metadata, with an honest "unknown / not provided" rendering wherever a field is genuinely unavailable from FL (capability honesty, Constitution IV).
 
 Because this is the first screen-bearing milestone, success is framed around **observable UI behavior verifiable via DevFlow** (DOM inspection + the documented screenshot caveat KI-001) **and the pure-logic filter seams** that are unit-testable without a native dylib.
 
@@ -26,7 +26,7 @@ No outstanding clarifications. All open choices were resolved using reasonable d
 
 ### User Story 1 - Browse the catalog list with per-model cards and cached badges (Priority: P1)
 
-As a FoundryStudio user, when the app reaches "ready" I want to see a browsable list of the available Foundry Local models rendered as informative per-model cards, each clearly showing whether the model is already cached on my machine — so that I can survey what is available and identify candidates to (later) download and run.
+As a FoundryForge user, when the app reaches "ready" I want to see a browsable list of the available Foundry Local models rendered as informative per-model cards, each clearly showing whether the model is already cached on my machine — so that I can survey what is available and identify candidates to (later) download and run.
 
 **Why this priority**: This is the MVP of M2 and the first real screen of the product. Without the catalog list and cards there is no discovery experience at all; everything else (search, filters, curated view, enrichment) refines a list that must first exist. It is the smallest slice that delivers standalone user value: "I can see what models exist and which I already have."
 
@@ -43,7 +43,7 @@ As a FoundryStudio user, when the app reaches "ready" I want to see a browsable 
 
 ### User Story 2 - Search the catalog by alias, display name, or id (Priority: P1)
 
-As a FoundryStudio user, I want to type into a search box and have the catalog narrow to models whose alias, display name, or id matches what I typed (case-insensitive) — so that I can quickly find a specific model in a catalog of dozens without scrolling.
+As a FoundryForge user, I want to type into a search box and have the catalog narrow to models whose alias, display name, or id matches what I typed (case-insensitive) — so that I can quickly find a specific model in a catalog of dozens without scrolling.
 
 **Why this priority**: Search is the primary find mechanism and, like the list itself, delivers immediate standalone value on top of US1. The matching logic already exists as a tested pure-logic seam (`CatalogFilter.SearchText` + `CatalogFilterExtensions.Matches`); M2 wires the UI to it. It is P1 because a catalog without search is materially harder to use even at the M0d-observed catalog size (~46 models).
 
@@ -60,7 +60,7 @@ As a FoundryStudio user, I want to type into a search box and have the catalog n
 
 ### User Story 3 - Filter by device, task, and provider, plus a cached-only toggle (Priority: P2)
 
-As a FoundryStudio user, I want to filter the catalog by device (CPU/GPU/NPU), by task, and by provider, and to toggle "cached only" — so that I can focus on, for example, only NPU-capable models, only the models I already have downloaded, or only a specific provider's models.
+As a FoundryForge user, I want to filter the catalog by device (CPU/GPU/NPU), by task, and by provider, and to toggle "cached only" — so that I can focus on, for example, only NPU-capable models, only the models I already have downloaded, or only a specific provider's models.
 
 **Why this priority**: Filters are a strong refinement on top of browse + search but are not required for the MVP to deliver value. They depend on US1 (the list) and on US5's enriched device/task/provider metadata to be meaningful (an unenriched catalog has nothing to filter by). They map directly onto the existing `CatalogFilter` fields (`Device`/`Task`/`Provider`/`CachedOnly`), so the work is UI wiring plus honest handling of "unknown" facet values.
 
@@ -79,7 +79,7 @@ As a FoundryStudio user, I want to filter the catalog by device (CPU/GPU/NPU), b
 
 ### User Story 4 - Curated default view surfaced first (Priority: P2)
 
-As a FoundryStudio user opening the app for the first time, I want a sensible curated/recommended subset of models surfaced first (with the full catalog still one action away) — so that I am not dropped into an undifferentiated wall of dozens of models and can start from a trustworthy short list, reinforcing the "curated, trusted catalog" positioning.
+As a FoundryForge user opening the app for the first time, I want a sensible curated/recommended subset of models surfaced first (with the full catalog still one action away) — so that I am not dropped into an undifferentiated wall of dozens of models and can start from a trustworthy short list, reinforcing the "curated, trusted catalog" positioning.
 
 **Why this priority**: The curated default improves first-run experience and reinforces DEC-014 positioning ("curated catalog as a feature, not a limitation"), but the screen is fully functional without it (US1 already shows the full list). It is a P2 refinement that depends on US1.
 
@@ -96,7 +96,7 @@ As a FoundryStudio user opening the app for the first time, I want a sensible cu
 
 ### User Story 5 - Rich, honest per-model card metadata (Priority: P2)
 
-As a FoundryStudio user evaluating models, I want each card to show the model's real details — alias, display name, size (GB), device / execution provider, context length, capabilities (e.g. vision / tool / reasoning where available), license, the cached badge, and variant availability (count/list of quant/device variants) — with anything FL genuinely does not provide shown honestly as "unknown / not provided" rather than a fabricated value — so that I can make an informed choice and trust what the app tells me.
+As a FoundryForge user evaluating models, I want each card to show the model's real details — alias, display name, size (GB), device / execution provider, context length, capabilities (e.g. vision / tool / reasoning where available), license, the cached badge, and variant availability (count/list of quant/device variants) — with anything FL genuinely does not provide shown honestly as "unknown / not provided" rather than a fabricated value — so that I can make an informed choice and trust what the app tells me.
 
 **Why this priority**: Enrichment is what makes the cards genuinely useful and is the substance behind the device/task/provider filters (US3), but the screen renders and is navigable without it (US1 cards can start minimal). It is the work of replacing the M1 `MapBasic` stub (`TODO(M2)` in `FoundryCatalogService.cs`) with real metadata mapping. It is P2 because the list/search MVP (US1/US2) delivers value first, and enrichment then deepens every card.
 
@@ -114,7 +114,7 @@ As a FoundryStudio user evaluating models, I want each card to show the model's 
 
 ### User Story 6 - Honest loading, empty, and error states (Priority: P2)
 
-As a FoundryStudio user, I want the catalog to honestly tell me when it is loading, when a filter/search matched nothing, and when Foundry Local or the catalog could not be reached — so that I am never left staring at a blank screen or a fabricated result, and I know whether to wait, change my filter, or retry.
+As a FoundryForge user, I want the catalog to honestly tell me when it is loading, when a filter/search matched nothing, and when Foundry Local or the catalog could not be reached — so that I am never left staring at a blank screen or a fabricated result, and I know whether to wait, change my filter, or retry.
 
 **Why this priority**: Honest states are required for a trustworthy, accessible screen and are mandated by the constitution ("surface the diagnosed cause, not a generic failure"), but they are a hardening layer over the core browse/search/filter stories. P2 because US1/US2 deliver the happy-path value first; this story makes the unhappy paths honest.
 

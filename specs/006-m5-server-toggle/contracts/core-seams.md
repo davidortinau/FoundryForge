@@ -1,12 +1,12 @@
 # Contract: Core pure-logic seams (new in M5)
 
-All seams below live in `FoundryStudio.Core/Server/`, are **FL-free and dylib-free**, and are unit-tested in `tests/FoundryStudio.Tests` without a native Foundry Local dylib (FR-027, SC-001/002/003/006/007/008/009). They mirror the M1–M4 precedent (`ModelStateGate`, `RamFitHeuristic`). **No new package references** — plain managed code + static data.
+All seams below live in `FoundryForge.Core/Server/`, are **FL-free and dylib-free**, and are unit-tested in `tests/FoundryForge.Tests` without a native Foundry Local dylib (FR-027, SC-001/002/003/006/007/008/009). They mirror the M1–M4 precedent (`ModelStateGate`, `RamFitHeuristic`). **No new package references** — plain managed code + static data.
 
 ---
 
 ## `ServerState` / `ServerStatus` — honest lifecycle (US1, US4)
 
-`src/FoundryStudio.Core/Server/ServerState.cs`, `ServerStatus.cs`
+`src/FoundryForge.Core/Server/ServerState.cs`, `ServerStatus.cs`
 
 ```csharp
 public enum ServerState { Stopped, Starting, Running, Stopping, Error }
@@ -28,7 +28,7 @@ public sealed record ServerStatus(
 
 ## `ServerStateMachine` — transition validator (US1, US4)
 
-`src/FoundryStudio.Core/Server/ServerStateMachine.cs`
+`src/FoundryForge.Core/Server/ServerStateMachine.cs`
 
 ```csharp
 public static class ServerStateMachine
@@ -49,7 +49,7 @@ public static class ServerStateMachine
 
 ## `ServerEndpoints` / `ServerRoute` — endpoint + routes (US1, US2)
 
-`src/FoundryStudio.Core/Server/ServerEndpoints.cs`
+`src/FoundryForge.Core/Server/ServerEndpoints.cs`
 
 ```csharp
 public sealed record ServerRoute(string Path, string Description);
@@ -76,7 +76,7 @@ public static class ServerEndpoints
 
 ## `ServerLimitations` — informational facts (US6)
 
-`src/FoundryStudio.Core/Server/ServerLimitations.cs`
+`src/FoundryForge.Core/Server/ServerLimitations.cs`
 
 ```csharp
 public static class ServerLimitations
@@ -98,7 +98,7 @@ public static class ServerLimitations
 
 ## `RequestActivityProjection` — render-only-observed-else-omit (US7)
 
-`src/FoundryStudio.Core/Server/RequestActivityProjection.cs`
+`src/FoundryForge.Core/Server/RequestActivityProjection.cs`
 
 ```csharp
 public sealed record RequestActivityEntry(DateTimeOffset At, string Summary);

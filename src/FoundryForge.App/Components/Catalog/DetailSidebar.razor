@@ -1,0 +1,429 @@
+@using System.Globalization
+@inject IFoundryCatalogService CatalogService
+@inject ServingStateService ServingState
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+@* Discover detail sidebar (400px, docked). Full detail + the variant/download/manage flow for the
+   SELECTED model. Rendered only when a model is selected. Uninstall lives here only, consent-gated. *@
+
+<aside class="model-detail" data-testid="model-detail" data-alias="@Model.Alias" aria-label="Model details">
+    <div class="model-detail__scroll">
+        <p class="model-detail__eyebrow eyebrow" data-testid="detail-status">
+            @(IsCached ? "Installed on this Mac" : "Available to download")
+        </p>
+
+        <div class="model-detail__title-row">
+            <h2 class="model-detail__name" data-testid="detail-name">@DisplayName</h2>
+            <button type="button"
+                    class="icon-button model-detail__copy"
+                    data-testid="detail-copy-id"
+                    title="Copy model id"
+                    aria-label="Copy model id"
+                    @onclick="CopyIdAsync">
+                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h8" /></svg>
+            </button>
+        </div>
+        <div class="model-detail__subtitle">
+            <span class="model-detail__family">@Model.Alias</span>
+            @if (!string.IsNullOrWhiteSpace(Model.ModelType))
+            {
+                <span class="format-chip" data-testid="detail-format">@Model.ModelType.Trim()</span>
+            }
+        </div>
+
+        <dl class="model-detail__spec-strip">
+            <div><dt>Size</dt><dd>@SizeLabel</dd></div>
+            <div><dt>Context</dt><dd>@ContextLabel</dd></div>
+            <div><dt>Format</dt><dd>@(string.IsNullOrWhiteSpace(Model.ModelType) ? "unknown" : Model.ModelType.Trim())</dd></div>
+            <div><dt>Device</dt><dd>@DeviceLabel</dd></div>
+        </dl>
+
+        @if (HasAnyCapability)
+        {
+            <section class="model-detail__section" aria-label="Capabilities">
+                <p class="model-detail__section-title eyebrow">Capabilities</p>
+                <CapabilityMarks Capabilities="Model.Capabilities" Mode="CapabilityMarks.MarkMode.Pills" />
+            </section>
+        }
+
+        <!-- Variant + download flow (the important part — lives here, not on the card). -->
+        <section class="model-detail__flow" aria-label="Variant and actions">
+            @if (VariantSelection.HasVariants)
+            {
+                <div class="field">
+                    <label for="@_variantId">Variant</label>
+                    <select id="@_variantId"
+                            data-testid="detail-variant-select"
+                            value="@VariantSelection.EffectiveVariantId"
+                            @onchange="OnVariantChangedAsync"
+                            disabled="@Operation.IsWorking">
+                        @foreach (var variant in Model.Variants)
+                        {
+                            <option value="@variant.VariantId">@FormatVariant(variant)</option>
+                        }
+                    </select>
+                </div>
+            }
+
+            @if (!IsCached)
+            {
+                @if (DiskFitMessage is { } diskFitMessage)
+                {
+                    <p id="@_diskFitId"
+                       class="disk-warning @(DiskFitIsWarning ? "disk-warning--warn" : string.Empty)"
+                       data-testid="detail-diskfit"
+                       role="@(DiskFitIsWarning ? "status" : null)">
+                        @diskFitMessage
+                    </p>
+                }
+
+                <label class="field-checkbox" for="@_autoloadId">
+                    <input id="@_autoloadId"
+                           type="checkbox"
+                           data-testid="detail-autoload"
+                           checked="@Operation.AutoLoadAfterDownload"
+                           @onchange="OnAutoLoadChangedAsync"
+                           disabled="@Operation.IsWorking" />
+                    <span>Auto-load after download</span>
+                </label>
+
+                @if (Operation.Phase is ModelOpPhase.Downloading or ModelOpPhase.Cancelling)
+                {
+                    <div class="download-progress @(Operation.ProgressPercent is null ? "download-progress--indeterminate" : string.Empty)"
+                         data-testid="detail-download-progress"
+                         role="progressbar"
+                         aria-label="Download progress for @DisplayName"
+                         aria-valuemin="0" aria-valuemax="100" aria-valuenow="@ProgressAriaValue">
+                        <div class="download-progress__bar" style="width: @ProgressWidth"></div>
+                        <span>@ProgressLabel</span>
+                    </div>
+                    <button type="button" class="button button-secondary" data-testid="detail-download-cancel"
+                            @onclick="CancelDownloadAsync" disabled="@(Operation.Phase == ModelOpPhase.Cancelling)">
+                        @(Operation.Phase == ModelOpPhase.Cancelling ? "Cancelling…" : "Cancel")
+                    </button>
+                }
+                else
+                {
+                    <button type="button" class="button model-detail__primary" data-testid="detail-download"
+                            aria-describedby="@_diskFitId" @onclick="DownloadAsync" disabled="@Operation.IsWorking">
+                        Download @DownloadSizeLabel
+                    </button>
+                }
+            }
+            else
+            {
+                <div class="model-detail__actions">
+                    @if (IsLoaded)
+                    {
+                        <button type="button" class="button button-secondary" data-testid="detail-unload"
+                                @onclick="UnloadAsync" disabled="@Operation.IsWorking">
+                            @(Operation.Phase == ModelOpPhase.Unloading ? "Unloading…" : "Unload from server")
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="button" class="button button-secondary" data-testid="detail-load"
+                                @onclick="LoadAsync" disabled="@Operation.IsWorking">
+                            @(Operation.Phase == ModelOpPhase.Loading ? "Loading…" : "Load into server")
+                        </button>
+                    }
+                    <button type="button" class="button button-text-danger" data-testid="detail-uninstall"
+                            @onclick="RequestDeleteAsync" disabled="@Operation.IsWorking">
+                        Uninstall…
+                    </button>
+                </div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(Operation.ErrorMessage))
+            {
+                <p class="operation-error" data-testid="detail-op-error" role="alert">@Operation.ErrorMessage</p>
+            }
+        </section>
+
+        <section class="model-detail__section" aria-label="Details">
+            <p class="model-detail__section-title eyebrow">Details</p>
+            <dl class="model-detail__grid">
+                <div><dt>Size on disk</dt><dd>@SizeLabel</dd></div>
+                <div><dt>Device</dt><dd>@DeviceLabel</dd></div>
+                <div><dt>Context length</dt><dd>@ContextFullLabel</dd></div>
+                <div><dt>License</dt><dd title="@Model.LicenseDescription">@(string.IsNullOrWhiteSpace(Model.License) ? "unknown" : Model.License)</dd></div>
+            </dl>
+        </section>
+
+        @if (!string.IsNullOrWhiteSpace(Model.LicenseDescription))
+        {
+            <section class="model-detail__section" aria-label="About">
+                <p class="model-detail__section-title eyebrow">About</p>
+                <p class="model-detail__about">@Model.LicenseDescription</p>
+            </section>
+        }
+
+        @if (Model.Variants is { Count: > 0 })
+        {
+            <section class="model-detail__section" aria-label="All variants">
+                <p class="model-detail__section-title eyebrow">All variants</p>
+                <ul class="model-detail__variants">
+                    @foreach (var variant in Model.Variants)
+                    {
+                        <li>@FormatVariant(variant)</li>
+                    }
+                </ul>
+            </section>
+        }
+    </div>
+</aside>
+
+@code {
+    [Parameter, EditorRequired] public ModelInfo Model { get; set; } = default!;
+    [Parameter] public bool IsCached { get; set; }
+    [Parameter] public bool IsLoaded { get; set; }
+    [Parameter, EditorRequired] public ModelOperationState Operation { get; set; } = default!;
+    [Parameter, EditorRequired] public VariantSelectionState VariantSelection { get; set; } = default!;
+    [Parameter] public double? FreeDiskGb { get; set; }
+    [Parameter] public EventCallback OnMutationCompleted { get; set; }
+    [Parameter] public EventCallback<ModelInfo> OnDeleteRequested { get; set; }
+
+    private string _variantId = string.Empty;
+    private string _autoloadId = string.Empty;
+    private string _diskFitId = string.Empty;
+
+    private string DisplayName => string.IsNullOrWhiteSpace(Model.DisplayName) ? Model.Alias : Model.DisplayName;
+
+    private bool HasAnyCapability =>
+        Model.Capabilities.Vision
+        || (Model.Capabilities.ToolCallingKnown && Model.Capabilities.ToolCalling)
+        || Model.Capabilities.Reasoning;
+
+    private string SizeLabel => Model.SizeGb is > 0
+        ? $"{Model.SizeGb!.Value.ToString("0.0", CultureInfo.InvariantCulture)} GB" : "unknown";
+
+    private string ContextLabel => Model.ContextLength is > 0 ? FormatContextK(Model.ContextLength.Value) : "unknown";
+
+    private string ContextFullLabel => Model.ContextLength is > 0
+        ? Model.ContextLength.Value.ToString("N0", CultureInfo.CurrentCulture) : "unknown";
+
+    private string DeviceLabel
+    {
+        get
+        {
+            var device = Model.Device is { } d ? d.ToString().ToUpperInvariant() : "unknown";
+            return string.IsNullOrWhiteSpace(Model.ExecutionProvider) ? device : $"{device} · {Model.ExecutionProvider}";
+        }
+    }
+
+    private string DownloadSizeLabel
+    {
+        get
+        {
+            var size = EffectiveDownloadSizeGb;
+            return size is > 0 ? $"({size!.Value.ToString("0.0", CultureInfo.InvariantCulture)} GB)" : string.Empty;
+        }
+    }
+
+    private double? EffectiveDownloadSizeGb
+    {
+        get
+        {
+            var id = VariantSelection.EffectiveVariantId;
+            var variantSize = string.IsNullOrWhiteSpace(id)
+                ? null
+                : Model.Variants.FirstOrDefault(v => string.Equals(v.VariantId, id, StringComparison.Ordinal))?.SizeGb;
+            return variantSize ?? Model.SizeGb;
+        }
+    }
+
+    private DiskFitResult? DiskFit => FreeDiskGb is double free
+        ? DiskFitHeuristic.Evaluate(EffectiveDownloadSizeGb, free) : null;
+
+    private bool DiskFitIsWarning => DiskFit?.Fit == FoundryForge.Core.Models.DiskFit.Warn;
+
+    private string? DiskFitMessage => DiskFit switch
+    {
+        { Fit: FoundryForge.Core.Models.DiskFit.Warn, MarginGb: { } margin } =>
+            $"May not fit: {SizeLabel} free short by {Math.Abs(margin).ToString("0.0", CultureInfo.InvariantCulture)} GB after headroom.",
+        { Fit: FoundryForge.Core.Models.DiskFit.Unknown } => "Size unknown — disk fit cannot be checked.",
+        _ => null,
+    };
+
+    private string? ProgressAriaValue => Operation.ProgressPercent is double v
+        ? Math.Round(v).ToString(CultureInfo.InvariantCulture) : null;
+
+    private string ProgressWidth => Operation.ProgressPercent is double v
+        ? $"{Math.Clamp(v, 0, 100).ToString("0.##", CultureInfo.InvariantCulture)}%" : "0%";
+
+    private string ProgressLabel => Operation.ProgressPercent is double v
+        ? $"Downloading — {Math.Clamp(v, 0, 100).ToString("0", CultureInfo.InvariantCulture)}%" : "Downloading…";
+
+    protected override void OnParametersSet()
+    {
+        var slug = SanitizeForId(Model.Alias);
+        _variantId = $"detail-variant-{slug}";
+        _autoloadId = $"detail-autoload-{slug}";
+        _diskFitId = $"detail-diskfit-{slug}";
+    }
+
+    private Task CopyIdAsync() => JS.InvokeVoidAsync("foundryForgeClipboard.copy", Model.Id).AsTask();
+
+    private async Task DownloadAsync()
+    {
+        Operation.Reset();
+        Operation.Phase = ModelOpPhase.Downloading;
+        Operation.Cts = new CancellationTokenSource();
+        await InvokeAsync(StateHasChanged);
+
+        var progress = new Progress<double>(value =>
+        {
+            Operation.ProgressPercent = NormalizeProgress(value);
+            _ = InvokeAsync(StateHasChanged);
+        });
+
+        try
+        {
+            await CatalogService.DownloadAsync(Model.Alias, progress, VariantSelection.EffectiveVariantId, Operation.Cts.Token);
+            if (Operation.AutoLoadAfterDownload && !Operation.Cts.IsCancellationRequested)
+            {
+                Operation.Phase = ModelOpPhase.Loading;
+                await InvokeAsync(StateHasChanged);
+                await CatalogService.LoadAsync(Model.Alias, VariantSelection.EffectiveVariantId, Operation.Cts.Token);
+            }
+
+            Operation.Reset();
+            await OnMutationCompleted.InvokeAsync();
+        }
+        catch (OperationCanceledException)
+        {
+            Operation.Reset();
+            await OnMutationCompleted.InvokeAsync();
+        }
+        catch (ModelBusyException ex)
+        {
+            Operation.Fail(ex.Message, busy: true);
+        }
+        catch (Exception ex)
+        {
+            Operation.Fail($"Download failed: {ex.Message}");
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Task CancelDownloadAsync()
+    {
+        Operation.Phase = ModelOpPhase.Cancelling;
+        Operation.Cts?.Cancel();
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadAsync()
+    {
+        Operation.Reset();
+        Operation.Phase = ModelOpPhase.Loading;
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            await CatalogService.LoadAsync(Model.Alias, VariantSelection.EffectiveVariantId);
+            Operation.Reset();
+            await OnMutationCompleted.InvokeAsync();
+        }
+        catch (ModelBusyException ex) { Operation.Fail(ex.Message, busy: true); }
+        catch (Exception ex) { Operation.Fail($"Load failed: {ex.Message}"); }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task UnloadAsync()
+    {
+        Operation.Reset();
+        Operation.Phase = ModelOpPhase.Unloading;
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            await CatalogService.UnloadAsync(Model.Alias);
+            Operation.Reset();
+            await OnMutationCompleted.InvokeAsync();
+        }
+        catch (ModelBusyException ex) { Operation.Fail(ex.Message, busy: true); }
+        catch (Exception ex) { Operation.Fail($"Unload failed: {ex.Message}"); }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Task RequestDeleteAsync() => OnDeleteRequested.InvokeAsync(Model);
+
+    private Task OnVariantChangedAsync(ChangeEventArgs args)
+    {
+        var value = args.Value?.ToString();
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            VariantSelection.Pin(value);
+        }
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task OnAutoLoadChangedAsync(ChangeEventArgs args)
+    {
+        Operation.AutoLoadAfterDownload = args.Value is true;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private static double NormalizeProgress(double value)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value)) return 0;
+        var percent = value <= 1 ? value * 100 : value;
+        return Math.Clamp(percent, 0, 100);
+    }
+
+    private static string FormatContextK(int tokens)
+    {
+        if (tokens >= 1000)
+        {
+            var k = tokens / 1000.0;
+            return $"{k.ToString(k >= 100 ? "0" : "0.#", CultureInfo.InvariantCulture)}K";
+        }
+        return tokens.ToString(CultureInfo.InvariantCulture);
+    }
+
+    // Reduce a variant to the part that actually varies: the execution-target suffix (e.g. "generic-gpu:2"),
+    // dropping the repeated model-name prefix, plus device + size. Matches the mock's compact variant rows.
+    private string FormatVariant(ModelVariant variant)
+    {
+        var shortId = ShortVariantId(variant.VariantId);
+        var parts = new List<string> { string.IsNullOrWhiteSpace(shortId) ? "variant" : shortId };
+        if (variant.Device is { } device) parts.Add(device.ToString().ToUpperInvariant());
+        if (variant.SizeGb is > 0) parts.Add($"{variant.SizeGb!.Value.ToString("0.0", CultureInfo.InvariantCulture)} GB");
+        return string.Join(" · ", parts);
+    }
+
+    private string ShortVariantId(string? variantId)
+    {
+        if (string.IsNullOrWhiteSpace(variantId))
+        {
+            return string.Empty;
+        }
+
+        // Prefer the execution-target tail (…-generic-gpu:2 → "generic-gpu:2").
+        var idx = variantId.IndexOf("generic", StringComparison.OrdinalIgnoreCase);
+        if (idx >= 0)
+        {
+            return variantId[idx..];
+        }
+
+        // Otherwise strip the model's own name prefix if the variant id repeats it.
+        foreach (var prefix in new[] { Model.Id, Model.Alias, Model.DisplayName })
+        {
+            if (!string.IsNullOrWhiteSpace(prefix)
+                && variantId.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                && variantId.Length > prefix.Length)
+            {
+                return variantId[prefix.Length..].TrimStart('-', ':', ' ');
+            }
+        }
+
+        return variantId;
+    }
+
+    private static string SanitizeForId(string value)
+    {
+        var chars = value.Select(c => char.IsLetterOrDigit(c) ? c : '-').ToArray();
+        return new string(chars).Trim('-').ToLowerInvariant();
+    }
+}

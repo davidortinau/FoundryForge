@@ -1,4 +1,4 @@
-# FoundryStudio
+# FoundryForge
 
 A desktop client for Microsoft Foundry Local: a native macOS (AppKit) .NET MAUI app with a Blazor Hybrid UI, also exposing Foundry Local's local OpenAI-compatible server. LM Studio is the feature reference.
 

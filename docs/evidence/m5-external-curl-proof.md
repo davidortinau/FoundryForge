@@ -1,7 +1,7 @@
 # M5 — external curl proof (SC-004)
 
 Hardware: real Apple Silicon, net11.0-macos. The exposed Foundry Local OpenAI-compatible
-server was toggled ON from the FoundryStudio Server panel (bound URL reported verbatim by the
+server was toggled ON from the FoundryForge Server panel (bound URL reported verbatim by the
 UI from `manager.Urls`). An **out-of-process** `curl` then hit the endpoint.
 
 ## Server running → bound URL

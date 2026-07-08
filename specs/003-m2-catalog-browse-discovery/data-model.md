@@ -1,13 +1,13 @@
 # Phase 1 Data Model: M2 — Catalog Browse + Discovery
 
 **Feature**: `003-m2-catalog-browse-discovery` · **Date**: 2026-06-25
-**Source of truth for field availability**: `research.md` R1/R2 (reflected FL `1.2.3` surface). All DTOs stay **FL-free** in `FoundryStudio.Core` (Constitution V / DEC-004 — the UI never touches the FL SDK).
+**Source of truth for field availability**: `research.md` R1/R2 (reflected FL `1.2.3` surface). All DTOs stay **FL-free** in `FoundryForge.Core` (Constitution V / DEC-004 — the UI never touches the FL SDK).
 
 ---
 
 ## 1. Enriched `ModelInfo` (Core DTO — extended)
 
-`src/FoundryStudio.Core/Models/ModelInfo.cs`. M1 record extended with M2 honesty-bearing fields. **`SizeGb` becomes nullable** so "unknown" is representable (FR-012 — never `0 GB` as a real size).
+`src/FoundryForge.Core/Models/ModelInfo.cs`. M1 record extended with M2 honesty-bearing fields. **`SizeGb` becomes nullable** so "unknown" is representable (FR-012 — never `0 GB` as a real size).
 
 ```csharp
 public sealed record ModelInfo(
@@ -44,7 +44,7 @@ public sealed record ModelInfo(
 
 ## 2. `ModelCapabilities` (new Core value type)
 
-`src/FoundryStudio.Core/Models/ModelCapabilities.cs`. A small honest capability set (R2). Each flag is **tri-state-by-omission**: present = FL declared it; absent = not declared (rendered as "not reported", never "absent").
+`src/FoundryForge.Core/Models/ModelCapabilities.cs`. A small honest capability set (R2). Each flag is **tri-state-by-omission**: present = FL declared it; absent = not declared (rendered as "not reported", never "absent").
 
 ```csharp
 public readonly record struct ModelCapabilities(
@@ -60,7 +60,7 @@ Rationale: `SupportsToolCalling` is `bool?` in FL; `ToolCallingKnown=false` lets
 
 ## 3. `ModelVariant` (Core DTO — extended)
 
-`src/FoundryStudio.Core/Models/ModelVariant.cs`. Informational only (no selection-to-load in M2 — that is M3).
+`src/FoundryForge.Core/Models/ModelVariant.cs`. Informational only (no selection-to-load in M2 — that is M3).
 
 ```csharp
 public sealed record ModelVariant(
@@ -78,13 +78,13 @@ Source: `IModel.Variants[i].Info` → `Runtime.DeviceType`, `FileSizeMb`, `Id` (
 
 ## 4. `CatalogFilter` (Core DTO — UNCHANGED)
 
-`src/FoundryStudio.Core/Models/CatalogFilter.cs` stays exactly as M1 (`Device?`/`Task`/`Provider`/`SearchText`/`CachedOnly`). FR-005/FR-007 forbid a parallel predicate. `CatalogFilterExtensions.Matches` behavior is preserved; the only adjustment is null-safety for the now-nullable `model.Device` (a null device never matches a device facet).
+`src/FoundryForge.Core/Models/CatalogFilter.cs` stays exactly as M1 (`Device?`/`Task`/`Provider`/`SearchText`/`CachedOnly`). FR-005/FR-007 forbid a parallel predicate. `CatalogFilterExtensions.Matches` behavior is preserved; the only adjustment is null-safety for the now-nullable `model.Device` (a null device never matches a device facet).
 
 ---
 
 ## 5. `CatalogViewState` (App view-model — new, UI layer)
 
-Lives in `src/FoundryStudio.App/Components/Catalog/` (UI, not Core — it is Blazor render state). The mutually-exclusive screen state (FR-014/015/016, US6) plus the active query/filter and curated/full toggle.
+Lives in `src/FoundryForge.App/Components/Catalog/` (UI, not Core — it is Blazor render state). The mutually-exclusive screen state (FR-014/015/016, US6) plus the active query/filter and curated/full toggle.
 
 ```
 CatalogViewState
@@ -108,12 +108,12 @@ CatalogViewState
 
 | Seam | File | Responsibility |
 |------|------|----------------|
-| `CuratedSelector` | `src/FoundryStudio.Core/Catalog/CuratedSelector.cs` | Deterministic curated allow-list selection (R3); `Select(models)` returns curated subset in stable order |
-| `CatalogFacets` | `src/FoundryStudio.Core/Catalog/CatalogFacets.cs` | `Derive(models)` → distinct non-empty Task/Provider/Device option lists (R4); excludes unknown |
+| `CuratedSelector` | `src/FoundryForge.Core/Catalog/CuratedSelector.cs` | Deterministic curated allow-list selection (R3); `Select(models)` returns curated subset in stable order |
+| `CatalogFacets` | `src/FoundryForge.Core/Catalog/CatalogFacets.cs` | `Derive(models)` → distinct non-empty Task/Provider/Device option lists (R4); excludes unknown |
 | `CatalogFilterExtensions` | existing | unchanged behavior; null-device safety only |
-| `ModelCapabilities` derivation | `src/FoundryStudio.Core/Catalog/CapabilityParser.cs` | `Parse(capabilitiesString, inputModalities, supportsToolCalling)` → `ModelCapabilities` (R2) |
+| `ModelCapabilities` derivation | `src/FoundryForge.Core/Catalog/CapabilityParser.cs` | `Parse(capabilitiesString, inputModalities, supportsToolCalling)` → `ModelCapabilities` (R2) |
 
-The **FL→Core mapping helper** (`ModelInfoMapper`) is the one piece that touches FL types, so it lives in `FoundryStudio.Foundry` (not Core) — but it is split so the *post-FL* pure transformation (capability parsing, size conversion, unknown handling) is in Core and unit-tested against plain fixtures (FR-019: "metadata-mapping logic MUST be testable from FL-metadata fixtures without a dylib"). The Foundry-side mapper only reads FL properties into the Core-side pure functions.
+The **FL→Core mapping helper** (`ModelInfoMapper`) is the one piece that touches FL types, so it lives in `FoundryForge.Foundry` (not Core) — but it is split so the *post-FL* pure transformation (capability parsing, size conversion, unknown handling) is in Core and unit-tested against plain fixtures (FR-019: "metadata-mapping logic MUST be testable from FL-metadata fixtures without a dylib"). The Foundry-side mapper only reads FL properties into the Core-side pure functions.
 
 ---
 
@@ -123,7 +123,7 @@ The **FL→Core mapping helper** (`ModelInfoMapper`) is the one piece that touch
 FL ICatalog ──ListModelsAsync()──▶ IModel[] (FL types, Foundry project only)
                                       │  .Info (ModelInfo), .Variants
                                       ▼
-              FoundryCatalogService.MapEnriched(IModel)         ← src/FoundryStudio.Foundry
+              FoundryCatalogService.MapEnriched(IModel)         ← src/FoundryForge.Foundry
                   ├─ size  = FileSizeMb/1024 (null-safe)
                   ├─ device= Runtime.DeviceType (Invalid→null)
                   ├─ caps  = CapabilityParser.Parse(...)        ← Core pure
@@ -131,7 +131,7 @@ FL ICatalog ──ListModelsAsync()──▶ IModel[] (FL types, Foundry project
                                       ▼
                          Core ModelInfo (FL-free DTO)           ← crosses the seam
                                       ▼
-   IFoundryCatalogService.BrowseAsync ──▶ App CatalogViewState  ← src/FoundryStudio.App
+   IFoundryCatalogService.BrowseAsync ──▶ App CatalogViewState  ← src/FoundryForge.App
                   ├─ CuratedSelector.Select / CatalogFilter.Apply (Core pure)
                   └─ render: CatalogList → ModelCard × N (+ badges, states)
 ```

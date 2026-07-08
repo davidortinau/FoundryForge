@@ -43,7 +43,7 @@ The progress callback is `Action<float>` (0..1 or 0..100 — confirm scale on ha
 
 **Question**: How to warn (not block) before a download that likely won't fit, with honest "unknown"?
 
-**Decision**: Add a pure `DiskFitHeuristic` in `FoundryStudio.Core/Catalog/` mirroring the existing `RamFitHeuristic`. It is a **pure function over numbers** — no I/O in Core (keeps it dylib-free and unit-testable, FR-034):
+**Decision**: Add a pure `DiskFitHeuristic` in `FoundryForge.Core/Catalog/` mirroring the existing `RamFitHeuristic`. It is a **pure function over numbers** — no I/O in Core (keeps it dylib-free and unit-testable, FR-034):
 ```csharp
 public static DiskFitResult Evaluate(double? modelSizeGb, double freeDiskGb);
 // null modelSizeGb            -> DiskFit.Unknown   (honest "size unknown — can't check fit", FR-024)

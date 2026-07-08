@@ -1,12 +1,12 @@
 # Phase 1 Data Model: M4 — Chat experience (v1 core)
 
-M4 introduces a **new persistent store** (chat history — user data under Constitution IV) plus several **pure-logic Core seams** (dylib-free, unit-tested — `FoundryStudio.Core`) and transient UI view-model state (`FoundryStudio.App`). Existing entities (`ModelInfo`, MEAI `ChatMessage`/`ChatOptions`/`ChatResponseUpdate`/`ChatRole`/`ChatFinishReason`) are consumed unchanged. All persisted/derived entities are FL-free and serialize/round-trip without a native dylib (FR-038).
+M4 introduces a **new persistent store** (chat history — user data under Constitution IV) plus several **pure-logic Core seams** (dylib-free, unit-tested — `FoundryForge.Core`) and transient UI view-model state (`FoundryForge.App`). Existing entities (`ModelInfo`, MEAI `ChatMessage`/`ChatOptions`/`ChatResponseUpdate`/`ChatRole`/`ChatFinishReason`) are consumed unchanged. All persisted/derived entities are FL-free and serialize/round-trip without a native dylib (FR-038).
 
 ---
 
 ## Existing entities (consumed, unchanged)
 
-### `ModelInfo` — `src/FoundryStudio.Core/Models/ModelInfo.cs`
+### `ModelInfo` — `src/FoundryForge.Core/Models/ModelInfo.cs`
 Consumed in M4: `Alias` (active model identity), **`ContextLength` (`int?`)** (context-window estimate denominator; null ⇒ honest unknown, R7), `IsLoaded`. No schema change.
 
 ### MEAI types (Microsoft.Extensions.AI 10.0.1)
@@ -19,7 +19,7 @@ Consumed in M4: `Alias` (active model identity), **`ContextLength` (`int?`)** (c
 
 ## New persistent entities (user data — Constitution IV)
 
-### `ChatSession` — `src/FoundryStudio.Core/Models/ChatSession.cs`
+### `ChatSession` — `src/FoundryForge.Core/Models/ChatSession.cs`
 The persisted, multi-turn conversation (one JSON file under `<AppData>/chats/<id>.json`, R3).
 ```csharp
 public sealed record ChatSession(
@@ -44,7 +44,7 @@ public sealed record ChatSession(
 
 **Survives restart** via `ChatHistoryDocument` round-trip (SC-008). **Destructive ops** (delete/clear) only through the consent gate (FR-025/026).
 
-### `ChatMessageRecord` — `src/FoundryStudio.Core/Models/ChatMessageRecord.cs`
+### `ChatMessageRecord` — `src/FoundryForge.Core/Models/ChatMessageRecord.cs`
 A single persisted turn (FL-free; mapped to MEAI `ChatMessage` at request time — never persist MEAI types directly, R3).
 ```csharp
 public sealed record ChatMessageRecord(
@@ -63,7 +63,7 @@ public enum ChatTurnRole { System, User, Assistant, Tool }
 
 ## New Core seam entities (pure, dylib-free)
 
-### `InferenceParameters` — `src/FoundryStudio.Core/Chat/InferenceParameters.cs`
+### `InferenceParameters` — `src/FoundryForge.Core/Chat/InferenceParameters.cs`
 The **only four** FL-supported params (US5). Excludes `top_k`/`min_p`/`repeat_penalty`/`seed` **by construction**.
 ```csharp
 public sealed record InferenceParameters(
@@ -78,7 +78,7 @@ public sealed record InferenceParameters(
 ```
 **Contract**: `ToChatOptions` sets exactly `Temperature`/`MaxOutputTokens`/`TopP`/`FrequencyPenalty`/`ModelId`/`Tools` and **nothing** for unsupported params (FR-019). Null fields leave the corresponding `ChatOptions` property unset (engine default). Pure; unit-tested (SC-006).
 
-### `GenerationMetrics` — `src/FoundryStudio.Core/Models/GenerationMetrics.cs`
+### `GenerationMetrics` — `src/FoundryForge.Core/Models/GenerationMetrics.cs`
 Derived-from-stream display values; **each nullable = honest "unknown"** (FR-016).
 ```csharp
 public sealed record GenerationMetrics(
@@ -89,13 +89,13 @@ public sealed record GenerationMetrics(
 ```
 **Producer**: `TokenStatsAccumulator`. Display-only; an "unknown" metric is never persisted as if authoritative.
 
-### `StopReason` — `src/FoundryStudio.Core/Models/GenerationMetrics.cs`
+### `StopReason` — `src/FoundryForge.Core/Models/GenerationMetrics.cs`
 ```csharp
 public enum StopReason { Natural, MaxTokens, ToolCalls, UserCancelled, Error, Unknown }
 ```
 Mapped from MEAI `ChatFinishReason` (`Stop`→Natural, `Length`→MaxTokens, `ToolCalls`→ToolCalls); user Stop (US3) ⇒ `UserCancelled`; stream fault ⇒ `Error`; absent ⇒ `Unknown` (FR-015).
 
-### `TokenStatsAccumulator` — `src/FoundryStudio.Core/Chat/TokenStatsAccumulator.cs`
+### `TokenStatsAccumulator` — `src/FoundryForge.Core/Chat/TokenStatsAccumulator.cs`
 Deterministic, clock-injected accumulator (R2).
 | Method | Effect |
 |--------|--------|
@@ -105,7 +105,7 @@ Deterministic, clock-injected accumulator (R2).
 
 Pure (no real clock inside) ⇒ unit-testable over a synthetic update sequence (SC-005). State transitions: `Idle → Streaming(first update) → Completed`.
 
-### `ContextWindowEstimate` — `src/FoundryStudio.Core/Models/ContextWindowEstimate.cs`
+### `ContextWindowEstimate` — `src/FoundryForge.Core/Models/ContextWindowEstimate.cs`
 ```csharp
 public sealed record ContextWindowEstimate(
     int UsedTokensEstimate,
@@ -116,13 +116,13 @@ public sealed record ContextWindowEstimate(
 ```
 **Producer**: `ContextWindowEstimator.Estimate(int usedTokensEstimate, int? contextLength, double warnFraction = 0.8)` (R7). Always **labeled an estimate** in the UI; `IsUnknown` ⇒ honest "limit unknown", no `Fraction` (FR-022). Pure; unit-tested (SC-007).
 
-### `TranscriptAssembler` — `src/FoundryStudio.Core/Chat/TranscriptAssembler.cs`
+### `TranscriptAssembler` — `src/FoundryForge.Core/Chat/TranscriptAssembler.cs`
 ```csharp
 public static IReadOnlyList<ChatMessage> Assemble(ChatSession session);
 ```
 **Contract**: prepends the system message when `SystemPrompt` is non-empty, then maps each `ChatMessageRecord` to a MEAI `ChatMessage` in order (multi-turn context, FR-004). Pure; dylib-free; unit-tested (SC-001).
 
-### `ChatMarkdown` — `src/FoundryStudio.Core/Chat/ChatMarkdown.cs`
+### `ChatMarkdown` — `src/FoundryForge.Core/Chat/ChatMarkdown.cs`
 ```csharp
 public static RenderedMarkdown Render(string markdown);   // Markdig pipeline w/ .DisableHtml()
 public readonly record struct CodeBlock(string Language, string Code);
@@ -134,7 +134,7 @@ public sealed record RenderedMarkdown(string Html, IReadOnlyList<CodeBlock> Code
 
 ## New persistence abstraction + impl
 
-### `IChatHistoryStore` — `src/FoundryStudio.Core/Abstractions/IChatHistoryStore.cs`
+### `IChatHistoryStore` — `src/FoundryForge.Core/Abstractions/IChatHistoryStore.cs`
 ```csharp
 public interface IChatHistoryStore
 {
@@ -149,10 +149,10 @@ public interface IChatHistoryStore
 - `DeleteAsync`/`ClearMessagesAsync` with **`userConfirmed:false` remove nothing** (no-op/throw before any file mutation) — the dylib-free enforcement point (SC-009).
 - `SaveAsync` is an upsert that persists the full `ChatSession` so the exchange survives restart (FR-023/027).
 
-### `FileChatHistoryStore` — `src/FoundryStudio.Core/Chat/FileChatHistoryStore.cs`
+### `FileChatHistoryStore` — `src/FoundryForge.Core/Chat/FileChatHistoryStore.cs`
 File impl (mirrors `FileSettingsService`; the App injects the `chats` directory path). One `<id>.json` per conversation via `ChatHistoryDocument`; `SemaphoreSlim` IO guard; write-temp-then-replace; **non-destructive recovery** — an unparseable file is preserved as `.bak`, never silently overwritten (Constitution IV). Plain managed file IO ⇒ directly unit-testable with a temp dir.
 
-### `ChatHistoryDocument` — `src/FoundryStudio.Core/Chat/ChatHistoryDocument.cs`
+### `ChatHistoryDocument` — `src/FoundryForge.Core/Chat/ChatHistoryDocument.cs`
 Mirrors `SettingsDocument`: `Serialize(ChatSession)` / `Deserialize(json)` with `System.Text.Json` (indented, stable names, `SchemaVersion`). Round-trip is the unit-tested seam (SC-008). Human-readable / user-auditable (Constitution IV).
 
 ---
@@ -167,7 +167,7 @@ Mirrors `SettingsDocument`: `Serialize(ChatSession)` / `Deserialize(json)` with 
 
 ---
 
-## Transient UI view-model state (`FoundryStudio.App`, not persisted)
+## Transient UI view-model state (`FoundryForge.App`, not persisted)
 
 | State | Component | Purpose |
 |-------|-----------|---------|

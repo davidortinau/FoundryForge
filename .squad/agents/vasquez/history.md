@@ -1,6 +1,6 @@
 # Project Context
 
-- **Project:** FoundryStudio
+- **Project:** FoundryForge
 - **Created:** 2026-06-25
 
 ## Core Context

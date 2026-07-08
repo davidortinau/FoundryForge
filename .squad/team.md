@@ -1,6 +1,6 @@
 # Squad Team
 
-> FoundryStudio
+> FoundryForge
 
 ## Coordinator
 
@@ -24,5 +24,5 @@
 
 ## Project Context
 
-- **Project:** FoundryStudio
+- **Project:** FoundryForge
 - **Created:** 2026-06-25

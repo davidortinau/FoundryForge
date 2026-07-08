@@ -6,7 +6,7 @@ M5 implements the existing seam `ILocalServerService` for real in the **Foundry 
 
 ## Existing seam (unchanged) — `ILocalServerService`
 
-`src/FoundryStudio.Core/Abstractions/ILocalServerService.cs`
+`src/FoundryForge.Core/Abstractions/ILocalServerService.cs`
 
 ```csharp
 public interface ILocalServerService
@@ -24,7 +24,7 @@ The UI consumes **only** this (plus the Core seams + M1 lifecycle/gate). It neve
 
 ## New impl — `LocalServerService`
 
-`src/FoundryStudio.Foundry/LocalServerService.cs`
+`src/FoundryForge.Foundry/LocalServerService.cs`
 
 ```csharp
 public sealed class LocalServerService : ILocalServerService
@@ -80,7 +80,7 @@ public sealed class LocalServerService : ILocalServerService
 
 ## DI registration (one-line swap)
 
-`src/FoundryStudio.App/MauiProgram.cs` (in `RegisterFoundryStudioServices`)
+`src/FoundryForge.App/MauiProgram.cs` (in `RegisterFoundryForgeServices`)
 
 ```diff
 - // Post-v1 honest stubs keep the DI graph stable for M5/M6 (IsSupported == false; operations throw).

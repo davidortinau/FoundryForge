@@ -2,7 +2,7 @@
 
 **Status**: existing interface (M1) — **no signature change**. M2 enriches the *returned data* and constrains the *UI to read-only methods only*. This contract pins what M2 may call and what each call now guarantees.
 
-`src/FoundryStudio.Core/Abstractions/IFoundryCatalogService.cs` (FL-free seam, DEC-004 / Constitution V).
+`src/FoundryForge.Core/Abstractions/IFoundryCatalogService.cs` (FL-free seam, DEC-004 / Constitution V).
 
 ## Methods the M2 catalog UI MAY call (read-only — R7)
 

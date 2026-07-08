@@ -1,7 +1,7 @@
 # Contract: `IModelStateGate` (load/unload concurrency gate)
 
-**Project**: `FoundryStudio.Core/Abstractions` (interface) · primitive
-`FoundryStudio.Core/Concurrency/ModelStateGate.cs` (pure, FL-free)
+**Project**: `FoundryForge.Core/Abstractions` (interface) · primitive
+`FoundryForge.Core/Concurrency/ModelStateGate.cs` (pure, FL-free)
 **Satisfies**: FR-008, FR-009, FR-010 · SC-004 · Constitution V · PLAN.md line 75 · DEC-004
 
 Serializes model-state mutations and drains-or-rejects them against any active stream **on the
@@ -9,7 +9,7 @@ same model**. Pure-logic — unit-testable with no native dylib (FR-016, SC-008)
 the one manager (both the in-process path and the future exposed server).
 
 ```csharp
-namespace FoundryStudio.Core.Abstractions;
+namespace FoundryForge.Core.Abstractions;
 
 public enum MutationPolicy { Drain, Reject }
 

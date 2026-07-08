@@ -8,7 +8,7 @@ description: "Task list for M1 — App Shell + Foundry Local Service Layer + DI 
 
 **Prerequisites**: plan.md, spec.md, research.md (R1–R11), data-model.md, contracts/ (6 service-interface contracts)
 
-**Tests**: INCLUDED. The spec mandates a test/CI seam (US3 is a **P1** user story, not optional) and pure-logic seam coverage over the FL-free `FoundryStudio.Core` (settings, catalog filtering, RAM-fit heuristic, concurrency gate). "Tests" here are framed around **verifiable service behavior** — ready-state reached without a `.Result`/`.Wait()` deadlock, the concurrency gate draining/rejecting/serializing correctly, settings persisting without silent wipe, and CI building clean on pinned versions — per the spec (foundation milestone, no end-user screens).
+**Tests**: INCLUDED. The spec mandates a test/CI seam (US3 is a **P1** user story, not optional) and pure-logic seam coverage over the FL-free `FoundryForge.Core` (settings, catalog filtering, RAM-fit heuristic, concurrency gate). "Tests" here are framed around **verifiable service behavior** — ready-state reached without a `.Result`/`.Wait()` deadlock, the concurrency gate draining/rejecting/serializing correctly, settings persisting without silent wipe, and CI building clean on pinned versions — per the spec (foundation milestone, no end-user screens).
 
 **Organization**: Tasks are grouped by user story (US1–US5) so each is independently implementable and testable, in priority order (P1 → P2).
 
@@ -16,7 +16,7 @@ description: "Task list for M1 — App Shell + Foundry Local Service Layer + DI 
 
 - **[P]**: Can run in parallel (different files, no dependency on an incomplete task)
 - **[Story]**: US1=ready-gated lifecycle, US2=concurrency gate, US3=test+CI seam, US4=catalog service + chat adapter, US5=settings store
-- Paths follow plan.md's **four-project** layout: `src/FoundryStudio.Core` (net10.0, FL-free), `src/FoundryStudio.Foundry` (net10.0, FL-bound), `src/FoundryStudio.App` (net10.0-macos, AppKit + Blazor Hybrid head), `tests/FoundryStudio.Tests` (net10.0, references **Core only**)
+- Paths follow plan.md's **four-project** layout: `src/FoundryForge.Core` (net10.0, FL-free), `src/FoundryForge.Foundry` (net10.0, FL-bound), `src/FoundryForge.App` (net10.0-macos, AppKit + Blazor Hybrid head), `tests/FoundryForge.Tests` (net10.0, references **Core only**)
 
 ## Prerequisite risk (non-blocking)
 
@@ -28,11 +28,11 @@ UPDATE (2026-06-25): net11 is DONE (DEC-016). M1 was built and verified on **net
 
 **Purpose**: Stand up the real, non-throwaway solution skeleton, reuse the M0-proven pinned build assets as-is, and retire the disposable spikes (FR-001, R7, R11).
 
-- [ ] T001 Create `FoundryStudio.sln` and the four projects with correct TFMs + project references: `src/FoundryStudio.Core/FoundryStudio.Core.csproj` (`net10.0`, **NO** Foundry Local SDK reference), `src/FoundryStudio.Foundry/FoundryStudio.Foundry.csproj` (`net10.0`, references Core + `Microsoft.AI.Foundry.Local` + `Microsoft.Extensions.AI`), `src/FoundryStudio.App/FoundryStudio.App.csproj` (`net10.0-macos`, `Microsoft.NET.Sdk.Razor`, references Core + Foundry), `tests/FoundryStudio.Tests/FoundryStudio.Tests.csproj` (`net10.0`, xUnit, references **Core ONLY**) (FR-001, R7)
+- [ ] T001 Create `FoundryForge.sln` and the four projects with correct TFMs + project references: `src/FoundryForge.Core/FoundryForge.Core.csproj` (`net10.0`, **NO** Foundry Local SDK reference), `src/FoundryForge.Foundry/FoundryForge.Foundry.csproj` (`net10.0`, references Core + `Microsoft.AI.Foundry.Local` + `Microsoft.Extensions.AI`), `src/FoundryForge.App/FoundryForge.App.csproj` (`net10.0-macos`, `Microsoft.NET.Sdk.Razor`, references Core + Foundry), `tests/FoundryForge.Tests/FoundryForge.Tests.csproj` (`net10.0`, xUnit, references **Core ONLY**) (FR-001, R7)
 - [ ] T002 [P] Reuse the pinned `Directory.Packages.props` at repo root as-is; confirm `ManagePackageVersionsCentrally=true`, that all four projects consume the pinned set with **no inline PackageReference versions**, and that the FL `sdk` line `1.2.3` + maui-labs AppKit `0.1.0-preview.8.26256.5` + MEAI `10.0.1` entries are present (source of truth `KNOWN-GOOD-VERSIONS.md`; FR-017)
-- [ ] T003 [P] Import `build/BundleFoundryLocalNative.targets` in `src/FoundryStudio.App/FoundryStudio.App.csproj` **ONLY**, and wire `Entitlements.Debug.plist` via `CodesignEntitlements`; verify neither Core nor Tests imports the bundle target (keeps the test seam dylib-free) (R7, E3)
+- [ ] T003 [P] Import `build/BundleFoundryLocalNative.targets` in `src/FoundryForge.App/FoundryForge.App.csproj` **ONLY**, and wire `Entitlements.Debug.plist` via `CodesignEntitlements`; verify neither Core nor Tests imports the bundle target (keeps the test seam dylib-free) (R7, E3)
 - [ ] T004 [P] Spikes disposition (R11/FR-001): delete/archive `spikes/m0a-baseline-app`, `spikes/m0b-fl-console`, `spikes/m0d-vertical-slice`; prune `spikes/README.md` to state they were throwaway and where their proven patterns now live in the real projects
-- [ ] T005 [P] Create `src/FoundryStudio.App/_Imports.razor` with the **FULL** MAUI Blazor template using-set (`Microsoft.AspNetCore.Components`, `…Components.Web`, `…Components.Forms`, `…Components.Routing`, `Microsoft.JSInterop`, plus app namespaces) so `@onclick`/`@bind` compile as interactive (KI-006, FR-002)
+- [ ] T005 [P] Create `src/FoundryForge.App/_Imports.razor` with the **FULL** MAUI Blazor template using-set (`Microsoft.AspNetCore.Components`, `…Components.Web`, `…Components.Forms`, `…Components.Routing`, `Microsoft.JSInterop`, plus app namespaces) so `@onclick`/`@bind` compile as interactive (KI-006, FR-002)
 - [ ] T006 [P] Record the net11 toolchain pin (the open chore referred to as **T004** in PLAN/spec) as a **prerequisite risk, non-blocking** entry in `KNOWN-ISSUES.md`; confirm M1 targets the proven `net10.0-macos` baseline (FR-019, Assumptions)
 
 ---
@@ -43,15 +43,15 @@ UPDATE (2026-06-25): net11 is DONE (DEC-016). M1 was built and verified on **net
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T007 [P] Lifecycle + gate interfaces in `src/FoundryStudio.Core/Abstractions/`: `IFoundryLifecycle.cs` (+ `FoundryReadyState` enum; `GetManagerAsync` returns `Task<object>` so Core stays FL-free) and `IModelStateGate.cs` (+ `MutationPolicy` enum, `ModelBusyException`) (contracts: IFoundryLifecycle, IModelStateGate)
-- [ ] T008 [P] Service interfaces in `src/FoundryStudio.Core/Abstractions/`: `IFoundryCatalogService.cs`, `IChatService.cs`, `ISettingsService.cs` (contracts: IFoundryCatalogService, IChatService, ISettingsService)
-- [ ] T009 [P] Post-v1 interfaces in `src/FoundryStudio.Core/Abstractions/`: `IEmbeddingService.cs`, `ITranscriptionService.cs`, `ILocalServerService.cs` (each exposes `IsSupported`) (FR-013, contract: IPostV1Services)
-- [ ] T010 [P] FL-free catalog DTO records in `src/FoundryStudio.Core/Models/`: `ModelInfo.cs`, `ModelVariant.cs` (+ `Device` enum `Cpu|Gpu|Npu`) (data-model.md)
-- [ ] T011 [P] FL-free settings model in `src/FoundryStudio.Core/Models/`: `AppSettings.cs` (+ `AppTheme` enum `Light|Dark|Auto`, `SchemaVersion`) (data-model.md, FR-014)
-- [ ] T012 [P] FL-free seam DTOs in `src/FoundryStudio.Core/Models/`: `CatalogFilter.cs` (criteria record: Device?/Task?/Provider?/SearchText?/CachedOnly) and `RamFitResult.cs` (+ `RamFit` enum `Comfortable|Tight|Unlikely`) (data-model.md)
-- [ ] T013 App shell scaffold (empty, compilable, launches a bare window) in `src/FoundryStudio.App/`: `Program.cs` (NSApplication bootstrap from M0d), `App.cs`, `AppDelegate.cs`, `BlazorHostPage.cs`, `Info.plist`, `wwwroot/index.html` + `wwwroot/app.css` (BundleResource), `Components/App.razor` + `Components/Routes.razor` (FR-001)
-- [ ] T014 `src/FoundryStudio.App/MauiProgram.cs` `CreateMauiApp` with `BlazorWebView` + a `RegisterFoundryStudioServices` DI seam (filled incrementally per story) + DevFlow `{Agent,Blazor}` registered **Debug-only** (R1, FR-019)
-- [ ] T015 Buildability checkpoint: `dotnet build FoundryStudio.sln -c Debug` compiles all four projects clean on the pinned set before story work begins (precedes the US3 CI gate, not a substitute for it)
+- [ ] T007 [P] Lifecycle + gate interfaces in `src/FoundryForge.Core/Abstractions/`: `IFoundryLifecycle.cs` (+ `FoundryReadyState` enum; `GetManagerAsync` returns `Task<object>` so Core stays FL-free) and `IModelStateGate.cs` (+ `MutationPolicy` enum, `ModelBusyException`) (contracts: IFoundryLifecycle, IModelStateGate)
+- [ ] T008 [P] Service interfaces in `src/FoundryForge.Core/Abstractions/`: `IFoundryCatalogService.cs`, `IChatService.cs`, `ISettingsService.cs` (contracts: IFoundryCatalogService, IChatService, ISettingsService)
+- [ ] T009 [P] Post-v1 interfaces in `src/FoundryForge.Core/Abstractions/`: `IEmbeddingService.cs`, `ITranscriptionService.cs`, `ILocalServerService.cs` (each exposes `IsSupported`) (FR-013, contract: IPostV1Services)
+- [ ] T010 [P] FL-free catalog DTO records in `src/FoundryForge.Core/Models/`: `ModelInfo.cs`, `ModelVariant.cs` (+ `Device` enum `Cpu|Gpu|Npu`) (data-model.md)
+- [ ] T011 [P] FL-free settings model in `src/FoundryForge.Core/Models/`: `AppSettings.cs` (+ `AppTheme` enum `Light|Dark|Auto`, `SchemaVersion`) (data-model.md, FR-014)
+- [ ] T012 [P] FL-free seam DTOs in `src/FoundryForge.Core/Models/`: `CatalogFilter.cs` (criteria record: Device?/Task?/Provider?/SearchText?/CachedOnly) and `RamFitResult.cs` (+ `RamFit` enum `Comfortable|Tight|Unlikely`) (data-model.md)
+- [ ] T013 App shell scaffold (empty, compilable, launches a bare window) in `src/FoundryForge.App/`: `Program.cs` (NSApplication bootstrap from M0d), `App.cs`, `AppDelegate.cs`, `BlazorHostPage.cs`, `Info.plist`, `wwwroot/index.html` + `wwwroot/app.css` (BundleResource), `Components/App.razor` + `Components/Routes.razor` (FR-001)
+- [ ] T014 `src/FoundryForge.App/MauiProgram.cs` `CreateMauiApp` with `BlazorWebView` + a `RegisterFoundryForgeServices` DI seam (filled incrementally per story) + DevFlow `{Agent,Blazor}` registered **Debug-only** (R1, FR-019)
+- [ ] T015 Buildability checkpoint: `dotnet build FoundryForge.sln -c Debug` compiles all four projects clean on the pinned set before story work begins (precedes the US3 CI gate, not a substitute for it)
 
 **Checkpoint**: Foundation ready — US1–US5 can proceed (P1 first; P2 stories can parallelize once Foundational is done).
 
@@ -63,12 +63,12 @@ UPDATE (2026-06-25): net11 is DONE (DEC-016). M1 was built and verified on **net
 
 **Independent Test**: Launch the app skeleton on Apple Silicon; observe an "initializing" state that blocks the chat surface, then a transition to "ready"; confirm via behavior that init offloads to a background thread, all awaiters receive the one shared instance, and no path blocks the init task with a synchronous wait.
 
-- [ ] T016 [US1] `src/FoundryStudio.Foundry/FoundryLifecycle.cs`: the single `FoundryLocalManager` wrapper implementing `IFoundryLifecycle` + `IAsyncDisposable`; `Lazy<Task<FoundryLocalManager>>` factory = `Task.Run(InitializeAsync)` (off the BlazorWebView dispatcher), `ReadyAsync(ct)`, strongly-typed `GetManagerAsync(ct)` overload, `State`; **hard rule: no `.Result`/`.Wait()`** on the init task (KI-005; FR-003/004/005/006; contract IFoundryLifecycle)
-- [ ] T017 [US1] Register `IFoundryLifecycle → FoundryLifecycle` as a **DI singleton** in `src/FoundryStudio.App/MauiProgram.cs`; guarantee no code path constructs a second manager (FR-003, SC-002)
-- [ ] T018 [US1] App-level "initializing" guard in `src/FoundryStudio.App/Components/Pages/`: `Initializing.razor` + `Ready.razor`; wire `Components/Routes.razor` to block not-yet-ready surfaces (including the chat surface) until `ReadyAsync` is satisfied; components `await ReadyAsync()` in `OnInitializedAsync` then `await InvokeAsync(StateHasChanged)` (FR-004/005, SC-001)
+- [ ] T016 [US1] `src/FoundryForge.Foundry/FoundryLifecycle.cs`: the single `FoundryLocalManager` wrapper implementing `IFoundryLifecycle` + `IAsyncDisposable`; `Lazy<Task<FoundryLocalManager>>` factory = `Task.Run(InitializeAsync)` (off the BlazorWebView dispatcher), `ReadyAsync(ct)`, strongly-typed `GetManagerAsync(ct)` overload, `State`; **hard rule: no `.Result`/`.Wait()`** on the init task (KI-005; FR-003/004/005/006; contract IFoundryLifecycle)
+- [ ] T017 [US1] Register `IFoundryLifecycle → FoundryLifecycle` as a **DI singleton** in `src/FoundryForge.App/MauiProgram.cs`; guarantee no code path constructs a second manager (FR-003, SC-002)
+- [ ] T018 [US1] App-level "initializing" guard in `src/FoundryForge.App/Components/Pages/`: `Initializing.razor` + `Ready.razor`; wire `Components/Routes.razor` to block not-yet-ready surfaces (including the chat surface) until `ReadyAsync` is satisfied; components `await ReadyAsync()` in `OnInitializedAsync` then `await InvokeAsync(StateHasChanged)` (FR-004/005, SC-001)
 - [ ] T019 [US1] Honest failed/slow-init handling in `FoundryLifecycle.cs` + `Initializing.razor`: surface a diagnosed cause, keep surfaces blocked, and ensure the gate is **never** satisfied by a failed init (`State == Failed`/`Initializing`) (edge case, SC-001)
 - [ ] T020 [US1] Dispose the manager cleanly on app exit via `FoundryLifecycle.DisposeAsync` wired into shutdown, **without** a synchronous block on an in-flight init task (FR-007, SC-003, edge case)
-- [ ] T021 [P] [US1] No-blocking guard test in `tests/FoundryStudio.Tests/NoBlockingInitGuardTests.cs`: scan repo source for `.Result`/`.Wait()` on the init task and assert **zero** occurrences (codifies KI-005; FR-006, SC-003)
+- [ ] T021 [P] [US1] No-blocking guard test in `tests/FoundryForge.Tests/NoBlockingInitGuardTests.cs`: scan repo source for `.Result`/`.Wait()` on the init task and assert **zero** occurrences (codifies KI-005; FR-006, SC-003)
 
 **Checkpoint**: App launches → "initializing" → "ready" with no deadlock; one shared manager; zero synchronous blocking. **This is the MVP.**
 
@@ -80,9 +80,9 @@ UPDATE (2026-06-25): net11 is DONE (DEC-016). M1 was built and verified on **net
 
 **Independent Test**: Through the service layer alone (no UI), start a simulated in-flight generation, then request load/unload of that model; confirm the gate drains or rejects (typed `ModelBusyException`), never mutates mid-stream, serializes concurrent mutations, and isolates per model.
 
-- [ ] T022 [P] [US2] `src/FoundryStudio.Core/Concurrency/ModelStateGate.cs` implementing `IModelStateGate`: per-model `SemaphoreSlim(1,1)` mutation lock + active-generation count; `BeginGenerationAsync(modelId)` → `IAsyncDisposable` lease; `MutateAsync` with `Drain` (await active→0, bounded) / `Reject` (throw `ModelBusyException`); per-model isolation; pure/FL-free (FR-008/009/010, R2; contract IModelStateGate)
-- [ ] T023 [US2] Register `IModelStateGate → ModelStateGate` as a **DI singleton** in `src/FoundryStudio.App/MauiProgram.cs` (one gate backs the one manager and the future exposed server) (FR-009, Constitution V)
-- [ ] T024 [P] [US2] `tests/FoundryStudio.Tests/ModelStateGateTests.cs`: drains (waits for lease disposal), rejects (`ModelBusyException`), concurrent-mutation serialization (0 observed concurrent mutations), per-model isolation (mutate B while A leased) — runs with **no native dylib** (SC-004, SC-008)
+- [ ] T022 [P] [US2] `src/FoundryForge.Core/Concurrency/ModelStateGate.cs` implementing `IModelStateGate`: per-model `SemaphoreSlim(1,1)` mutation lock + active-generation count; `BeginGenerationAsync(modelId)` → `IAsyncDisposable` lease; `MutateAsync` with `Drain` (await active→0, bounded) / `Reject` (throw `ModelBusyException`); per-model isolation; pure/FL-free (FR-008/009/010, R2; contract IModelStateGate)
+- [ ] T023 [US2] Register `IModelStateGate → ModelStateGate` as a **DI singleton** in `src/FoundryForge.App/MauiProgram.cs` (one gate backs the one manager and the future exposed server) (FR-009, Constitution V)
+- [ ] T024 [P] [US2] `tests/FoundryForge.Tests/ModelStateGateTests.cs`: drains (waits for lease disposal), rejects (`ModelBusyException`), concurrent-mutation serialization (0 observed concurrent mutations), per-model isolation (mutate B while A leased) — runs with **no native dylib** (SC-004, SC-008)
 
 **Checkpoint**: Gate verified through the service layer with no UI/dylib; rejections are honest/typed.
 
@@ -90,13 +90,13 @@ UPDATE (2026-06-25): net11 is DONE (DEC-016). M1 was built and verified on **net
 
 ## Phase 5: User Story 3 - Test project + CI seam from day one (Priority: P1)
 
-**Goal**: A unit-test project (`tests/FoundryStudio.Tests`, references Core only — scaffolded in T001) plus one CI job that restores+builds+tests the whole solution on a clean checkout against the pinned versions, failing if any dependency floats off the pinned set.
+**Goal**: A unit-test project (`tests/FoundryForge.Tests`, references Core only — scaffolded in T001) plus one CI job that restores+builds+tests the whole solution on a clean checkout against the pinned versions, failing if any dependency floats off the pinned set.
 
 **Independent Test**: On a clean checkout, run CI and confirm it restores/builds the full solution on **only** the pinned versions; run the test project and confirm the pure-logic seam tests pass with no native Foundry Local dylib present.
 
 - [ ] T025 [US3] Enable `RestorePackagesWithLockFile=true` and commit lock files so a locked-mode restore **fails** if any dependency resolves off the pinned `Directory.Packages.props` set (FR-017, SC-009)
-- [ ] T026 [US3] `.github/workflows/ci.yml`: one macOS Apple-Silicon job — clean checkout → `dotnet restore --locked-mode` → `dotnet build FoundryStudio.sln -c Debug` → `dotnet test tests/FoundryStudio.Tests -c Debug`, all on the pinned set; the job **fails** on float, build break, or seam-test failure (FR-017, SC-009, R10)
-- [ ] T027 [US3] Verify `tests/FoundryStudio.Tests` references **Core only** (no FL/MEAI/dylib transitive) and that the pure-logic seam tests execute green in an environment with **no native Foundry Local dylib present** (FR-016, SC-008)
+- [ ] T026 [US3] `.github/workflows/ci.yml`: one macOS Apple-Silicon job — clean checkout → `dotnet restore --locked-mode` → `dotnet build FoundryForge.sln -c Debug` → `dotnet test tests/FoundryForge.Tests -c Debug`, all on the pinned set; the job **fails** on float, build break, or seam-test failure (FR-017, SC-009, R10)
+- [ ] T027 [US3] Verify `tests/FoundryForge.Tests` references **Core only** (no FL/MEAI/dylib transitive) and that the pure-logic seam tests execute green in an environment with **no native Foundry Local dylib present** (FR-016, SC-008)
 - [ ] T028 [US3] Wire the FR-006/SC-003 no-`.Result`/`.Wait()` guard (T021) into the CI job so a KI-005 regression fails the build (SC-012)
 
 **Checkpoint**: Clean-checkout CI green on pinned versions; seam tests pass dylib-free; the pinning + KI-005 guardrails are enforced from day one.
@@ -109,15 +109,15 @@ UPDATE (2026-06-25): net11 is DONE (DEC-016). M1 was built and verified on **net
 
 **Independent Test**: Through the service layer (no UI), exercise catalog ops against the ready-gated manager and confirm each maps to the right FL op and routes load/unload through the gate; confirm the chat adapter streams in-process with zero loopback sockets and composes MEAI middleware.
 
-- [ ] T029 [P] [US4] `src/FoundryStudio.Core/Catalog/CatalogFilter.cs` pure predicates over `ModelInfo`/`ModelVariant` (device/task/provider/search/cachedOnly; null criteria = match all; cached vs loaded partition helpers) (FR-016, R6)
-- [ ] T030 [P] [US4] `src/FoundryStudio.Core/Catalog/RamFitHeuristic.cs` pure `Evaluate(sizeGb, freeRamGb)` → `RamFitResult` (size vs **free** RAM with a wide margin, long-context KV-cache caveat, never a confident green verdict) (FR-016, R5)
-- [ ] T031 [P] [US4] `tests/FoundryStudio.Tests/CatalogFilterTests.cs` + `tests/FoundryStudio.Tests/RamFitHeuristicTests.cs` — pure seams, no dylib (SC-008)
-- [ ] T032 [US4] `src/FoundryStudio.Foundry/FoundryCatalogService.cs` implementing `IFoundryCatalogService`: wraps `ICatalog`/`IModel`, maps results into `ModelInfo`/`ModelVariant`, implements Browse/GetModel/GetVariants/ListCached/ListLoaded/Download; `LoadAsync`/`UnloadAsync` route through `IModelStateGate.MutateAsync`; `DeleteFromCacheAsync` requires `userConfirmed` (protected user data) (FR-011, SC-005, Constitution IV; contract IFoundryCatalogService)
-- [ ] T033 [US4] `src/FoundryStudio.Foundry/FoundryChatClient.cs` in-process `IChatClient` adapter (Microsoft.Extensions.AI) backed by `IModel.GetChatClientAsync()` → `CompleteChatStreamingAsync`; maps MEAI `ChatMessage` ↔ FL request message; acquires a `ModelStateGate` generation lease per stream; **no `127.0.0.1` loopback socket** (FR-012, SC-006, R3; contract IChatService)
-- [ ] T034 [US4] `src/FoundryStudio.Foundry/ChatService.cs` implementing `IChatService` over the adapter, shaped so MEAI middleware composes (`AsBuilder().UseFunctionInvocation().UseOpenTelemetry()` seam reserved for M4); structured output treated as **best-effort only** — no "guaranteed JSON" surface (FR-012/018, SC-010, E4)
-- [ ] T035 [P] [US4] Post-v1 honest stubs in `src/FoundryStudio.Foundry/PostV1/`: `StubEmbeddingService.cs`, `StubTranscriptionService.cs`, `StubLocalServerService.cs` — `IsSupported == false`, operations throw `NotSupportedException("Not implemented in v1 …")` (never fake/empty) (FR-013, contract IPostV1Services)
-- [ ] T036 [US4] Register catalog, chat, and post-v1 stub services in `src/FoundryStudio.App/MauiProgram.cs` DI so the dependency graph is stable for M2/M4/M5/M6 (FR-011/012/013)
-- [ ] T037 [P] [US4] `tests/FoundryStudio.Tests/PostV1StubTests.cs`: `IsSupported == false` and operations throw `NotSupportedException` rather than returning fake/empty data (FR-013, SC-010)
+- [ ] T029 [P] [US4] `src/FoundryForge.Core/Catalog/CatalogFilter.cs` pure predicates over `ModelInfo`/`ModelVariant` (device/task/provider/search/cachedOnly; null criteria = match all; cached vs loaded partition helpers) (FR-016, R6)
+- [ ] T030 [P] [US4] `src/FoundryForge.Core/Catalog/RamFitHeuristic.cs` pure `Evaluate(sizeGb, freeRamGb)` → `RamFitResult` (size vs **free** RAM with a wide margin, long-context KV-cache caveat, never a confident green verdict) (FR-016, R5)
+- [ ] T031 [P] [US4] `tests/FoundryForge.Tests/CatalogFilterTests.cs` + `tests/FoundryForge.Tests/RamFitHeuristicTests.cs` — pure seams, no dylib (SC-008)
+- [ ] T032 [US4] `src/FoundryForge.Foundry/FoundryCatalogService.cs` implementing `IFoundryCatalogService`: wraps `ICatalog`/`IModel`, maps results into `ModelInfo`/`ModelVariant`, implements Browse/GetModel/GetVariants/ListCached/ListLoaded/Download; `LoadAsync`/`UnloadAsync` route through `IModelStateGate.MutateAsync`; `DeleteFromCacheAsync` requires `userConfirmed` (protected user data) (FR-011, SC-005, Constitution IV; contract IFoundryCatalogService)
+- [ ] T033 [US4] `src/FoundryForge.Foundry/FoundryChatClient.cs` in-process `IChatClient` adapter (Microsoft.Extensions.AI) backed by `IModel.GetChatClientAsync()` → `CompleteChatStreamingAsync`; maps MEAI `ChatMessage` ↔ FL request message; acquires a `ModelStateGate` generation lease per stream; **no `127.0.0.1` loopback socket** (FR-012, SC-006, R3; contract IChatService)
+- [ ] T034 [US4] `src/FoundryForge.Foundry/ChatService.cs` implementing `IChatService` over the adapter, shaped so MEAI middleware composes (`AsBuilder().UseFunctionInvocation().UseOpenTelemetry()` seam reserved for M4); structured output treated as **best-effort only** — no "guaranteed JSON" surface (FR-012/018, SC-010, E4)
+- [ ] T035 [P] [US4] Post-v1 honest stubs in `src/FoundryForge.Foundry/PostV1/`: `StubEmbeddingService.cs`, `StubTranscriptionService.cs`, `StubLocalServerService.cs` — `IsSupported == false`, operations throw `NotSupportedException("Not implemented in v1 …")` (never fake/empty) (FR-013, contract IPostV1Services)
+- [ ] T036 [US4] Register catalog, chat, and post-v1 stub services in `src/FoundryForge.App/MauiProgram.cs` DI so the dependency graph is stable for M2/M4/M5/M6 (FR-011/012/013)
+- [ ] T037 [P] [US4] `tests/FoundryForge.Tests/PostV1StubTests.cs`: `IsSupported == false` and operations throw `NotSupportedException` rather than returning fake/empty data (FR-013, SC-010)
 
 **Checkpoint**: Catalog + chat seams exist behind stable interfaces; load/unload routes through the gate; in-process chat opens 0 loopback sockets; post-v1 stubs are honest.
 
@@ -129,10 +129,10 @@ UPDATE (2026-06-25): net11 is DONE (DEC-016). M1 was built and verified on **net
 
 **Independent Test**: Through the settings store (no UI), write cache dir/default model/theme; restart the process; read back unchanged; confirm a destructive reset without consent is a no-op and that no path silently wipes settings; inspect the on-disk JSON for human-auditability.
 
-- [ ] T038 [P] [US5] `src/FoundryStudio.Core/Settings/SettingsDocument.cs` pure logic: documented defaults (incl. default model cache directory), JSON (de)serialization, merge-missing-with-defaults, and the `RequireConsent` guard preventing destructive overwrite/clear without an explicit consent flag (FR-014/015, R4; contract ISettingsService)
-- [ ] T039 [P] [US5] `tests/FoundryStudio.Tests/SettingsDocumentTests.cs`: defaults when unset; set→read round-trip fidelity; corrupt/missing/empty input → defaults + original file preserved (`.bak`); reset-without-consent is a no-op; reset-with-consent proceeds — all dylib-free (SC-007, SC-008)
-- [ ] T040 [US5] `src/FoundryStudio.Foundry/PreferencesSettingsService.cs` implementing `ISettingsService`: persist a human-readable JSON document in app data anchored via MAUI Essentials `Preferences`; `GetAsync`/`UpdateAsync`/`ResetAsync(userConfirmed)`; non-destructive recovery (keep `.bak` of an unparseable file) (FR-014/015, R4)
-- [ ] T041 [US5] Register `ISettingsService → PreferencesSettingsService` as a **DI singleton** in `src/FoundryStudio.App/MauiProgram.cs` (FR-014)
+- [ ] T038 [P] [US5] `src/FoundryForge.Core/Settings/SettingsDocument.cs` pure logic: documented defaults (incl. default model cache directory), JSON (de)serialization, merge-missing-with-defaults, and the `RequireConsent` guard preventing destructive overwrite/clear without an explicit consent flag (FR-014/015, R4; contract ISettingsService)
+- [ ] T039 [P] [US5] `tests/FoundryForge.Tests/SettingsDocumentTests.cs`: defaults when unset; set→read round-trip fidelity; corrupt/missing/empty input → defaults + original file preserved (`.bak`); reset-without-consent is a no-op; reset-with-consent proceeds — all dylib-free (SC-007, SC-008)
+- [ ] T040 [US5] `src/FoundryForge.Foundry/PreferencesSettingsService.cs` implementing `ISettingsService`: persist a human-readable JSON document in app data anchored via MAUI Essentials `Preferences`; `GetAsync`/`UpdateAsync`/`ResetAsync(userConfirmed)`; non-destructive recovery (keep `.bak` of an unparseable file) (FR-014/015, R4)
+- [ ] T041 [US5] Register `ISettingsService → PreferencesSettingsService` as a **DI singleton** in `src/FoundryForge.App/MauiProgram.cs` (FR-014)
 - [ ] T042 [US5] Confirm the documented default `ModelCacheDirectory` platform path is returned when unset, and that the cache directory it references (multi-GB protected user data) is never wiped/overwritten without consent (FR-014/015, Constitution IV)
 
 **Checkpoint**: Settings persist with 100% fidelity across restart; consent-gated; on-disk JSON is auditable/editable.
@@ -193,21 +193,21 @@ UPDATE (2026-06-25): net11 is DONE (DEC-016). M1 was built and verified on **net
 
 ```bash
 # Launch all FL-free Core contracts + DTOs together (different files, no deps):
-Task: "Lifecycle + gate interfaces in src/FoundryStudio.Core/Abstractions/ (T007)"
-Task: "Service interfaces in src/FoundryStudio.Core/Abstractions/ (T008)"
-Task: "Post-v1 interfaces in src/FoundryStudio.Core/Abstractions/ (T009)"
-Task: "Catalog DTOs in src/FoundryStudio.Core/Models/ (T010)"
-Task: "Settings model in src/FoundryStudio.Core/Models/ (T011)"
-Task: "Seam DTOs in src/FoundryStudio.Core/Models/ (T012)"
+Task: "Lifecycle + gate interfaces in src/FoundryForge.Core/Abstractions/ (T007)"
+Task: "Service interfaces in src/FoundryForge.Core/Abstractions/ (T008)"
+Task: "Post-v1 interfaces in src/FoundryForge.Core/Abstractions/ (T009)"
+Task: "Catalog DTOs in src/FoundryForge.Core/Models/ (T010)"
+Task: "Settings model in src/FoundryForge.Core/Models/ (T011)"
+Task: "Seam DTOs in src/FoundryForge.Core/Models/ (T012)"
 ```
 
 ## Parallel Example: P2 pure seams + tests (US4)
 
 ```bash
-Task: "CatalogFilter pure predicates in src/FoundryStudio.Core/Catalog/CatalogFilter.cs (T029)"
-Task: "RamFitHeuristic pure logic in src/FoundryStudio.Core/Catalog/RamFitHeuristic.cs (T030)"
-Task: "CatalogFilterTests + RamFitHeuristicTests in tests/FoundryStudio.Tests/ (T031)"
-Task: "Post-v1 honest stubs in src/FoundryStudio.Foundry/PostV1/ (T035)"
+Task: "CatalogFilter pure predicates in src/FoundryForge.Core/Catalog/CatalogFilter.cs (T029)"
+Task: "RamFitHeuristic pure logic in src/FoundryForge.Core/Catalog/RamFitHeuristic.cs (T030)"
+Task: "CatalogFilterTests + RamFitHeuristicTests in tests/FoundryForge.Tests/ (T031)"
+Task: "Post-v1 honest stubs in src/FoundryForge.Foundry/PostV1/ (T035)"
 ```
 
 ---

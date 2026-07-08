@@ -4,7 +4,7 @@ Owns the net11 AppKit head, native dylib bundling, signing, and DevFlow.
 
 ## Project Context
 
-**Project:** FoundryStudio
+**Project:** FoundryForge
 
 ## Responsibilities
 

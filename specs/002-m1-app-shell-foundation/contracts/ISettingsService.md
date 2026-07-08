@@ -1,7 +1,7 @@
 # Contract: `ISettingsService` (app settings / persistence store)
 
-**Project**: `FoundryStudio.Core/Abstractions` (interface) + `Core/Settings/SettingsDocument.cs`
-(pure logic) · impl `FoundryStudio.Foundry/PreferencesSettingsService.cs`
+**Project**: `FoundryForge.Core/Abstractions` (interface) + `Core/Settings/SettingsDocument.cs`
+(pure logic) · impl `FoundryForge.Foundry/PreferencesSettingsService.cs`
 **Satisfies**: FR-014, FR-015 · SC-007 · Constitution IV · PLAN.md line 95
 
 Persists app settings (model cache directory, default model, theme) across launches, fully
@@ -9,9 +9,9 @@ user-editable and auditable, **never wiped or destructively overwritten without 
 per-action consent**. The cache directory it stores points at multi-GB protected user data.
 
 ```csharp
-namespace FoundryStudio.Core.Abstractions;
+namespace FoundryForge.Core.Abstractions;
 
-using FoundryStudio.Core.Models; // AppSettings, AppTheme
+using FoundryForge.Core.Models; // AppSettings, AppTheme
 
 public interface ISettingsService
 {

@@ -1,0 +1,102 @@
+@using FoundryForge.Core.Chat
+@inject IJSRuntime Js
+
+@if (!IsStreaming && IsAssistant && IsGarbled(Content))
+{
+    <article class="chat-message chat-message--assistant chat-message--error"
+             data-testid="chat-response-error"
+             role="alert">
+        <div class="chat-message__meta">
+            <span class="chat-message__role">Assistant</span>
+            <span class="pill chat-message__error-pill">Unreadable response</span>
+        </div>
+        <p class="chat-response-error__text">The model returned a garbled or empty response. This is usually temporary — try again.</p>
+        <div class="chat-response-error__actions">
+            <button type="button" class="button button-secondary" @onclick="() => OnRetry.InvokeAsync()">Retry</button>
+            <button type="button" class="button button-secondary" @onclick="CopyRawAsync">Copy raw</button>
+        </div>
+    </article>
+}
+else
+{
+    <article class="chat-message chat-message--@RoleCss"
+             data-testid="@TestId"
+             data-streaming="@StreamingValue"
+             aria-live="@(IsAssistant ? "polite" : null)">
+        <div class="chat-message__meta">
+            <span class="chat-message__role">@RoleLabel</span>
+            @if (IsStreaming)
+            {
+                <span class="pill chat-message__streaming">Generating…</span>
+            }
+        </div>
+        <div class="chat-markdown" data-testid="chat-markdown">@((MarkupString)Rendered.Html)</div>
+        @if (Rendered.CodeBlocks.Count > 0)
+        {
+            <div class="chat-codeblocks" aria-label="Code blocks in this message">
+                @foreach (var block in EnumerateCodeBlocks())
+                {
+                    <figure class="chat-codeblock" data-testid="chat-codeblock">
+                        <figcaption>
+                            <span>@(string.IsNullOrWhiteSpace(block.Value.Language) ? "code" : block.Value.Language)</span>
+                            <button type="button"
+                                    class="button button-secondary chat-code-copy"
+                                    data-testid="chat-code-copy"
+                                    aria-label="Copy exact code block"
+                                    @onclick="() => CopyCodeAsync(block.Value.Code)">
+                                Copy code
+                            </button>
+                        </figcaption>
+                        <pre><code>@block.Value.Code</code></pre>
+                    </figure>
+                }
+            </div>
+        }
+    </article>
+}
+
+@code {
+    [Parameter, EditorRequired] public ChatTurnRole Role { get; set; }
+
+    [Parameter] public string Content { get; set; } = string.Empty;
+
+    [Parameter] public bool IsStreaming { get; set; }
+
+    /// <summary>Set when this message is in a read-only past-session view (no model loaded).</summary>
+    [Parameter] public bool IsReadOnly { get; set; }
+
+    /// <summary>Invoked when the user clicks Retry on a garbled response.</summary>
+    [Parameter] public EventCallback OnRetry { get; set; }
+
+    private bool IsAssistant => Role == ChatTurnRole.Assistant;
+
+    private string TestId => IsAssistant ? "chat-msg-assistant" : "chat-msg-user";
+
+    private string? StreamingValue => IsAssistant ? (IsStreaming ? "true" : "false") : null;
+
+    private string RoleCss => IsAssistant ? "assistant" : "user";
+
+    private string RoleLabel => IsAssistant ? "Assistant" : "You";
+
+    private RenderedMarkdown Rendered => ChatMarkdown.Render(Content);
+
+    private IEnumerable<KeyValuePair<int, CodeBlock>> EnumerateCodeBlocks() => Rendered.CodeBlocks.Select((value, index) => new KeyValuePair<int, CodeBlock>(index, value));
+
+    private ValueTask CopyCodeAsync(string code) => Js.InvokeVoidAsync("foundryForgeClipboard.copy", code);
+
+    private Task CopyRawAsync() => Js.InvokeVoidAsync("foundryForgeClipboard.copy", Content).AsTask();
+
+    /// <summary>
+    /// Detects non-renderable output: empty after trim, or dominated by replacement characters
+    /// (U+FFFD / '?') — more than 60% of non-whitespace chars are bad.
+    /// </summary>
+    private static bool IsGarbled(string content)
+    {
+        var trimmed = content.Trim();
+        if (string.IsNullOrEmpty(trimmed)) return true;
+        var nonSpace = trimmed.Count(c => c != ' ' && c != '\t' && c != '\n' && c != '\r');
+        if (nonSpace == 0) return true;
+        var badChars = trimmed.Count(c => c == '?' || c == '\uFFFD');
+        return (double)badChars / nonSpace > 0.6;
+    }
+}

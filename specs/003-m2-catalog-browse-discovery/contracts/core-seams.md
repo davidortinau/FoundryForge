@@ -1,12 +1,12 @@
 # Contract: Core pure-logic seams (new in M2)
 
-All seams below live in `FoundryStudio.Core`, are **FL-free and dylib-free**, and are unit-tested in `tests/FoundryStudio.Tests` without a native Foundry Local dylib (FR-019, SC-003/SC-004).
+All seams below live in `FoundryForge.Core`, are **FL-free and dylib-free**, and are unit-tested in `tests/FoundryForge.Tests` without a native Foundry Local dylib (FR-019, SC-003/SC-004).
 
 ---
 
 ## `CapabilityParser` — derive honest capabilities (R2)
 
-`src/FoundryStudio.Core/Catalog/CapabilityParser.cs`
+`src/FoundryForge.Core/Catalog/CapabilityParser.cs`
 
 ```csharp
 public static ModelCapabilities Parse(
@@ -28,7 +28,7 @@ public static ModelCapabilities Parse(
 
 ## `CuratedSelector` — deterministic curated default (R3, FR-008)
 
-`src/FoundryStudio.Core/Catalog/CuratedSelector.cs`
+`src/FoundryForge.Core/Catalog/CuratedSelector.cs`
 
 ```csharp
 public static IReadOnlyList<ModelInfo> Select(IEnumerable<ModelInfo> all);
@@ -39,7 +39,7 @@ public static IReadOnlyList<string> CuratedAliases { get; }  // the app-defined 
 - Returns only models whose `Alias` is in `CuratedAliases`, in a deterministic order (allow-list order).
 - A curated alias absent from `all` is silently skipped (graceful degradation, never throws).
 - Stable/idempotent: same input ⇒ same output ordering.
-- Makes **no** quality claim; the set is "FoundryStudio-curated", documented as such.
+- Makes **no** quality claim; the set is "FoundryForge-curated", documented as such.
 
 **Test fixtures**: full set incl. curated+non-curated → only curated, in allow-list order; missing curated alias → skipped; empty input → empty.
 
@@ -47,7 +47,7 @@ public static IReadOnlyList<string> CuratedAliases { get; }  // the app-defined 
 
 ## `CatalogFacets` — honest facet option derivation (R4, FR-006)
 
-`src/FoundryStudio.Core/Catalog/CatalogFacets.cs`
+`src/FoundryForge.Core/Catalog/CatalogFacets.cs`
 
 ```csharp
 public static CatalogFacets Derive(IEnumerable<ModelInfo> models);
@@ -65,7 +65,7 @@ public static CatalogFacets Derive(IEnumerable<ModelInfo> models);
 
 ## `CatalogFilterExtensions` — UNCHANGED behavior (FR-005/FR-007)
 
-`src/FoundryStudio.Core/Catalog/CatalogFilterExtensions.cs` keeps its M1 `Matches`/`Apply` semantics. Only adjustment: null-safety for the now-nullable `ModelInfo.Device` (a `null` device matches **no** device filter; still matches when no device filter is set). Existing M1 tests remain valid; one added case covers a null-device model against a device filter.
+`src/FoundryForge.Core/Catalog/CatalogFilterExtensions.cs` keeps its M1 `Matches`/`Apply` semantics. Only adjustment: null-safety for the now-nullable `ModelInfo.Device` (a `null` device matches **no** device filter; still matches when no device filter is set). Existing M1 tests remain valid; one added case covers a null-device model against a device filter.
 
 ---
 
