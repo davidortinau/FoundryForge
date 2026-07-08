@@ -54,7 +54,7 @@ public sealed class NlEngineResolver
 
         return engine switch
         {
-            NlSearchEngine.AppleFoundationModels => BuildApple(),
+            NlSearchEngine.AppleFoundationModels when OperatingSystem.IsMacOSVersionAtLeast(26) => BuildApple(),
             NlSearchEngine.CopilotCli => BuildCopilot(),
             NlSearchEngine.LocalModel => await BuildLocalOrFallbackAsync(cancellationToken).ConfigureAwait(false),
             _ => _deterministic,
