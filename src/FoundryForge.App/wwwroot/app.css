@@ -182,13 +182,6 @@ svg { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 1
 }
 .sidebar-storage__summary { color: var(--fs-sidebar-text); }
 .sidebar-storage__summary strong { color: var(--fs-sidebar-text-strong); }
-.sidebar-storage__path {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font: var(--fs-type-eyebrow);
-  color: var(--fs-sidebar-text-muted);
-}
 .sidebar-settings {
   display: grid;
   grid-template-columns: 18px 1fr;

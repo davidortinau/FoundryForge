@@ -1,7 +1,6 @@
 @inject NavigationManager Navigation
 @inject ServingStateService ServingState
 @inject IFoundryCatalogService CatalogService
-@inject ISettingsService SettingsService
 @implements IDisposable
 
 <aside class="sidebar" aria-label="FoundryForge navigation">
@@ -35,14 +34,10 @@
     </nav>
 
     <div class="sidebar-foot">
-        <div class="sidebar-storage" data-testid="sidebar-storage" title="@_cachePath">
+        <div class="sidebar-storage" data-testid="sidebar-storage">
             <span class="sidebar-storage__summary">
                 <strong>@_cachedCount</strong> local model@(_cachedCount == 1 ? string.Empty : "s")@_cachedSizeSuffix
             </span>
-            @if (!string.IsNullOrWhiteSpace(_cachePath))
-            {
-                <span class="sidebar-storage__path">@_cachePath</span>
-            }
         </div>
         <button type="button"
                 class="sidebar-settings"
@@ -63,7 +58,6 @@
 
     private int _cachedCount;
     private string _cachedSizeSuffix = string.Empty;
-    private string? _cachePath;
 
     protected override async Task OnInitializedAsync()
     {
@@ -102,16 +96,6 @@
         {
             _cachedCount = 0;
             _cachedSizeSuffix = string.Empty;
-        }
-
-        try
-        {
-            var settings = await SettingsService.GetAsync();
-            _cachePath = settings.ModelCacheDirectory;
-        }
-        catch
-        {
-            // Best-effort — leave whatever we had.
         }
 
         StateHasChanged();
